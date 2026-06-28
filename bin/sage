@@ -12,14 +12,26 @@ import {
   doctor,
   renderDoctor,
 } from '../lib/control.mjs'
+import {
+  territory,
+  whyDiverged,
+  mergeBrief,
+  renderTerritory,
+  renderWhyDiverged,
+  renderMergeBrief,
+} from '../lib/territory.mjs'
+import { crossStat } from '../lib/git.mjs'
 
 const USAGE = `usage: sage <command>
-  board              roster of this repo's sessions
-  repos              list all judged repos
-  on | off           enable/disable SAGE globally
-  link <sid> [state] manual link_state override (default: linked)
-  unlink <sid>       mark a session unlinked (closed)
-  doctor             validate dirs / hook / settings / token-forecast`
+  board                roster of this repo's sessions
+  territory <glob…>    who else claims/touches these paths (pre-flight)
+  why-diverged <file>  which sessions touch a file + why (+ numstat)
+  merge-brief          all contested paths before you merge
+  repos                list all judged repos
+  on | off             enable/disable SAGE globally
+  link <sid> [state]   manual link_state override (default: linked)
+  unlink <sid>         mark a session unlinked (closed)
+  doctor               validate dirs / hook / settings / token-forecast`
 
 const main = () => {
   const [cmd, a1, a2] = process.argv.slice(2)
@@ -32,6 +44,34 @@ const main = () => {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
       return console.log(renderBoard(collectSessions(home, repoId, now), { repoId, now }))
+    }
+    case 'territory': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      const queries = process.argv.slice(3)
+      if (!queries.length) return console.log('usage: sage territory <glob> [glob…]')
+      const selfSid = process.env.SAGE_SELF_SID || undefined
+      return console.log(renderTerritory(territory(home, repoId, queries, { now, selfSid }), { queries }))
+    }
+    case 'why-diverged': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      if (!a1) return console.log('usage: sage why-diverged <file>')
+      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const touches = whyDiverged(home, repoId, a1, { now, selfSid })
+      // Tier 2 (on demand): real cross-branch numstat for each session that has a
+      // live worktree, compared against the first other contesting branch.
+      for (const t of touches) {
+        const other = touches.find((o) => o.branch && o.branch !== t.branch)
+        if (t.worktree && t.branch && other) t.stat = crossStat(t.worktree, other.branch, t.branch, a1)
+      }
+      return console.log(renderWhyDiverged(touches, { file: a1 }))
+    }
+    case 'merge-brief': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const selfSid = process.env.SAGE_SELF_SID || undefined
+      return console.log(renderMergeBrief(mergeBrief(home, repoId, { now, selfSid }), { repoId }))
     }
     case 'repos': {
       const repos = listRepos(home)
