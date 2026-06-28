@@ -19,6 +19,8 @@ import { gitSignals, branchOf } from '../lib/git.mjs'
 import { autoDump } from '../lib/handoff.mjs'
 import { pidForSession } from '../lib/registry.mjs'
 import { isAlive } from '../lib/liveness.mjs'
+import { collectSessions } from '../lib/board.mjs'
+import { fleetLine } from '../lib/fleet.mjs'
 
 const POST_TOOL_THROTTLE_MS = 30000
 
@@ -86,6 +88,13 @@ const main = () => {
         updated_at: at,
       })
       appendEvent(home, repoId, { event: 'open', session_id: sid, source: payload.source || null, at })
+      // The one sanctioned auto-injection (design §10.3): a one-line fleet brief.
+      // SessionStart-only, only when other sessions exist (never noise when solo).
+      // Inside main()'s try/catch (fail-open) and behind the enable gate above;
+      // core-only (no adapter load) to keep the hot path cheap. stdout on a
+      // SessionStart hook is injected as session context by Claude Code.
+      const brief = fleetLine(collectSessions(home, repoId, now), { selfSid: sid })
+      if (brief) console.log(`sage: ${brief}`)
       break
     }
 

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { resolveRepoId } from '../lib/repo-id.mjs'
-import { sessionFile, eventsFile, sageHome } from '../lib/paths.mjs'
+import { sessionFile, eventsFile, sageHome, sessionsDir } from '../lib/paths.mjs'
 import { readSidecar } from '../lib/handoff.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
@@ -85,6 +85,38 @@ test('PreCompact auto-dumps md+json and stamps the record', () => {
   assert.ok(rec.handoff_at)
   const events = fs.readFileSync(eventsFile(home, id), 'utf8').split('\n').filter(Boolean)
   assert.ok(events.map((l) => JSON.parse(l).event).includes('precompact'))
+})
+
+const seedOther = (home, id, rec) => {
+  fs.mkdirSync(sessionsDir(home, id), { recursive: true })
+  fs.writeFileSync(path.join(sessionsDir(home, id), `${rec.session_id}.json`), JSON.stringify(rec))
+}
+
+test('SessionStart brief: prints a one-liner when another session exists', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  const out = emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  assert.match(out, /sage: \d+ live · nearest feat-other touches src\/x\.ts/)
+})
+
+test('SessionStart brief: silent when solo, when disabled, and on non-SessionStart events', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  // solo → no other session → no brief
+  assert.equal(emit({ hook_event_name: 'SessionStart', session_id: 'solo', cwd: repo }, home).trim(), '')
+  // a Stop with another session present → still no brief (SessionStart-only)
+  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  assert.equal(emit({ hook_event_name: 'Stop', session_id: 'solo', cwd: repo }, home).trim(), '')
+  // disabled → no brief even on SessionStart with another session present
+  const home2 = mkTmp('sage-h-') // no config seeded = disabled
+  const repo2 = mkGitRepo()
+  seedOther(home2, resolveRepoId(repo2), { session_id: 'other', branch: 'feat-o', touched_globs: ['a.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  assert.equal(emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo2 }, home2).trim(), '')
 })
 
 test('PreCompact on a non-repo cwd writes nothing and does not throw', () => {
