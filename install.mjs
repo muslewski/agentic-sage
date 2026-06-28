@@ -46,19 +46,28 @@ if (stat) {
   fs.symlinkSync(target, link)
 }
 
-// 3. merge lifecycle hooks into settings.json (back up, skip-if-present)
+// 3. merge lifecycle hooks into settings.json (back up once, skip-if-present).
+// On malformed JSON we ABORT — never overwrite the human's live config.
 const settingsPath = path.join(home, '.claude', 'settings.json')
 let settings = {}
 if (fs.existsSync(settingsPath)) {
-  fs.copyFileSync(settingsPath, settingsPath + '.bak')
+  const bak = settingsPath + '.bak'
+  if (!fs.existsSync(bak)) fs.copyFileSync(settingsPath, bak) // preserve the PRISTINE original
   try {
     settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
   } catch {
-    settings = {}
+    console.error(
+      `SAGE install ABORTED: ${settingsPath} is not valid JSON. ` +
+        `Fix it and re-run — no changes were made to it.`,
+    )
+    process.exit(1)
   }
 }
 settings.hooks = settings.hooks || {}
-const command = `node ${link}`
+// Quote both paths and use the absolute node binary (process.execPath) so a
+// space in $HOME or an nvm-managed node (not on the hook shell's PATH) can't
+// leave SAGE installed-but-dead.
+const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(link)}`
 for (const ev of HOOK_EVENTS) {
   settings.hooks[ev] = settings.hooks[ev] || []
   const present = settings.hooks[ev].some((group) =>

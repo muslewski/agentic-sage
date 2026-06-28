@@ -47,3 +47,13 @@ test('preserves a pre-existing unrelated hook and never enables', () => {
   const cfg = JSON.parse(fs.readFileSync(path.join(claude, 'sage', 'config.json'), 'utf8'))
   assert.equal(cfg.enabled, false)
 })
+
+test('malformed settings.json → abort, original left intact', () => {
+  const home = mkTmp('sage-h-')
+  const claude = path.join(home, '.claude')
+  fs.mkdirSync(claude, { recursive: true })
+  const sp = path.join(claude, 'settings.json')
+  fs.writeFileSync(sp, '{ bad json,, }')
+  assert.throws(() => runInstall(home)) // exit 1 → execFileSync throws
+  assert.equal(fs.readFileSync(sp, 'utf8'), '{ bad json,, }') // never overwritten
+})

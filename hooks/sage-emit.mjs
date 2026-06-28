@@ -13,7 +13,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { resolveRepoId } from '../lib/repo-id.mjs'
-import { isEnabled } from '../lib/enabled.mjs'
+import { isGloballyEnabled, isEnabled } from '../lib/enabled.mjs'
 import { readRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
 import { gitSignals } from '../lib/git.mjs'
 import { pidForSession } from '../lib/registry.mjs'
@@ -26,6 +26,7 @@ const branchOf = (cwd) => {
     return execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 3000,
     }).trim()
   } catch {
     return null
@@ -33,6 +34,14 @@ const branchOf = (cwd) => {
 }
 
 const main = () => {
+  // Never block on a TTY: a hook always pipes its payload; a TTY stdin would
+  // hang readFileSync(0) until EOF. The watchdog (below) is the backstop.
+  try {
+    if (process.stdin.isTTY) return
+  } catch {
+    /* ignore */
+  }
+
   let raw = ''
   try {
     raw = fs.readFileSync(0, 'utf8') // fd 0 = stdin
@@ -53,10 +62,14 @@ const main = () => {
   const cwd = payload.cwd || process.cwd()
   if (!sid || !event) return
 
+  // DEFAULT-OFF fast path — tier-1 check FIRST (one file read), before any git.
+  if (!isGloballyEnabled(home)) return
+
   const repoId = resolveRepoId(cwd)
   if (!repoId) return // not a git repo → nothing to judge
 
-  if (!isEnabled({ home, repoId, cwd })) return // DEFAULT-OFF fast path
+  // Full gate (re-confirms global + per-repo + per-session opt-out).
+  if (!isEnabled({ home, repoId, cwd })) return
 
   const now = Date.now()
   const at = new Date(now).toISOString()
@@ -65,6 +78,7 @@ const main = () => {
     case 'SessionStart': {
       const sig = gitSignals(cwd)
       const pid = pidForSession(home, sid)
+      const prev = readRecord(home, repoId, sid)
       mergeRecord(home, repoId, sid, {
         session_id: sid,
         repo_id: repoId,
@@ -79,7 +93,7 @@ const main = () => {
         source: payload.source || null,
         status: 'active',
         liveness: 'idle',
-        opened_at: at,
+        opened_at: (prev && prev.opened_at) || at, // preserve true open time across resume/clear
         updated_at: at,
       })
       appendEvent(home, repoId, { event: 'open', session_id: sid, source: payload.source || null, at })
