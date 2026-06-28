@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { gitSignals, branchOf } from '../lib/git.mjs'
+import { gitSignals, branchOf, crossStat } from '../lib/git.mjs'
 import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 
 test('clean repo on main: head set, not dirty, nothing touched', () => {
@@ -39,4 +39,21 @@ test('branchOf returns the current branch', () => {
 
 test('branchOf on a non-repo returns null', () => {
   assert.equal(branchOf(mkTmp('sage-norepo-')), null)
+})
+
+test('crossStat: numstat between two branches for a file; safe on bad input', () => {
+  const repo = mkGitRepo() // on `main`, one commit
+  git(repo, 'checkout', '-qb', 'feat-b')
+  fs.writeFileSync(path.join(repo, 'shared.ts'), 'base line\nbranch-b line\n')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-qm', 'b edits shared')
+  const stat = crossStat(repo, 'main', 'feat-b', 'shared.ts')
+  assert.equal(stat.length, 1)
+  assert.equal(stat[0].file, 'shared.ts')
+  assert.equal(stat[0].added, 2)
+  assert.equal(stat[0].deleted, 0)
+  // absent file / bad ref → [] (defensive, never throws)
+  assert.deepEqual(crossStat(repo, 'main', 'feat-b', 'nope.ts'), [])
+  assert.deepEqual(crossStat(repo, 'bad-ref', 'also-bad', 'shared.ts'), [])
+  assert.deepEqual(crossStat(mkTmp('sage-norepo-'), 'a', 'b', 'x'), [])
 })
