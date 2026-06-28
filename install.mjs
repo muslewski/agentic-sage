@@ -77,8 +77,28 @@ for (const ev of HOOK_EVENTS) {
 }
 fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n')
 
+// 4. tmux fleet pane — idempotent, additive (mirrors the existing `bind g`).
+//    Absolute node + sage path so the popup works regardless of the shell PATH.
+const tmuxConf = path.join(home, '.tmux.conf')
+const sageBin = path.join(repoRoot, 'bin', 'sage')
+const bindLine = `bind j display-popup -E -w 90% -h 70% '${process.execPath} ${sageBin} board'`
+let conf = ''
+try {
+  conf = fs.readFileSync(tmuxConf, 'utf8')
+} catch {
+  /* no tmux.conf yet */
+}
+let tmuxNote = `already present (skipped)`
+if (!conf.includes(`${sageBin} board`)) {
+  if (conf && !fs.existsSync(tmuxConf + '.bak')) fs.copyFileSync(tmuxConf, tmuxConf + '.bak')
+  fs.appendFileSync(tmuxConf, `${conf && !conf.endsWith('\n') ? '\n' : ''}# SAGE fleet pane (bind j)\n${bindLine}\n`)
+  tmuxNote = `added \`bind j\` → run \`tmux source-file ~/.tmux.conf\` to apply`
+}
+
 console.log(`SAGE installed — DISABLED by default.
   config:   ${gc}
   hook:     ${link} -> ${target}
   settings: ${settingsPath} (backed up to .bak if it existed)
-Enable when ready:  edit ${gc} → {"enabled": true}`)
+  tmux:     ${tmuxConf} — ${tmuxNote}
+Enable when ready:  edit ${gc} → {"enabled": true}  (or: sage on)
+Fleet line:  add \`${sageBin} fleet\` to your session-sync tick for an always-on summary.`)

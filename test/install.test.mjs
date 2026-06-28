@@ -48,6 +48,21 @@ test('preserves a pre-existing unrelated hook and never enables', () => {
   assert.equal(cfg.enabled, false)
 })
 
+test('tmux bind: adds an idempotent bind j; backs up + preserves a pre-existing conf', () => {
+  const home = mkTmp('sage-h-')
+  const conf = path.join(home, '.tmux.conf')
+  fs.writeFileSync(conf, 'set -g mouse on\n') // pre-existing unrelated config
+  runInstall(home)
+  const after = fs.readFileSync(conf, 'utf8')
+  assert.match(after, /set -g mouse on/) // preserved
+  assert.match(after, /bind j .*sage.* board/) // our bind added
+  assert.equal(fs.readFileSync(conf + '.bak', 'utf8'), 'set -g mouse on\n') // backed up pristine
+  // idempotent: a second run does not duplicate the bind
+  runInstall(home)
+  const binds = (fs.readFileSync(conf, 'utf8').match(/bind j /g) || []).length
+  assert.equal(binds, 1)
+})
+
 test('malformed settings.json → abort, original left intact', () => {
   const home = mkTmp('sage-h-')
   const claude = path.join(home, '.claude')
