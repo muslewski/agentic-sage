@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+// The `sage` CLI — a read-mostly fleet-judge front-end over P1's records.
+// Resolves the repo from cwd; degrades to a clear line on any non-git/empty case.
+import os from 'node:os'
+import { resolveRepoId } from '../lib/repo-id.mjs'
+import { collectSessions, renderBoard } from '../lib/board.mjs'
+import {
+  setEnabled,
+  linkSession,
+  unlinkSession,
+  listRepos,
+  doctor,
+  renderDoctor,
+} from '../lib/control.mjs'
+
+const USAGE = `usage: sage <command>
+  board              roster of this repo's sessions
+  repos              list all judged repos
+  on | off           enable/disable SAGE globally
+  link <sid> [state] manual link_state override (default: linked)
+  unlink <sid>       mark a session unlinked (closed)
+  doctor             validate dirs / hook / settings / token-forecast`
+
+const main = () => {
+  const [cmd, a1, a2] = process.argv.slice(2)
+  const home = os.homedir()
+  const cwd = process.cwd()
+  const now = Date.now()
+
+  switch (cmd) {
+    case 'board': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      return console.log(renderBoard(collectSessions(home, repoId, now), { repoId, now }))
+    }
+    case 'repos': {
+      const repos = listRepos(home)
+      if (!repos.length) return console.log('sage: no judged repos yet')
+      return console.log(repos.map((r) => `  ${r.repoId}  (${r.sessions} session(s))`).join('\n'))
+    }
+    case 'on':
+    case 'off':
+      setEnabled(home, cmd === 'on')
+      return console.log(`SAGE globally ${cmd === 'on' ? 'enabled' : 'disabled'}`)
+    case 'link':
+    case 'unlink': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      if (!a1) return console.log(`usage: sage ${cmd} <session_id>${cmd === 'link' ? ' [state]' : ''}`)
+      cmd === 'link'
+        ? linkSession(home, repoId, a1, a2 || 'linked')
+        : unlinkSession(home, repoId, a1)
+      return console.log(`sage: ${cmd === 'link' ? `linked ${a1} (${a2 || 'linked'})` : `unlinked ${a1}`}`)
+    }
+    case 'doctor':
+      return console.log(renderDoctor(doctor(home, cwd)))
+    default:
+      return console.log(USAGE)
+  }
+}
+
+try {
+  main()
+} catch (e) {
+  console.log(`sage: ${e && e.message ? e.message : 'error'}`)
+}
