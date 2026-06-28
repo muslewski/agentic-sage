@@ -22,7 +22,7 @@ const fixture = () => {
     path.join(root, 'syndcast-mind', 'BACKLOG.md'),
     [
       '| ID | Mission | Status | Lands | Notes |', '|---|---|---|---|---|',
-      '| D1 | Thing | 🟡 | feat-x | doing it |',
+      '| D1 | Thing with a 🟡 glyph in the prose | 🟡 | feat-x | sub-task ✅ note |',
       '| D2 | Other | ✅ | docs→main | done |', '',
     ].join('\n'),
   )

@@ -83,7 +83,9 @@ export const claimedWork = (rec, ctx) => {
     const id = cells[1] // cells[0] is '' (leading pipe)
     if (/^-+$/.test(id) || id.toLowerCase() === 'id') continue // separator/header
     if (cells.some((c) => c.includes(branch))) {
-      const status = cells.find((c) => /[🟡✅⬜🅓]/u.test(c)) || ''
+      // the Status cell is EXACTLY a status glyph — Mission/Notes cells also
+      // contain glyphs (e.g. "P0 🟡"), so match the standalone cell, not `includes`.
+      const status = cells.find((c) => /^[🟡✅⬜🅓]$/u.test(c)) || ''
       return { row: id, status }
     }
   }
