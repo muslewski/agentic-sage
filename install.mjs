@@ -11,7 +11,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { sageHome, globalConfig } from './lib/paths.mjs'
 
-const HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'SessionEnd']
+// PreToolUse drives the default-OFF guard (P7). Inert until a guard is armed
+// (sage guard on) — the emitter fast-skips on a cheap breadcrumb otherwise.
+const HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'SessionEnd', 'PreToolUse']
 
 const home = os.homedir()
 const repoRoot = path.dirname(fileURLToPath(import.meta.url))
@@ -101,4 +103,6 @@ console.log(`SAGE installed — DISABLED by default.
   settings: ${settingsPath} (backed up to .bak if it existed)
   tmux:     ${tmuxConf} — ${tmuxNote}
 Enable when ready:  edit ${gc} → {"enabled": true}  (or: sage on)
-Fleet line:  add \`${sageBin} fleet\` to your session-sync tick for an always-on summary.`)
+Fleet line:  add \`${sageBin} fleet\` to your session-sync tick for an always-on summary.
+Guard:    built but OFF — arm per repo with \`sage guard add <path>\` then \`sage guard on\`
+          (blocks edits to contested paths via exit 2; fail-open + default-OFF).`)
