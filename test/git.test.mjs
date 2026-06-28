@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { gitSignals } from '../lib/git.mjs'
+import { gitSignals, branchOf } from '../lib/git.mjs'
 import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 
 test('clean repo on main: head set, not dirty, nothing touched', () => {
@@ -31,4 +31,12 @@ test('a branch commit shows in touched (vs main)', () => {
 test('non-git path degrades to safe defaults', () => {
   const sig = gitSignals(mkTmp('sage-norepo-'))
   assert.deepEqual(sig, { head: null, dirty: false, touched: [] })
+})
+
+test('branchOf returns the current branch', () => {
+  assert.equal(branchOf(mkGitRepo()), 'main')
+})
+
+test('branchOf on a non-repo returns null', () => {
+  assert.equal(branchOf(mkTmp('sage-norepo-')), null)
 })
