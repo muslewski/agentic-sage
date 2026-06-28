@@ -21,6 +21,14 @@ import { pidForSession } from '../lib/registry.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
+import {
+  guardsActive,
+  readGuard,
+  targetPath,
+  relForRepo,
+  shouldBlock,
+  blockMessage,
+} from '../lib/guard.mjs'
 
 const POST_TOOL_THROTTLE_MS = 30000
 
@@ -55,6 +63,11 @@ const main = () => {
 
   // DEFAULT-OFF fast path — tier-1 check FIRST (one file read), before any git.
   if (!isGloballyEnabled(home)) return
+
+  // HOT-PATH-CHEAP: PreToolUse fires before every tool call. With no guard armed
+  // anywhere (the default), skip on a single cheap breadcrumb check — no git, no
+  // per-repo read, no chance of a block.
+  if (event === 'PreToolUse' && !guardsActive(home)) return
 
   const repoId = resolveRepoId(cwd)
   if (!repoId) return // not a git repo → nothing to judge
@@ -153,6 +166,25 @@ const main = () => {
       })
       appendEvent(home, repoId, { event: 'close', session_id: sid, reason: payload.reason || null, at })
       break
+
+    case 'PreToolUse': {
+      // The ONE component that can act: block (exit 2) an edit to a contested
+      // path. Gated by SAGE-on (above) AND this repo's armed guard; fail-open
+      // (any throw → the trailing exit 0). Read-only — no record write on this
+      // hot path; only a cheap event on an actual block.
+      const guard = readGuard(home, repoId)
+      if (!guard.enabled || !guard.paths.length) break
+      const target = targetPath(payload.tool_name, payload.tool_input)
+      if (!target) break
+      const rel = relForRepo(target, resolveRepoRoot(cwd) || cwd)
+      const { blocked, matched } = shouldBlock(rel, guard)
+      if (blocked) {
+        appendEvent(home, repoId, { event: 'guard-block', session_id: sid, path: rel, matched, at })
+        process.stderr.write(blockMessage(rel, matched) + '\n')
+        process.exit(2)
+      }
+      break
+    }
 
     default:
       break
