@@ -41,6 +41,11 @@ test('overlaps: exact, one-glob match, both-glob static-prefix', () => {
   assert.ok(overlaps('src/**', 'src/auth/login.ts'))
   assert.ok(overlaps('src/auth/**', 'src/auth/x.ts'))
   assert.ok(!overlaps('src/auth/**', 'src/billing/**'))
+  // empty-static-prefix globs must NOT all collide: suffix discriminates.
+  assert.ok(!overlaps('*.ts', '*.md'))
+  assert.ok(overlaps('*.ts', '*.ts'))
+  assert.ok(!overlaps('**/a.ts', '**/b.ts'))
+  assert.ok(overlaps('src/**', 'src/auth/*.ts')) // src/** suffix '' → vacuously ok
 })
 
 test('isGenerated: lockfiles, dirs, markers; source false; extra glob', () => {
