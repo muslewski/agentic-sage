@@ -1,0 +1,13 @@
+{
+  "name": "agentic-sage",
+  "version": "0.0.0",
+  "description": "SAGE — a passive, read-only fleet judge for many parallel agent coding sessions. One judge per repo.",
+  "type": "module",
+  "bin": {
+    "sage": "./bin/sage"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
