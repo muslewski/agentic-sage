@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionFile, eventsFile, sageHome } from '../lib/paths.mjs'
+import { readSidecar } from '../lib/handoff.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'sage-emit.mjs')
@@ -62,4 +63,41 @@ test('non-git cwd ⇒ nothing written', () => {
   const notRepo = mkTmp('sage-norepo-')
   emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: notRepo }, home)
   assert.equal(fs.existsSync(path.join(sageHome(home), 'repos')), false)
+})
+
+test('PreCompact auto-dumps md+json and stamps the record', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  const tmpDir = mkTmp('sage-dump-')
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
+  })
+  const jsons = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'))
+  assert.equal(jsons.length, 1)
+  const sc = readSidecar(path.join(tmpDir, jsons[0]))
+  assert.equal(sc.source, 'precompact')
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.ok(rec.handoff_path)
+  assert.ok(rec.handoff_at)
+  const events = fs.readFileSync(eventsFile(home, id), 'utf8').split('\n').filter(Boolean)
+  assert.ok(events.map((l) => JSON.parse(l).event).includes('precompact'))
+})
+
+test('PreCompact on a non-repo cwd writes nothing and does not throw', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const notRepo = mkTmp('sage-norepo-')
+  const tmpDir = mkTmp('sage-dump-')
+  assert.doesNotThrow(() =>
+    execFileSync('node', [EMIT], {
+      input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: notRepo }),
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
+    }),
+  )
+  assert.equal(fs.readdirSync(tmpDir).length, 0)
 })

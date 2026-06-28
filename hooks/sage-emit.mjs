@@ -11,27 +11,16 @@
 // this session's record + appends an event, partitioned by repo.
 import fs from 'node:fs'
 import os from 'node:os'
-import { execFileSync } from 'node:child_process'
-import { resolveRepoId } from '../lib/repo-id.mjs'
+import path from 'node:path'
+import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { isGloballyEnabled, isEnabled } from '../lib/enabled.mjs'
 import { readRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
-import { gitSignals } from '../lib/git.mjs'
+import { gitSignals, branchOf } from '../lib/git.mjs'
+import { autoDump } from '../lib/handoff.mjs'
 import { pidForSession } from '../lib/registry.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 
 const POST_TOOL_THROTTLE_MS = 30000
-
-const branchOf = (cwd) => {
-  try {
-    return execFileSync('git', ['-C', cwd, 'rev-parse', '--abbrev-ref', 'HEAD'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 3000,
-    }).trim()
-  } catch {
-    return null
-  }
-}
 
 const main = () => {
   // Never block on a TTY: a hook always pipes its payload; a TTY stdin would
@@ -127,10 +116,24 @@ const main = () => {
       break
     }
 
-    case 'PreCompact':
-      // Marker only; the structured handoff dump is P2.
+    case 'PreCompact': {
+      // Compaction is about to wipe the thread → auto-publish objective truth
+      // so the human need not remember /handoff. A hook has no conversation
+      // access, so the dump is git/registry signals only (no narrative).
       appendEvent(home, repoId, { event: 'precompact', session_id: sid, at })
+      const prefix = path.basename(resolveRepoRoot(cwd) || cwd)
+      const tmpDir = process.env.SAGE_TMPDIR || os.tmpdir()
+      const { jsonPath } = autoDump({
+        cwd,
+        sessionId: sid,
+        pid: pidForSession(home, sid),
+        now,
+        tmpDir,
+        prefix,
+      })
+      mergeRecord(home, repoId, sid, { handoff_path: jsonPath, handoff_at: at, updated_at: at })
       break
+    }
 
     case 'SessionEnd':
       mergeRecord(home, repoId, sid, {
