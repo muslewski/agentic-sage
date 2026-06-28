@@ -2,7 +2,8 @@
 // The `sage` CLI — a read-mostly fleet-judge front-end over P1's records.
 // Resolves the repo from cwd; degrades to a clear line on any non-git/empty case.
 import os from 'node:os'
-import { resolveRepoId } from '../lib/repo-id.mjs'
+import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
+import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
 import { collectSessions, renderBoard } from '../lib/board.mjs'
 import {
   setEnabled,
@@ -33,7 +34,14 @@ const USAGE = `usage: sage <command>
   unlink <sid>         mark a session unlinked (closed)
   doctor               validate dirs / hook / settings / token-forecast`
 
-const main = () => {
+// Load the optional per-repo adapter + its ctx (project enrichment; null on any
+// repo with no adapter → the agnostic P1–P4 path).
+const adapterCtx = async (home, repoId, cwd) => {
+  const ctx = { repoRoot: resolveRepoRoot(cwd) }
+  return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
+}
+
+const main = async () => {
   const [cmd, a1, a2] = process.argv.slice(2)
   const home = os.homedir()
   const cwd = process.cwd()
@@ -43,7 +51,10 @@ const main = () => {
     case 'board': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
-      return console.log(renderBoard(collectSessions(home, repoId, now), { repoId, now }))
+      const sessions = collectSessions(home, repoId, now)
+      const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
+      if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
+      return console.log(renderBoard(sessions, { repoId, now }))
     }
     case 'territory': {
       const repoId = resolveRepoId(cwd)
@@ -51,7 +62,10 @@ const main = () => {
       const queries = process.argv.slice(3)
       if (!queries.length) return console.log('usage: sage territory <glob> [glob…]')
       const selfSid = process.env.SAGE_SELF_SID || undefined
-      return console.log(renderTerritory(territory(home, repoId, queries, { now, selfSid }), { queries }))
+      const overlaps = territory(home, repoId, queries, { now, selfSid })
+      const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
+      if (adapter) for (const o of overlaps) o.zone = zoneOf(adapter, ctx, o.hit)
+      return console.log(renderTerritory(overlaps, { queries }))
     }
     case 'why-diverged': {
       const repoId = resolveRepoId(cwd)
@@ -65,13 +79,19 @@ const main = () => {
         const other = touches.find((o) => o.branch && o.branch !== t.branch)
         if (t.worktree && t.branch && other) t.stat = crossStat(t.worktree, other.branch, t.branch, a1)
       }
+      const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
+      if (adapter) for (const t of touches) t.zone = zoneOf(adapter, ctx, a1)
       return console.log(renderWhyDiverged(touches, { file: a1 }))
     }
     case 'merge-brief': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
       const selfSid = process.env.SAGE_SELF_SID || undefined
-      return console.log(renderMergeBrief(mergeBrief(home, repoId, { now, selfSid }), { repoId }))
+      const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
+      const extraGlobs = adapter?.generatedGlobs?.() ?? []
+      const contested = mergeBrief(home, repoId, { now, selfSid, extraGlobs })
+      if (adapter) for (const c of contested) c.zone = zoneOf(adapter, ctx, c.path)
+      return console.log(renderMergeBrief(contested, { repoId }))
     }
     case 'repos': {
       const repos = listRepos(home)
@@ -99,8 +119,4 @@ const main = () => {
   }
 }
 
-try {
-  main()
-} catch (e) {
-  console.log(`sage: ${e && e.message ? e.message : 'error'}`)
-}
+main().catch((e) => console.log(`sage: ${e && e.message ? e.message : 'error'}`))

@@ -66,3 +66,19 @@ test('why-diverged + merge-brief surface a contested file', () => {
   assert.match(brief, /shared\.ts/)
   assert.match(brief, /feat-a/)
 })
+
+test('an adapter enriches board (row) + territory (zone); none → unchanged', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 'a', branch: 'main', touched_globs: ['src/auth/x.ts'], updated_at: '2026-06-28T12:00:00Z' })
+  // no adapter → bare board, no zone/row tokens
+  assert.doesNotMatch(run(['board'], home, repo), /↳|zone:/)
+  // add a repo-local adapter
+  fs.mkdirSync(path.join(repo, '.sage'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.sage', 'adapter.mjs'),
+    'export const ownsZone = (p) => p.startsWith("src/auth") ? "auth" : null\n' +
+    'export const claimedWork = (rec) => rec.branch === "main" ? { row: "D7", status: "🟡" } : null\n')
+  assert.match(run(['board'], home, repo), /D7/)
+  assert.match(run(['territory', 'src/auth/**'], home, repo), /zone: auth/)
+})
