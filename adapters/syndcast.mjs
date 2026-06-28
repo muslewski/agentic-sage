@@ -63,11 +63,16 @@ export const backlogPath = (ctx) => {
   }
 }
 
-// Match a session's branch against a BACKLOG markdown row's Lands cell. Code
-// branches appear verbatim in Lands (e.g. `fix/editor-test-type-drift`).
+// Match a session's branch against a BACKLOG row's **Lands** cell only. Code
+// branches appear verbatim in Lands (e.g. `fix/editor-test-type-drift`). The
+// Lands column index comes from each table's header row, so a branch token in a
+// Mission/Notes cell can't false-claim a row. `main`/`master` is the docs /
+// primary-checkout branch — it never claims a code row.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const claimedWork = (rec, ctx) => {
   const branch = rec && rec.branch
-  if (!branch) return null
+  if (!branch || branch === 'main' || branch === 'master') return null
   const p = backlogPath(ctx)
   if (!p) return null
   let text = ''
@@ -76,15 +81,25 @@ export const claimedWork = (rec, ctx) => {
   } catch {
     return null
   }
+  // branch as a delimited token (not a loose substring): `/`, `.`, `-` are
+  // branch chars, so a boundary is any other char or a line edge.
+  const tokenRe = new RegExp(`(^|[^\\w./-])${escapeRe(branch)}([^\\w./-]|$)`)
+  let landsIdx = -1
   for (const line of text.split('\n')) {
-    if (!line.startsWith('|')) continue
+    if (!line.startsWith('|')) {
+      landsIdx = -1 // left the table → the Lands column no longer applies
+      continue
+    }
     const cells = line.split('|').map((c) => c.trim())
-    if (cells.length < 4) continue
-    const id = cells[1] // cells[0] is '' (leading pipe)
-    if (/^-+$/.test(id) || id.toLowerCase() === 'id') continue // separator/header
-    if (cells.some((c) => c.includes(branch))) {
-      // the Status cell is EXACTLY a status glyph — Mission/Notes cells also
-      // contain glyphs (e.g. "P0 🟡"), so match the standalone cell, not `includes`.
+    const hi = cells.findIndex((c) => /^lands$/i.test(c))
+    if (hi >= 0) {
+      landsIdx = hi // header row → locate Lands for the rows that follow
+      continue
+    }
+    if (landsIdx < 0 || cells.length <= landsIdx) continue
+    if (/^-+$/.test(cells[1] || '')) continue // separator row
+    if (tokenRe.test(cells[landsIdx])) {
+      const id = cells[1] // cells[0] is '' (leading pipe)
       const status = cells.find((c) => /^[🟡✅⬜🅓]$/u.test(c)) || ''
       return { row: id, status }
     }

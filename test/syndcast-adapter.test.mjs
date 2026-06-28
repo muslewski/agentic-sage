@@ -23,7 +23,8 @@ const fixture = () => {
     [
       '| ID | Mission | Status | Lands | Notes |', '|---|---|---|---|---|',
       '| D1 | Thing with a 🟡 glyph in the prose | 🟡 | feat-x | sub-task ✅ note |',
-      '| D2 | Other | ✅ | docs→main | done |', '',
+      '| D2 | Other | ✅ | docs→main | done |',
+      '| D3 | mentions feat-y in the mission prose | ⬜ | other-branch | n |', '',
     ].join('\n'),
   )
   return root
@@ -36,11 +37,15 @@ test('ownsZone: matching glob → zone slug; non-match → null', () => {
   assert.equal(ownsZone('src/bar/x.ts', ctx), null)
 })
 
-test('claimedWork: branch in Lands → row+status; unknown/none → null', () => {
+test('claimedWork: only the Lands cell matches; main + prose-mentions do not', () => {
   const ctx = { repoRoot: fixture() }
   assert.deepEqual(claimedWork({ branch: 'feat-x' }, ctx), { row: 'D1', status: '🟡' })
   assert.equal(claimedWork({ branch: 'nope' }, ctx), null)
   assert.equal(claimedWork({}, ctx), null)
+  // branch named only in a Mission cell must NOT claim that row (Lands-scoped)
+  assert.equal(claimedWork({ branch: 'feat-y' }, ctx), null)
+  // main/master is the docs branch — never claims a code row (even vs docs→main)
+  assert.equal(claimedWork({ branch: 'main' }, ctx), null)
 })
 
 test('backlogPath + generatedGlobs/isGenerated', () => {
