@@ -1,0 +1,102 @@
+# Writing a SAGE adapter
+
+SAGE's **core** works on any repo with zero configuration — it reads git, tmux, the session
+registry, and a generic handoff sidecar. An **adapter** is *optional* per-project enrichment: it
+teaches SAGE your repo's vocabulary so the board and territory show **named work and zones**
+("zone: `billing-credits`", "↳ row `D9`") instead of bare paths.
+
+**A repo with no adapter is a first-class citizen.** Everything still works; warnings just
+reference paths, not named rows or zones.
+
+## The contract
+
+An adapter is a single ES module exporting up to four functions. All are optional — export only
+what your repo can answer. `ctx` is always `{ repoRoot }` (the absolute path to the repo root).
+
+```js
+// ownsZone(path, ctx) → string | null
+//   Map a repo-relative path to an architectural-zone name (or null).
+export const ownsZone = (p, ctx) => /* zone slug */ null
+
+// claimedWork(record, ctx) → { row, status } | null
+//   Map a session record (its `branch`, etc.) to a tracked work item.
+//   `row` is the item id (e.g. a backlog row), `status` an optional glyph/label.
+export const claimedWork = (rec, ctx) => /* { row: 'D9', status: '🟡' } */ null
+
+// backlogPath(ctx) → string | null
+//   Absolute path to the repo's backlog/worklog file, if it has one.
+export const backlogPath = (ctx) => null
+
+// generatedGlobs() → string[]
+//   Globs for THIS repo's generated outputs. A contested generated file is
+//   flagged "regenerate, don't merge" instead of hand-merged.
+export const generatedGlobs = () => []
+```
+
+The core consumes these through thin enrichment helpers (`lib/adapter.mjs`): `zoneOf`, `rowOf`. A
+missing export simply yields no enrichment for that dimension.
+
+## Discovery order
+
+When the CLI runs in a repo, it looks for an adapter in this order and uses the first it finds:
+
+1. `<repoRoot>/.sage/adapter.mjs` — in-repo (the generic, committable location).
+2. `~/.claude/sage/repos/<repo-id>/adapter.mjs` — out-of-tree (symlinked; keeps the adapter out
+   of the project's own git history — see "Out-of-tree adapters" below).
+3. none — core-only.
+
+## Fail-closed-to-core
+
+A broken, missing, or throwing adapter must **never** crash the CLI. `loadAdapter` dynamically
+imports the module and returns `null` on any error; every enrichment helper swallows adapter
+throws and falls back to the bare-path core behavior. So a bad adapter degrades gracefully to
+exactly what you'd get with no adapter — it can't take SAGE down. Test your adapter, but know the
+blast radius is contained by design.
+
+## The handoff `project` blob
+
+The generic handoff sidecar (`sage.handoff/1`) carries the universal core fields plus an **opaque
+`project` object** the adapter may fill. The core never inspects `project` — it's a passthrough for
+adapter-specific truth a future enrichment step can read. Keep core fields and project fields
+separate; the core only ever reads the core fields.
+
+## Glob dialect
+
+Adapter globs use SAGE's dialect (shared with the guard and territory): `*` and `?` are the only
+wildcards; `[ ] { }` are **literal** path characters (so a Next.js dynamic route `[channelSlug]`
+matches itself, not a regex char-class). Brace expansion (`{a,b}`) is **not** supported — a brace
+glob matches literally. Use `overlaps` from `lib/territory.mjs` if your adapter needs to match
+paths against globs (the syndcast adapter does).
+
+## Worked example — `adapters/syndcast.mjs`
+
+The shipped reference adapter for the Syndcast project reads its Obsidian "Mind" vault under
+`<repoRoot>/syndcast-mind/`:
+
+- **`ownsZone(path, ctx)`** — scans `map/zones/*.md`, parses each zone's `owns.globs` list with a
+  zero-dependency line scanner (no YAML lib), and returns the zone slug whose globs `overlaps` the
+  path.
+- **`claimedWork(rec, ctx)`** — matches the session's `branch` against the **Lands** column of
+  `BACKLOG.md` rows (column index taken from each table's header, so a branch token in another
+  cell can't false-claim a row; `main`/`master` never claims a code row), returning `{ row, status }`.
+- **`backlogPath(ctx)`** — `<repoRoot>/syndcast-mind/BACKLOG.md` if present.
+- **`generatedGlobs()`** — `payload-types.ts`, `importMap.js`, the Mind `map/index.md`, the visuals
+  manifest — syndcast's regenerate-don't-merge outputs.
+
+It is **read-only and zero-dependency** — a good template for your own.
+
+### Out-of-tree adapters (the isolation pattern)
+
+The syndcast adapter source lives **here, in `agentic-sage/adapters/`**, not in syndcast's own git
+tree, and is symlinked to `~/.claude/sage/repos/<id>/adapter.mjs` for live use. This keeps SAGE
+(meta-tooling) entirely out of the project it observes. If you'd rather version the adapter with
+your project, just commit it at `<repoRoot>/.sage/adapter.mjs` (discovery slot 1) — both work.
+
+## Extension points (not yet wired)
+
+- **`program` / `phase` / `claimed_globs` mapping** — richer than `claimedWork`'s `{row, status}`;
+  needs the controller to register the session's program/phase at "go" (not derivable from git
+  alone). A future contract addition.
+- **Fleet-aware guard** — an adapter-supplied contested set. The guard is deliberately a
+  *manual* human-curated list today (see `CONVENTIONS.md` and decision `0083`); auto-deriving it
+  from other sessions' claims is a possible future enhancement, not the current contract.
