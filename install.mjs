@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+// Wire SAGE into ~/.claude. Idempotent and CONSERVATIVE:
+//   - seeds a DISABLED global config (never overwrites an existing one)
+//   - NEVER writes {enabled:true} — activation is the human's explicit choice
+//   - symlinks the emitter hook (backs up a non-symlink collision)
+//   - merges 6 lifecycle hooks into settings.json (backs it up first,
+//     skips entries already present, preserves unrelated hooks)
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { sageHome, globalConfig } from './lib/paths.mjs'
+
+const HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'SessionEnd']
+
+const home = os.homedir()
+const repoRoot = path.dirname(fileURLToPath(import.meta.url))
+
+// 1. seed default-OFF global config (never clobber)
+fs.mkdirSync(sageHome(home), { recursive: true })
+const gc = globalConfig(home)
+if (!fs.existsSync(gc)) fs.writeFileSync(gc, JSON.stringify({ enabled: false }, null, 2) + '\n')
+
+// 2. symlink the emitter into ~/.claude/hooks
+const hooksDir = path.join(home, '.claude', 'hooks')
+fs.mkdirSync(hooksDir, { recursive: true })
+const link = path.join(hooksDir, 'sage-emit.mjs')
+const target = path.join(repoRoot, 'hooks', 'sage-emit.mjs')
+let stat = null
+try {
+  stat = fs.lstatSync(link)
+} catch {
+  /* absent */
+}
+if (stat) {
+  if (stat.isSymbolicLink()) {
+    if (fs.readlinkSync(link) !== target) {
+      fs.unlinkSync(link)
+      fs.symlinkSync(target, link)
+    }
+  } else {
+    fs.renameSync(link, link + '.bak') // back up a real file we didn't create
+    fs.symlinkSync(target, link)
+  }
+} else {
+  fs.symlinkSync(target, link)
+}
+
+// 3. merge lifecycle hooks into settings.json (back up, skip-if-present)
+const settingsPath = path.join(home, '.claude', 'settings.json')
+let settings = {}
+if (fs.existsSync(settingsPath)) {
+  fs.copyFileSync(settingsPath, settingsPath + '.bak')
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+  } catch {
+    settings = {}
+  }
+}
+settings.hooks = settings.hooks || {}
+const command = `node ${link}`
+for (const ev of HOOK_EVENTS) {
+  settings.hooks[ev] = settings.hooks[ev] || []
+  const present = settings.hooks[ev].some((group) =>
+    (group.hooks || []).some((h) => h.command === command),
+  )
+  if (!present) settings.hooks[ev].push({ hooks: [{ type: 'command', command }] })
+}
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n')
+
+console.log(`SAGE installed — DISABLED by default.
+  config:   ${gc}
+  hook:     ${link} -> ${target}
+  settings: ${settingsPath} (backed up to .bak if it existed)
+Enable when ready:  edit ${gc} → {"enabled": true}`)
