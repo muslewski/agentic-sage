@@ -59,6 +59,22 @@ test('shouldBlock is default-OFF and glob-aware', () => {
   })
 })
 
+test('shouldBlock handles app-router bracket paths literally (no over-block, no miss)', () => {
+  const g = { enabled: true, paths: ['src/app/[channelSlug]/billing/**'] }
+  // own subtree → blocked
+  assert.equal(shouldBlock('src/app/[channelSlug]/billing/page.tsx', g).blocked, true)
+  // sibling subtree under the SAME dynamic seg → NOT blocked
+  assert.equal(shouldBlock('src/app/[channelSlug]/settings/page.tsx', g).blocked, false)
+  // a DIFFERENT dynamic seg → NOT blocked (brackets are literal, not a char-class)
+  assert.equal(shouldBlock('src/app/[teamSlug]/billing/page.tsx', g).blocked, false)
+  // single-char dir must NOT match the bracket class (the old char-class bug)
+  assert.equal(shouldBlock('src/app/c/billing/page.tsx', g).blocked, false)
+  // a literal bracketed guard path matches itself exactly
+  const lit = { enabled: true, paths: ['src/app/[channelSlug]/x.ts'] }
+  assert.equal(shouldBlock('src/app/[channelSlug]/x.ts', lit).blocked, true)
+  assert.equal(shouldBlock('src/app/c/x.ts', lit).blocked, false)
+})
+
 test('writers round-trip + maintain the guards-active breadcrumb', () => {
   const h = tmpHome()
   addGuardPath(h, ID, 'locked.ts')
