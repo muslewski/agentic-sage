@@ -110,6 +110,34 @@ test('PreCompact auto-dumps md+json and stamps the record', () => {
   assert.ok(events.map((l) => JSON.parse(l).event).includes('precompact'))
 })
 
+// P8 portability: the handoff sidecar filename is prefixed by the REPO BASENAME,
+// never a project literal. Characterization test — the behavior ships from P2
+// (emitter: prefix = path.basename(resolveRepoRoot(cwd))); this guards it.
+test('PreCompact sidecar prefix is the repo basename (portable, no project literal)', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  // a git repo whose dir basename we control
+  const parent = mkTmp('sage-pp-')
+  const repo = path.join(parent, 'zzz-portable')
+  fs.mkdirSync(repo)
+  execFileSync('git', ['-C', repo, 'init', '-q', '-b', 'main'], { stdio: 'ignore' })
+  execFileSync('git', ['-C', repo, 'config', 'user.email', 't@t'], { stdio: 'ignore' })
+  execFileSync('git', ['-C', repo, 'config', 'user.name', 't'], { stdio: 'ignore' })
+  fs.writeFileSync(path.join(repo, 'README.md'), '# t\n')
+  execFileSync('git', ['-C', repo, 'add', '-A'], { stdio: 'ignore' })
+  execFileSync('git', ['-C', repo, 'commit', '-qm', 'init'], { stdio: 'ignore' })
+  const tmpDir = mkTmp('sage-dump-')
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
+  })
+  const jsons = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'))
+  assert.equal(jsons.length, 1)
+  assert.ok(jsons[0].startsWith('zzz-portable-handoff-'), `prefix was: ${jsons[0]}`)
+  assert.ok(!jsons[0].includes('syndcast'))
+})
+
 const seedOther = (home, id, rec) => {
   fs.mkdirSync(sessionsDir(home, id), { recursive: true })
   fs.writeFileSync(path.join(sessionsDir(home, id), `${rec.session_id}.json`), JSON.stringify(rec))
