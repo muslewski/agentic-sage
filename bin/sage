@@ -2,6 +2,8 @@
 // The `sage` CLI — a read-mostly fleet-judge front-end over P1's records.
 // Resolves the repo from cwd; degrades to a clear line on any non-git/empty case.
 import os from 'node:os'
+import fs from 'node:fs'
+import path from 'node:path'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
 import { collectSessions, renderBoard } from '../lib/board.mjs'
@@ -30,9 +32,10 @@ import {
   rmGuardPath,
   setGuardEnabled,
   renderGuard,
+  relForRepo,
 } from '../lib/guard.mjs'
 import { resolveSelfSid } from '../lib/self.mjs'
-import { mergeRecord } from '../lib/store.mjs'
+import { mergeRecord, readRecord } from '../lib/store.mjs'
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
@@ -145,6 +148,9 @@ const main = async () => {
         return console.log(
           'sage: cannot resolve the current session — run inside an enabled session, or set SAGE_SELF_SID',
         )
+      if (/[/\\]|\.\./.test(sid)) return console.log('sage: refusing an unsafe SAGE_SELF_SID')
+      if (!readRecord(home, repoId, sid))
+        return console.log(`sage: no open record for ${sid} here — claim from the session that owns it`)
       mergeRecord(home, repoId, sid, {
         claimed_globs: globs,
         link_state: 'linked',
@@ -158,8 +164,21 @@ const main = async () => {
       const sub = a1 || 'list'
       if (sub === 'add' || sub === 'rm') {
         if (!a2) return console.log(`usage: sage guard ${sub} <path>`)
-        sub === 'add' ? addGuardPath(home, repoId, a2) : rmGuardPath(home, repoId, a2)
-        return console.log(`sage: guard ${sub === 'add' ? 'added' : 'removed'} ${a2}`)
+        // Normalize to repo-relative (from the git toplevel) so an absolute, a
+        // ./-prefixed, or a from-subdirectory path matches the emitter's
+        // repo-relative target — otherwise it silently guards nothing.
+        const root = resolveRepoRoot(cwd) || cwd
+        let p = relForRepo(path.resolve(cwd, a2), root)
+        // A bare existing directory guards nothing without /** — expand it.
+        if (sub === 'add' && !/[*?]/.test(p)) {
+          try {
+            if (fs.statSync(path.resolve(cwd, a2)).isDirectory()) p = `${p.replace(/\/$/, '')}/**`
+          } catch {
+            /* not an existing dir — keep as a literal path */
+          }
+        }
+        sub === 'add' ? addGuardPath(home, repoId, p) : rmGuardPath(home, repoId, p)
+        return console.log(`sage: guard ${sub === 'add' ? 'added' : 'removed'} ${p}`)
       }
       if (sub === 'on') {
         setGuardEnabled(home, repoId, true)

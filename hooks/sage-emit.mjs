@@ -179,8 +179,15 @@ const main = () => {
       const rel = relForRepo(target, resolveRepoRoot(cwd) || cwd)
       const { blocked, matched } = shouldBlock(rel, guard)
       if (blocked) {
-        appendEvent(home, repoId, { event: 'guard-block', session_id: sid, path: rel, matched, at })
-        process.stderr.write(blockMessage(rel, matched) + '\n')
+        // Logging must never downgrade a verified block to an allow, so it gets
+        // its own try. Write the reason SYNCHRONOUSLY (fs.writeSync, not the
+        // buffered stderr.write) so exit(2) can't truncate it on a pipe.
+        try {
+          appendEvent(home, repoId, { event: 'guard-block', session_id: sid, path: rel, matched, at })
+        } catch {
+          /* best-effort log; the block still fires */
+        }
+        fs.writeSync(2, blockMessage(rel, matched) + '\n')
         process.exit(2)
       }
       break

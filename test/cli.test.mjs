@@ -122,6 +122,26 @@ test('claim with no resolvable session prints a clear hint; exit 0', () => {
   assert.match(run(['claim', 'src/**'], home, repo), /SAGE_SELF_SID/)
 })
 
+test('claim refuses an unsafe SAGE_SELF_SID (path traversal)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  assert.match(run(['claim', 'src/**'], home, repo, { SAGE_SELF_SID: '../../evil' }), /unsafe/)
+})
+
+test('claim onto a sid with no record prints a hint (no ghost row)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  assert.match(run(['claim', 'src/**'], home, repo, { SAGE_SELF_SID: 'ghost' }), /no open record/)
+})
+
+test('guard add normalizes a ./-prefixed path to repo-relative', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  run(['guard', 'add', './src/x.ts'], home, repo)
+  assert.deepEqual(readGuard(home, id).paths, ['src/x.ts'])
+})
+
 test('an adapter enriches board (row) + territory (zone); none → unchanged', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()

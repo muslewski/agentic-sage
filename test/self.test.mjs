@@ -26,3 +26,14 @@ test('pid-walk matches a record by pid', () => {
 test('no env + no matching pid → null', () => {
   assert.equal(resolveSelfSid(tmpHome(), ID, { pid: 999999, env: {} }), null)
 })
+
+test('pid-walk skips a closed record (no stale/pid-reuse self-match)', () => {
+  const h = tmpHome()
+  writeRecord(h, ID, 'dead', {
+    session_id: 'dead',
+    pid: process.pid,
+    status: 'closed',
+    updated_at: '2026-06-28T00:00:00Z',
+  })
+  assert.equal(resolveSelfSid(h, ID, { pid: process.pid, env: {} }), null)
+})
