@@ -22,9 +22,12 @@ import {
   renderMergeBrief,
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
+import { fleetLine } from '../lib/fleet.mjs'
+import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
+  fleet                one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
   merge-brief          all contested paths before you merge
@@ -54,7 +57,16 @@ const main = async () => {
       const sessions = collectSessions(home, repoId, now)
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
+      const panes = tmuxPanes() // best-effort: jumpable pane per live session
+      if (panes.length) for (const s of sessions) { if (s.pid) s.tmux = paneForPid(s.pid, panes) }
       return console.log(renderBoard(sessions, { repoId, now }))
+    }
+    case 'fleet': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const line = fleetLine(collectSessions(home, repoId, now), { selfSid })
+      return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
     }
     case 'territory': {
       const repoId = resolveRepoId(cwd)

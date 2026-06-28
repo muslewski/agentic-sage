@@ -67,6 +67,22 @@ test('why-diverged + merge-brief surface a contested file', () => {
   assert.match(brief, /feat-a/)
 })
 
+test('fleet prints the nearest-neighbour line; board renders with tmux best-effort', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 'a', branch: 'feat-a', touched_globs: ['src/a.ts'], liveness: 'idle', updated_at: '2026-06-28T11:00:00Z' })
+  seedSession(home, id, { session_id: 'b', branch: 'feat-b', touched_globs: ['src/b.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  assert.match(run(['fleet'], home, repo), /sage: 2 live · nearest feat-b touches src\/b\.ts/)
+  assert.match(run(['board'], home, repo), /feat-b/) // board still renders (tmux column optional)
+})
+
+test('fleet with no other sessions says so', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  assert.match(run(['fleet'], home, repo), /no other sessions/)
+})
+
 test('an adapter enriches board (row) + territory (zone); none → unchanged', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
