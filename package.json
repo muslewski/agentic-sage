@@ -21,7 +21,11 @@
   "author": "Mateusz Muślewski <10kento10@gmail.com>",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/muslewski/agentic-sage.git"
   },
+  "bugs": {
+    "url": "https://github.com/muslewski/agentic-sage/issues"
+  },
+  "homepage": "https://github.com/muslewski/agentic-sage#readme",
   "license": "MIT"
 }
