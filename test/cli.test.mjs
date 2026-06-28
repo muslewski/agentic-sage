@@ -6,11 +6,16 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
-import { sessionsDir, globalConfig } from '../lib/paths.mjs'
+import { sessionsDir, globalConfig, sessionFile } from '../lib/paths.mjs'
+import { readGuard } from '../lib/guard.mjs'
 
 const SAGE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'sage')
-const run = (args, home, cwd) =>
-  execFileSync('node', [SAGE, ...args], { encoding: 'utf8', env: { ...process.env, HOME: home }, cwd })
+const run = (args, home, cwd, extraEnv = {}) =>
+  execFileSync('node', [SAGE, ...args], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, ...extraEnv },
+    cwd,
+  })
 
 test('board prints a seeded session branch', () => {
   const home = mkTmp('sage-h-')
@@ -81,6 +86,40 @@ test('fleet with no other sessions says so', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
   assert.match(run(['fleet'], home, repo), /no other sessions/)
+})
+
+test('guard add/list/on/off/rm round-trip', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  run(['guard', 'add', 'locked.ts'], home, repo)
+  const list = run(['guard', 'list'], home, repo)
+  assert.match(list, /locked\.ts/)
+  assert.match(list, /disarmed/)
+  run(['guard', 'on'], home, repo)
+  assert.equal(readGuard(home, id).enabled, true)
+  assert.match(run(['guard', 'list'], home, repo), /armed/)
+  run(['guard', 'off'], home, repo)
+  assert.equal(readGuard(home, id).enabled, false)
+  run(['guard', 'rm', 'locked.ts'], home, repo)
+  assert.deepEqual(readGuard(home, id).paths, [])
+})
+
+test('claim writes claimed_globs + link_state=linked onto the current record', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 'g1', branch: 'feat-x', updated_at: '2026-06-28T12:00:00Z' })
+  run(['claim', 'src/**', 'docs/**'], home, repo, { SAGE_SELF_SID: 'g1' })
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 'g1'), 'utf8'))
+  assert.deepEqual(rec.claimed_globs, ['src/**', 'docs/**'])
+  assert.equal(rec.link_state, 'linked')
+})
+
+test('claim with no resolvable session prints a clear hint; exit 0', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  assert.match(run(['claim', 'src/**'], home, repo), /SAGE_SELF_SID/)
 })
 
 test('an adapter enriches board (row) + territory (zone); none → unchanged', () => {

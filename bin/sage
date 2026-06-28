@@ -24,6 +24,15 @@ import {
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
+import {
+  readGuard,
+  addGuardPath,
+  rmGuardPath,
+  setGuardEnabled,
+  renderGuard,
+} from '../lib/guard.mjs'
+import { resolveSelfSid } from '../lib/self.mjs'
+import { mergeRecord } from '../lib/store.mjs'
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
@@ -35,6 +44,8 @@ const USAGE = `usage: sage <command>
   on | off             enable/disable SAGE globally
   link <sid> [state]   manual link_state override (default: linked)
   unlink <sid>         mark a session unlinked (closed)
+  claim <glob…>        register this session's intent (claimed_globs)
+  guard …              list | add <path> | rm <path> | on | off (default OFF)
   doctor               validate dirs / hook / settings / token-forecast`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
@@ -123,6 +134,42 @@ const main = async () => {
         ? linkSession(home, repoId, a1, a2 || 'linked')
         : unlinkSession(home, repoId, a1)
       return console.log(`sage: ${cmd === 'link' ? `linked ${a1} (${a2 || 'linked'})` : `unlinked ${a1}`}`)
+    }
+    case 'claim': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const globs = process.argv.slice(3)
+      if (!globs.length) return console.log('usage: sage claim <glob> [glob…]')
+      const sid = resolveSelfSid(home, repoId)
+      if (!sid)
+        return console.log(
+          'sage: cannot resolve the current session — run inside an enabled session, or set SAGE_SELF_SID',
+        )
+      mergeRecord(home, repoId, sid, {
+        claimed_globs: globs,
+        link_state: 'linked',
+        updated_at: new Date(now).toISOString(),
+      })
+      return console.log(`sage: claimed ${globs.join(' ')} on ${sid}`)
+    }
+    case 'guard': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const sub = a1 || 'list'
+      if (sub === 'add' || sub === 'rm') {
+        if (!a2) return console.log(`usage: sage guard ${sub} <path>`)
+        sub === 'add' ? addGuardPath(home, repoId, a2) : rmGuardPath(home, repoId, a2)
+        return console.log(`sage: guard ${sub === 'add' ? 'added' : 'removed'} ${a2}`)
+      }
+      if (sub === 'on') {
+        setGuardEnabled(home, repoId, true)
+        return console.log('sage: guard ARMED — SAGE will now block edits to contested paths here')
+      }
+      if (sub === 'off') {
+        setGuardEnabled(home, repoId, false)
+        return console.log('sage: guard disarmed')
+      }
+      return console.log(renderGuard(readGuard(home, repoId)))
     }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))
