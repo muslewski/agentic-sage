@@ -10,6 +10,18 @@ answers two questions cheaply:
 
 One judge per repo. Zero dependencies, Node ≥ 18, `node --test`.
 
+## Quickstart
+
+```bash
+git clone https://github.com/muslewski/agentic-sage && cd agentic-sage
+node install.mjs        # conservative wiring into ~/.claude — installs DISABLED
+sage on                 # opt in (default OFF)
+```
+
+Then paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into your repo/user
+`CLAUDE.md` and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
+config we run ourselves — in **[`SETUP.md`](./SETUP.md)**.
+
 ## Why — keep the human at fleet altitude
 
 Every popular multi-agent harness scales by **removing the human**: a queen/PM agent drives
