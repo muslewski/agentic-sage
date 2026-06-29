@@ -35,7 +35,10 @@ import {
   relForRepo,
 } from '../lib/guard.mjs'
 import { resolveSelfSid } from '../lib/self.mjs'
-import { mergeRecord, readRecord } from '../lib/store.mjs'
+import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
+import { isEnabled } from '../lib/enabled.mjs'
+import { globalConfig } from '../lib/paths.mjs'
+import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
@@ -49,7 +52,8 @@ const USAGE = `usage: sage <command>
   unlink <sid>         mark a session unlinked (closed)
   claim <glob…>        register this session's intent (claimed_globs)
   guard …              list | add <path> | rm <path> | on | off (default OFF)
-  doctor               validate dirs / hook / settings / token-forecast`
+  doctor               validate dirs / hook / settings / token-forecast
+  statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
 // repo with no adapter → the agnostic P1–P4 path).
@@ -63,6 +67,19 @@ const main = async () => {
   const home = os.homedir()
   const cwd = process.cwd()
   const now = Date.now()
+
+  // Best-effort: stamp this session's "asking" breadcrumb so a statusline can
+  // surface it. Only marks a session SAGE is enabled for AND already has a
+  // record for — a read verb never fabricates a record.
+  const stampAsking = (repoId, verb) => {
+    try {
+      if (!repoId || !isEnabled({ home, repoId, cwd })) return
+      const sid = resolveSelfSid(home, repoId)
+      if (sid && !/[/\\]|\.\./.test(sid) && readRecord(home, repoId, sid)) markAsking(home, sid, verb)
+    } catch {
+      /* best-effort — never let the breadcrumb break a consult */
+    }
+  }
 
   switch (cmd) {
     case 'board': {
@@ -78,6 +95,7 @@ const main = async () => {
     case 'fleet': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
+      stampAsking(repoId, 'fleet')
       const selfSid = process.env.SAGE_SELF_SID || undefined
       const line = fleetLine(collectSessions(home, repoId, now), { selfSid })
       return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
@@ -85,6 +103,7 @@ const main = async () => {
     case 'territory': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      stampAsking(repoId, 'territory')
       const queries = process.argv.slice(3)
       if (!queries.length) return console.log('usage: sage territory <glob> [glob…]')
       const selfSid = process.env.SAGE_SELF_SID || undefined
@@ -96,6 +115,7 @@ const main = async () => {
     case 'why-diverged': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
+      stampAsking(repoId, 'why-diverged')
       if (!a1) return console.log('usage: sage why-diverged <file>')
       const selfSid = process.env.SAGE_SELF_SID || undefined
       const touches = whyDiverged(home, repoId, a1, { now, selfSid })
@@ -112,6 +132,7 @@ const main = async () => {
     case 'merge-brief': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
+      stampAsking(repoId, 'merge-brief')
       const selfSid = process.env.SAGE_SELF_SID || undefined
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       const extraGlobs = adapter?.generatedGlobs?.() ?? []
@@ -156,6 +177,7 @@ const main = async () => {
         link_state: 'linked',
         updated_at: new Date(now).toISOString(),
       })
+      markAsking(home, sid, 'claim')
       return console.log(`sage: claimed ${globs.join(' ')} on ${sid}`)
     }
     case 'guard': {
@@ -189,6 +211,42 @@ const main = async () => {
         return console.log('sage: guard disarmed')
       }
       return console.log(renderGuard(readGuard(home, repoId)))
+    }
+    case 'statusline': {
+      // Fail-open: NEVER break the status bar. Resolve session+cwd from flags →
+      // stdin JSON (the Claude statusline payload) → env. Print the configured
+      // label only while a consult is fresh AND SAGE is on; otherwise nothing.
+      try {
+        const slArgs = process.argv.slice(3)
+        const flag = (n) => {
+          const i = slArgs.indexOf(n)
+          return i >= 0 ? slArgs[i + 1] : undefined
+        }
+        let sid = flag('--session')
+        let scwd = flag('--cwd')
+        if ((!sid || !scwd) && !process.stdin.isTTY) {
+          try {
+            const p = JSON.parse(fs.readFileSync(0, 'utf8'))
+            sid = sid || p.session_id
+            scwd = scwd || p.cwd
+          } catch {
+            /* no / garbage stdin — fall through */
+          }
+        }
+        sid = sid || process.env.CLAUDE_SESSION_ID
+        scwd = scwd || cwd
+        if (!sid) return
+        const repoId = resolveRepoId(scwd)
+        if (!isEnabled({ home, repoId, cwd: scwd })) return
+        const cfg = readJson(globalConfig(home)) || {}
+        const ttlMs = Number.isFinite(cfg.statuslineTtlMs) ? cfg.statuslineTtlMs : 8000
+        const label = typeof cfg.statuslineLabel === 'string' ? cfg.statuslineLabel : '⚖️ Asking Sage'
+        if (askingAgeMs(home, sid, now) < ttlMs) process.stdout.write(label)
+        else clearAsking(home, sid)
+      } catch {
+        /* fail-open: print nothing */
+      }
+      return
     }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))

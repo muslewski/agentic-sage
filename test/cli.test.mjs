@@ -8,6 +8,7 @@ import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionsDir, globalConfig, sessionFile } from '../lib/paths.mjs'
 import { readGuard } from '../lib/guard.mjs'
+import { markAsking, askingFile } from '../lib/asking.mjs'
 
 const SAGE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'sage')
 const run = (args, home, cwd, extraEnv = {}) =>
@@ -156,4 +157,71 @@ test('an adapter enriches board (row) + territory (zone); none → unchanged', (
     'export const claimedWork = (rec) => rec.branch === "main" ? { row: "D7", status: "🟡" } : null\n')
   assert.match(run(['board'], home, repo), /D7/)
   assert.match(run(['territory', 'src/auth/**'], home, repo), /zone: auth/)
+})
+
+test('statusline: fresh breadcrumb prints the label; stale prints nothing + self-cleans', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 's1' })
+  run(['on'], home, repo)
+  markAsking(home, 's1', 'territory') // fresh
+  assert.match(run(['statusline', '--session', 's1', '--cwd', repo], home, repo), /Asking Sage/)
+  const f = askingFile(home, 's1')
+  const old = new Date(Date.now() - 60_000)
+  fs.utimesSync(f, old, old) // make it stale
+  assert.equal(run(['statusline', '--session', 's1', '--cwd', repo], home, repo), '')
+  assert.equal(fs.existsSync(f), false) // self-cleaned on the stale read
+})
+
+test('statusline: empty when SAGE off, when absent, and on garbage stdin (fail-open)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 's1' })
+  markAsking(home, 's1', 'fleet')
+  assert.equal(run(['statusline', '--session', 's1', '--cwd', repo], home, repo), '') // SAGE off
+  run(['on'], home, repo)
+  assert.equal(run(['statusline', '--session', 'sX', '--cwd', repo], home, repo), '') // absent
+  const garbage = execFileSync('node', [SAGE, 'statusline'], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+    cwd: repo,
+    input: 'not json',
+  })
+  assert.equal(garbage, '') // fail-open, exit 0 (execFileSync would throw on non-zero)
+})
+
+test('statusline: reads session/cwd from a stdin JSON payload; honors config label', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 's1' })
+  run(['on'], home, repo)
+  const gc = globalConfig(home)
+  const cur = JSON.parse(fs.readFileSync(gc, 'utf8'))
+  fs.writeFileSync(gc, JSON.stringify({ ...cur, statuslineLabel: '🧭 SAGE' })) // merge-preserve enabled
+  markAsking(home, 's1', 'merge-brief')
+  const out = execFileSync('node', [SAGE, 'statusline'], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+    cwd: repo,
+    input: JSON.stringify({ session_id: 's1', cwd: repo }),
+  })
+  assert.match(out, /🧭 SAGE/)
+})
+
+test('consult verbs stamp the breadcrumb for a known session; board does not; unknown sid does not', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 's1' })
+  run(['on'], home, repo)
+  run(['territory', 'src/**'], home, repo, { SAGE_SELF_SID: 's1' })
+  assert.equal(fs.existsSync(askingFile(home, 's1')), true) // territory stamped
+  fs.unlinkSync(askingFile(home, 's1'))
+  run(['board'], home, repo, { SAGE_SELF_SID: 's1' })
+  assert.equal(fs.existsSync(askingFile(home, 's1')), false) // board excluded
+  run(['fleet'], home, repo, { SAGE_SELF_SID: 'ghost' })
+  assert.equal(fs.existsSync(askingFile(home, 'ghost')), false) // no record ⇒ no stamp
 })
