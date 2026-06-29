@@ -1,5 +1,9 @@
 # Setting up SAGE
 
+<p align="center">
+  <img src="assets/sage-setup.png" alt="SAGE — Easy Setup: four steps — Clone, Install, Enable, Doctor. Four simple steps to a coordinated fleet." />
+</p>
+
 A linear walkthrough from clone to a coordinating fleet. Three required steps; everything else is
 **optional** and badged. The last section, **[How we run it](#how-we-run-it-dogfood)**, is the exact
 config we use ourselves — copy it for a proven setup.
