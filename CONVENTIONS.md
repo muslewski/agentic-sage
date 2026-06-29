@@ -1,5 +1,9 @@
 # SAGE conventions
 
+<p align="center">
+  <img src="assets/sage-conventions.png" alt="SAGE — Conventions: the controller's side of the contract. Worktree after design, consult before a PR or on conflict, the optional guard, full enable/disable control. Passive by design, fail-open, default-off, hot-path-cheap." />
+</p>
+
 How a controller (the human, or an autopilot loop) should use SAGE so the fleet judge has
 something true to judge. SAGE stays **passive** — it watches and answers; these conventions are the
 *controller's* side of the contract. Everything here is opt-in: with SAGE off (the default), none
