@@ -1,5 +1,9 @@
 # SAGE — the Old Wise One
 
+<p align="center">
+  <img src="assets/sage.png" width="320" alt="SAGE — the Old Wise One: “I don’t do the work. I judge it.”" />
+</p>
+
 **S**ession **A**wareness & **G**uidance **E**ngine: a passive, read-only **fleet judge** for
 running many parallel agent coding sessions (e.g. Claude Code). It does no work, spawns nothing,
 edits nothing — it watches every session, holds each one's self-declared truth (time-aware), and
