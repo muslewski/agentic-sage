@@ -22,6 +22,11 @@ Then paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into y
 `CLAUDE.md` and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
 config we run ourselves — in **[`SETUP.md`](./SETUP.md)**.
 
+**Prefer to let your agent do it?** Clone, then tell your coding agent *"set up agentic-sage for this
+repo."* It reads **[`AGENTS.md`](./AGENTS.md)** — the deterministic setup runbook — and walks the
+install → enable → wire → (optional) adapter → verify steps for you. Fully reversible:
+`node uninstall/uninstall.mjs` (see [`uninstall/`](./uninstall/README.md)).
+
 ## Why — keep the human at fleet altitude
 
 Every popular multi-agent harness scales by **removing the human**: a queen/PM agent drives
@@ -37,16 +42,59 @@ drives, never types into a pane (unless you opt in). It makes human-as-orchestra
 scale** — human-in-the-loop at the *fleet* altitude. That inversion is the project's reason to
 exist.
 
-## Core vs adapter
+## Universal core vs your project
 
-| | **Core** (project-agnostic) | **Adapter** (per-project, optional) |
+SAGE has one boundary, and everything in these docs hangs off it:
+
+| | **Universal core** (any repo, zero config) | **Your project** (optional) |
 |---|---|---|
 | Reads | git (worktree/branch/HEAD/`diff --numstat`), tmux, the session registry, a generic handoff sidecar | your repo's backlog rows, program/phase notes, architectural-zone glob ownership |
-| Gives | `board`, liveness, `territory`, `why-diverged`, `merge-brief` | named rows/zones in all of the above |
+| Gives | `board`, liveness, `territory`, `why-diverged`, `merge-brief`, the guard | named rows/zones in all of the above |
+| How | install + `sage on` — nothing else required | an **adapter** (`ownsZone`/`claimedWork`/`backlogRows`/`generatedGlobs`) + your own controller conventions |
 | If absent | always present | core still fully works — warnings reference *paths*, not named rows/zones |
 
-A repo with **no adapter is first-class.** Write one (see [`ADAPTERS.md`](./ADAPTERS.md)) only when
-you want named work and zones.
+A repo with **no adapter is first-class.** Scaffold one with `sage adapter init` (writes
+`.sage/adapter.mjs` from [`adapters/template.mjs`](./adapters/template.mjs); guide in
+[`ADAPTERS.md`](./ADAPTERS.md)) only when you want named work and zones.
+
+> **What's tailor-made vs universal.** This repo ships *one person's* setup as a worked example —
+> the `adapters/syndcast.mjs` adapter, a backlog format, worktrees under `.claude/worktrees`, a
+> [superpowers](https://github.com/obra/superpowers)-style harness, an autopilot `CLAUDE.md`. **None
+> of that is required.** The universal core knows nothing about it. Treat `adapters/syndcast.mjs` and
+> `CONVENTIONS.md` as *examples to adapt*, not steps to copy.
+
+## Parts & options — what each piece is, and whether you need it
+
+| Part | What it does | Universal or example | Need it? | Turn on |
+|---|---|---|---|---|
+| `sage` CLI + emitter hook | the judge: records sessions, answers `board`/`territory`/… | universal | **required** | `install.mjs` + `sage on` |
+| `sage-fleet` skill + CLAUDE pointer | sessions coordinate themselves (claim, merge-brief, why-diverged) | universal | recommended | paste `templates/CLAUDE.snippet.md` |
+| `sage-doctor` skill (`/sage-doctor`) | one-command config-validity check | universal | recommended | auto-linked by `install.mjs` |
+| Adapter (`.sage/adapter.mjs`) | names *your* rows + zones on the board | your project | optional | `sage adapter init` |
+| Backlog coordination | who-holds-which-row + `.md` drift, without owning the file | needs an adapter | optional | adapter's `backlogRows` + `sage backlog` |
+| Worktree-at-go convention | register intent the instant a worktree exists | example (controller) | optional | adapt from `CONVENTIONS.md` |
+| The guard | **blocks** edits to contested paths (`exit 2`) | universal | optional, off | `sage guard add <p>` + `sage guard on` |
+| tmux fleet pane | `bind j` → popup `sage board` | universal | optional | `tmux source-file ~/.tmux.conf` |
+| Statusline segment | `⚖️ Asking Sage` while consulting | universal | optional | wire `templates/statusline.snippet.md` |
+| `/handoff` sidecar, token-forecast | integrations with other tooling | example/integration | optional | see SETUP.md / Optional integrations |
+
+## What `install.mjs` wires (so you can trust it)
+
+It merges **seven** lifecycle hooks into `~/.claude/settings.json` (back up once · skip-if-present ·
+abort on malformed JSON · never auto-enable). All fire the one emitter, all **fail-open** and
+**no-op while SAGE is OFF**:
+
+| Hook event | What SAGE does on it |
+|---|---|
+| `SessionStart` | record/refresh this session; the one optional one-line fleet brief |
+| `UserPromptSubmit` | refresh liveness/timestamp |
+| `PostToolUse` | refresh `touched_globs` (git numstat) |
+| `Stop` | last-turn-fresh record (survives `/clear`) |
+| `PreCompact` | lightweight handoff sidecar dump |
+| `SessionEnd` | mark the session closed |
+| `PreToolUse` | the guard — **inert** unless a guard is armed (cheap breadcrumb skip otherwise) |
+
+Undo all of it any time: `node uninstall/uninstall.mjs` (surgical — see [`uninstall/`](./uninstall/README.md)).
 
 ## Install
 
@@ -68,7 +116,8 @@ sage fleet              # one-line fleet summary (fold into a status tick)
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file
 sage merge-brief        # all contested paths + the regenerate-don't-merge rule
-sage doctor             # validate dirs / hook / settings wiring / current repo
+sage adapter init       # scaffold .sage/adapter.mjs (optional, for named work/zones)
+sage doctor             # validate config / hook / settings / linked skills / adapter
 sage off                # freeze judging
 ```
 
@@ -172,10 +221,14 @@ breadcrumb check, before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md
 bin/sage            CLI (argv dispatch, async adapter load)
 lib/*.mjs           pure, unit-tested logic (zero deps)
 hooks/sage-emit.mjs the one hook entry (fail-open, default-OFF)
-adapters/           reference adapters (e.g. syndcast.mjs) — out of the observed tree
+adapters/           template.mjs (scaffold) + syndcast.mjs (worked example) — out of the observed tree
 install.mjs         conservative wiring into ~/.claude
+uninstall/          surgical reversible uninstall (uninstall.mjs + README)
 test/*.test.mjs     node --test, hermetic (temp HOME, temp git repos)
 ```
 
-`CONVENTIONS.md` — the controller's side of the contract (worktree-at-go, the guard).
-`ADAPTERS.md` — write a per-project adapter. `LICENSE` — MIT.
+**Docs:** [`AGENTS.md`](./AGENTS.md) — agent setup runbook ("set it up for my repo"). ·
+[`SETUP.md`](./SETUP.md) — human walkthrough (required/optional tiers). ·
+[`ADAPTERS.md`](./ADAPTERS.md) — write a per-project adapter. ·
+[`CONVENTIONS.md`](./CONVENTIONS.md) — an *example* controller setup (worktree-at-go, the guard). ·
+[`uninstall/`](./uninstall/README.md) — undo it. · `LICENSE` — MIT.

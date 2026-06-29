@@ -8,6 +8,11 @@ teaches SAGE your repo's vocabulary so the board and territory show **named work
 **A repo with no adapter is a first-class citizen.** Everything still works; warnings just
 reference paths, not named rows or zones.
 
+**Start here:** `sage adapter init` stamps a fully-commented no-op adapter at `<repoRoot>/.sage/
+adapter.mjs` (from [`adapters/template.mjs`](./adapters/template.mjs)) — fill in only what your repo
+can answer. The contract below explains each function; [`adapters/syndcast.mjs`](./adapters/syndcast.mjs)
+is a complete worked example.
+
 ## The contract
 
 An adapter is a single ES module exporting up to four functions. All are optional — export only

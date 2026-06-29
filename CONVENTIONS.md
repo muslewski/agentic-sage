@@ -5,6 +5,12 @@ something true to judge. SAGE stays **passive** — it watches and answers; thes
 *controller's* side of the contract. Everything here is opt-in: with SAGE off (the default), none
 of it runs.
 
+> **This is an example controller setup — mine, not a requirement.** The specifics below (worktrees
+> under `.claude/worktrees`, a [superpowers](https://github.com/obra/superpowers)-style harness, an
+> autopilot loop) are how *one* adopter drives SAGE. The universal core knows nothing about them.
+> Adapt the *shape* (register intent at "go"; consult before a PR / on a conflict) to your own
+> harness — don't copy the literal paths.
+
 ## Worktree-after-design (register intent at "go")
 
 Linking ≠ worktree. A session **links** at SessionStart in the primary checkout (`link_state:

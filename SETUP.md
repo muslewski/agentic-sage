@@ -7,6 +7,10 @@ config we use ourselves — copy it for a proven setup.
 > SAGE is **read-only and default-OFF**. Installing changes nothing until you `sage on`; it never
 > edits your repo, never spawns, never blocks (unless you explicitly arm the optional guard).
 
+> **Want your agent to do this?** Clone the repo, then tell your coding agent *"set up agentic-sage
+> for this repo."* It follows **[`AGENTS.md`](./AGENTS.md)** (the deterministic runbook) through the
+> same steps below. This page is the human path; AGENTS.md is the agent path — same destination.
+
 ---
 
 ## Required
@@ -118,10 +122,26 @@ See the "Coordinating the backlog" section of the [README](./README.md#coordinat
 
 ---
 
-## How we run it (dogfood)
+## Uninstall
 
-The setup behind the SAGE repo's own development (running ~8 parallel Claude Code sessions on one
-codebase). Following the steps above reproduces it:
+Fully reversible whenever you want:
+
+```bash
+node uninstall/uninstall.mjs
+```
+
+It removes SAGE's wiring **surgically** — only its own `sage-emit` hook entries + symlinks + the tmux
+`bind j` line; **every foreign hook/setting is left intact** (settings.json is backed up first). It
+**keeps** your `~/.claude/sage/` state (config + session history) and prints the exact `rm -rf` for a
+manual delete — never automatic. Details + the safety guarantees: [`uninstall/`](./uninstall/README.md).
+
+---
+
+## How we run it (an example setup)
+
+This is *one adopter's* config — the setup behind the SAGE repo's own development (~8 parallel Claude
+Code sessions on one codebase). It's an **example to copy or adapt**, not a requirement; the universal
+core needs none of it. Following the steps above reproduces it:
 
 | Piece | State | Why |
 |---|---|---|
