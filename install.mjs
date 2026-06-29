@@ -97,40 +97,54 @@ if (!conf.includes(`${sageBin} board`)) {
   tmuxNote = `added \`bind j\` → run \`tmux source-file ~/.tmux.conf\` to apply`
 }
 
-// 5. symlink the sage-fleet skill into ~/.claude/skills (opt-out: SAGE_SKIP_SKILL=1).
-//    Same conservative discipline as the hook: skip-if-linked, back up a real collision.
-//    Presence is inert — the skill is a no-op until SAGE is on AND a session invokes it.
+// 5. symlink every skills/* dir into ~/.claude/skills (opt-out: SAGE_SKIP_SKILL=1).
+//    Same conservative discipline as the hook: skip-if-linked, back up a real
+//    collision, never clobber a taken .bak. Presence is inert — a skill is a no-op
+//    until SAGE is on AND a session (or the user, for /sage-doctor) invokes it.
 let skillNote = 'skipped (SAGE_SKIP_SKILL=1)'
 if (!process.env.SAGE_SKIP_SKILL) {
   const skillsDir = path.join(home, '.claude', 'skills')
   fs.mkdirSync(skillsDir, { recursive: true })
-  const slink = path.join(skillsDir, 'sage-fleet')
-  const starget = path.join(repoRoot, 'skills', 'sage-fleet')
-  let sst = null
+  const srcSkills = path.join(repoRoot, 'skills')
+  let names = []
   try {
-    sst = fs.lstatSync(slink)
+    names = fs.readdirSync(srcSkills, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
   } catch {
-    /* absent */
+    /* no skills dir */
   }
-  if (sst) {
-    if (sst.isSymbolicLink()) {
-      if (fs.readlinkSync(slink) !== starget) {
-        fs.unlinkSync(slink)
-        fs.symlinkSync(starget, slink)
-      }
-      skillNote = 'already linked'
-    } else if (fs.existsSync(slink + '.bak')) {
-      // a real dir/file is here AND a .bak already exists — never clobber either; leave it.
-      skillNote = `left as-is — ${slink} exists and sage-fleet.bak is taken; symlink yourself if wanted`
-    } else {
-      fs.renameSync(slink, slink + '.bak') // back up a real dir/file we didn't create
-      fs.symlinkSync(starget, slink)
-      skillNote = 'backed up existing → sage-fleet.bak, linked'
+  const notes = []
+  for (const name of names) {
+    const slink = path.join(skillsDir, name)
+    const starget = path.join(srcSkills, name)
+    let sst = null
+    try {
+      sst = fs.lstatSync(slink)
+    } catch {
+      /* absent */
     }
-  } else {
-    fs.symlinkSync(starget, slink)
-    skillNote = 'linked'
+    if (sst) {
+      if (sst.isSymbolicLink()) {
+        if (fs.readlinkSync(slink) !== starget) {
+          fs.unlinkSync(slink)
+          fs.symlinkSync(starget, slink)
+          notes.push(`${name}: relinked`)
+        } else {
+          notes.push(`${name}: linked`)
+        }
+      } else if (fs.existsSync(slink + '.bak')) {
+        // a real dir/file is here AND a .bak already exists — never clobber either; leave it.
+        notes.push(`${name}: left as-is (${name}.bak taken)`)
+      } else {
+        fs.renameSync(slink, slink + '.bak') // back up a real dir/file we didn't create
+        fs.symlinkSync(starget, slink)
+        notes.push(`${name}: backed up → .bak, linked`)
+      }
+    } else {
+      fs.symlinkSync(starget, slink)
+      notes.push(`${name}: linked`)
+    }
   }
+  skillNote = notes.length ? notes.join('; ') : 'no skills to link'
 }
 
 console.log(`SAGE installed — DISABLED by default.
@@ -138,8 +152,9 @@ console.log(`SAGE installed — DISABLED by default.
   hook:     ${link} -> ${target}
   settings: ${settingsPath} (backed up to .bak if it existed)
   tmux:     ${tmuxConf} — ${tmuxNote}
-  skill:    ~/.claude/skills/sage-fleet — ${skillNote}
+  skills:   ~/.claude/skills — ${skillNote}
   pointer:  paste templates/CLAUDE.snippet.md into your repo/user CLAUDE.md to wire sessions in
+  verify:   run \`/sage-doctor\` (or \`${sageBin} doctor\`) to validate the wiring
 Enable when ready:  edit ${gc} → {"enabled": true}  (or: sage on)
 Fleet line:  add \`${sageBin} fleet\` to your session-sync tick for an always-on summary.
 Guard:    built but OFF — arm per repo with \`sage guard add <path>\` then \`sage guard on\`
