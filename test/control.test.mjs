@@ -103,3 +103,22 @@ test('setEnabled merges — preserves tokenForecastPath across on/off', () => {
   assert.equal(cfg.enabled, true)
   assert.equal(cfg.tokenForecastPath, '~/tfx')
 })
+
+// --- P12: skills-linked doctor check + verdict summary ---
+
+test('doctor: skills-linked check — absent ⇒ not ok; both linked ⇒ ok', () => {
+  const home = mkTmp('sage-sk-')
+  const c0 = doctor(home, mkTmp('sage-norepo-')).find((c) => c.name === 'skills linked')
+  assert.equal(c0.ok, false)
+  assert.match(c0.detail, /missing/)
+  const sk = path.join(home, '.claude', 'skills')
+  fs.mkdirSync(sk, { recursive: true })
+  for (const n of ['sage-fleet', 'sage-doctor']) fs.symlinkSync(mkTmp('sage-tgt-'), path.join(sk, n))
+  const c1 = doctor(home, mkTmp('sage-norepo-')).find((c) => c.name === 'skills linked')
+  assert.equal(c1.ok, true)
+})
+
+test('renderDoctor ends with a verdict summary', () => {
+  const home = mkTmp('sage-v-')
+  assert.match(renderDoctor(doctor(home, mkTmp('sage-norepo-'))), /\d+ ok · \d+ need attention/)
+})
