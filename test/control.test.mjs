@@ -122,3 +122,10 @@ test('renderDoctor ends with a verdict summary', () => {
   const home = mkTmp('sage-v-')
   assert.match(renderDoctor(doctor(home, mkTmp('sage-norepo-'))), /\d+ ok · \d+ need attention/)
 })
+
+test('doctor: project adapter check — none ⇒ ok + "core-only"', () => {
+  const home = mkTmp('sage-ad-')
+  const c = doctor(home, mkTmp('sage-norepo-')).find((c) => c.name === 'project adapter')
+  assert.equal(c.ok, true)
+  assert.match(c.detail, /none/)
+})
