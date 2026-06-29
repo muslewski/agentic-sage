@@ -31,7 +31,22 @@ export const backlogPath = (ctx) => null
 //   Globs for THIS repo's generated outputs. A contested generated file is
 //   flagged "regenerate, don't merge" instead of hand-merged.
 export const generatedGlobs = () => []
+
+// backlogRows(ctx) → [{ id, status, mission, lands }]
+//   Parse the project's backlog file into rows so `sage backlog` can report who
+//   holds each row + flag .md drift. `status` is the row's current glyph/checkbox
+//   (✅/🟡/⬜); read it from the Status column, not the first glyph on the line.
+//   Missing/garbage file → [] (fail-closed-to-empty; never throw). Absent ⇒ `sage
+//   backlog` degrades to "no backlog adapter for this repo."
+export const backlogRows = (ctx) => []
 ```
+
+- **`backlogRows(ctx) → [{ id, status, mission, lands }]`** *(optional)* — parse the project's backlog
+  file into rows so `sage backlog` can report who holds each row + flag `.md` drift. `status` is the
+  row's current glyph/checkbox (`✅`/`🟡`/`⬜`); read it from the **Status column**, not the first glyph
+  on the line. Missing/garbage file → `[]` (fail-closed-to-empty; never throw). Absent ⇒ `sage backlog`
+  degrades to "no backlog adapter for this repo." The reference `adapters/syndcast.mjs` parses both the
+  A/B/C checklist items and the Section-D table.
 
 The core consumes these through thin enrichment helpers (`lib/adapter.mjs`): `zoneOf`, `rowOf`. A
 missing export simply yields no enrichment for that dimension.

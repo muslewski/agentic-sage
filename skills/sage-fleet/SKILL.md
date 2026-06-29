@@ -23,14 +23,19 @@ work because SAGE is absent or off.
 ## The four touchpoints
 
 **1. At work-start (after the design "go", before you write the plan or touch a file).**
-Check for a collision, then declare your intent:
+First claim your backlog ROW, then check file territory:
 
-    sage territory 'src/feature/**' 'docs/**'   # does a LIVE session already claim these?
+    sage backlog                                 # is your intended row already held by a LIVE session?
+    # if a live session holds your row → take a different row, or surface the overlap to the human.
+    sage backlog claim D11                        # register THIS session's row so the next session sees you
+
+    sage territory 'src/feature/**' 'docs/**'    # …then the file-path collision check
     # if it reports another session's live claim on overlapping paths:
     #   → narrow your scope to non-overlapping globs, OR surface the overlap to the human.
-    sage claim 'src/feature/**' 'docs/**'        # register THIS session's intent
+    sage claim 'src/feature/**' 'docs/**'        # register THIS session's file intent
 
-`sage claim` writes your `claimed_globs` so the *next* session's territory check sees you.
+`sage backlog claim` writes your `claimed_row`; `sage claim` writes your `claimed_globs` — together the
+*next* session's `sage backlog` / `sage territory` see you.
 
 **2. Periodically / before a large multi-file edit.** A quick sanity check:
 
@@ -40,6 +45,7 @@ Check for a collision, then declare your intent:
 
     sage merge-brief                 # contested paths across the fleet
     sage why-diverged path/to/file   # for each contested file: the other session's intent
+    sage backlog                     # confirm no orphan/drift on your row before you hand-edit its ✅
 
 For a **generated** file (lockfile, generated types, a built manifest), apply
 **regenerate-don't-merge**: re-run its generator on the merged source instead of hand-merging

@@ -38,6 +38,9 @@ Claim-at-go is only the first touchpoint. The full session-facing protocol — s
   **generated** file, regenerate-don't-merge (re-run its generator on the merged source).
 - **On a git/merge conflict:** `sage why-diverged <file>` before you resolve, so you resolve with
   the other session's intent in mind; generated file → regenerate rather than line-merge.
+- **Claim your backlog row** at work-start (`sage backlog claim <row>`) and re-check `sage backlog`
+  before a PR. SAGE coordinates rows by writing only its own state — it never edits the backlog file;
+  the `✅`/status edit stays your normal doc change. Advisory + opt-in, like every other touchpoint.
 
 These stay **advisory** (the guard below is the only thing that can act). As with claim-at-go,
 wire the one-line pointer (`templates/CLAUDE.snippet.md`) into your CLAUDE.md only when you

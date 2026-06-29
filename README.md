@@ -77,6 +77,30 @@ That protocol ships as a Claude Code skill, [`skills/sage-fleet`](./skills/sage-
 It is **advisory**: the skill runs the verbs and surfaces collisions; it never blocks and never
 decides — that's the guard's job (opt-in) and the human's call. SAGE off ⇒ the skill is a no-op.
 
+## Coordinating the backlog (optional)
+
+A **backlog** is a shared, human-readable *work-index* — the one file (e.g. `BACKLOG.md`) where every
+parallel session finds its place and claims work, so N sessions don't all grab the same task or trip
+over each other. It is the fleet's source of *what's in flight*.
+
+SAGE helps coordinate it **without owning the file**. The backlog has two layers: the **stable** prose
+(a row exists, its mission, refs) and the **volatile** truth (who holds it now, is the holder alive).
+The volatile layer is what 8 sessions actually collide on — so SAGE keeps it in its **own** state
+(`claimed_row` on the session record), reads your `BACKLOG.md` through the adapter, and reports each
+row's live truth — **never editing the file**:
+
+    sage backlog              # rows × live sessions: who holds what, orphaned 🟡, .md glyph drift
+    sage backlog claim D11    # register THIS session's row (writes only SAGE's own state)
+
+`sage backlog` flags **drift** between the file and reality — a row marked ⬜ that a live session holds
+(`held-but-open`), or a 🟡 row whose holder has died (`orphaned`). The `.md` stays the human's
+at-a-glance doc (with whatever glyphs you keep); SAGE is the live truth and flags where they disagree —
+the same freshness model a frozen snapshot + a staleness chip uses. You (or the human) reconcile the
+glyph; **SAGE never writes the row**, keeping the human at fleet altitude (§0).
+
+Backlog support is **adapter-gated**: your project supplies `backlogRows(ctx)` (see `ADAPTERS.md`). With
+no adapter, `sage backlog` simply says so — the core stays project-agnostic.
+
 ## Statusline segment (optional)
 
 See when a session is *currently* taking SAGE's advice — an ephemeral status-bar segment
