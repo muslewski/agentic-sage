@@ -177,7 +177,11 @@ const main = async () => {
         link_state: 'linked',
         updated_at: new Date(now).toISOString(),
       })
-      markAsking(home, sid, 'claim')
+      try {
+        markAsking(home, sid, 'claim') // best-effort breadcrumb — never break the claim
+      } catch {
+        /* ignore */
+      }
       return console.log(`sage: claimed ${globs.join(' ')} on ${sid}`)
     }
     case 'guard': {
