@@ -4,6 +4,7 @@
 import os from 'node:os'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
 import { collectSessions, renderBoard } from '../lib/board.mjs'
@@ -55,6 +56,7 @@ const USAGE = `usage: sage <command>
   backlog              rows × live sessions: who holds what, orphans, .md drift
   backlog claim <row>  register THIS session's backlog row (claimed_row)
   guard …              list | add <path> | rm <path> | on | off (default OFF)
+  adapter init         scaffold .sage/adapter.mjs from the template
   doctor               validate dirs / hook / settings / token-forecast
   statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
 
@@ -304,6 +306,23 @@ const main = async () => {
         /* fail-open: print nothing */
       }
       return
+    }
+    case 'adapter': {
+      const root = resolveRepoRoot(cwd)
+      if (!root) return console.log('sage: not a git repo (cd into the repo you want an adapter for)')
+      if ((a1 || 'init') !== 'init')
+        return console.log('usage: sage adapter init   (scaffold .sage/adapter.mjs from the template)')
+      const dest = path.join(root, '.sage', 'adapter.mjs')
+      const rel = path.relative(root, dest)
+      if (fs.existsSync(dest)) return console.log(`sage: ${rel} already exists — edit it (won't overwrite)`)
+      const tmpl = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'adapters', 'template.mjs')
+      fs.mkdirSync(path.dirname(dest), { recursive: true })
+      fs.copyFileSync(tmpl, dest)
+      return console.log(
+        `sage: scaffolded ${rel} from the template\n` +
+          `  → edit it to teach SAGE your repo's vocabulary (see ADAPTERS.md)\n` +
+          `  → it's committable; or symlink it out-of-tree to ~/.claude/sage/repos/<id>/adapter.mjs`,
+      )
     }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))

@@ -46,6 +46,18 @@ test('unknown command prints usage; exit 0', () => {
   assert.match(run(['wat'], home, mkTmp('sage-norepo-')), /usage/i)
 })
 
+test('sage adapter init scaffolds .sage/adapter.mjs; re-run won’t overwrite; non-git → clear line', () => {
+  const home = mkTmp('sage-ai-')
+  const repo = mkGitRepo()
+  const out1 = run(['adapter', 'init'], home, repo)
+  assert.match(out1, /scaffolded \.sage\/adapter\.mjs/)
+  assert.ok(fs.existsSync(path.join(repo, '.sage', 'adapter.mjs')))
+  const out2 = run(['adapter', 'init'], home, repo)
+  assert.match(out2, /already exists/)
+  const out3 = run(['adapter', 'init'], home, mkTmp('sage-ai-norepo-'))
+  assert.match(out3, /not a git repo/)
+})
+
 const seedSession = (home, id, rec) => {
   fs.mkdirSync(sessionsDir(home, id), { recursive: true })
   fs.writeFileSync(path.join(sessionsDir(home, id), `${rec.session_id}.json`), JSON.stringify(rec))
