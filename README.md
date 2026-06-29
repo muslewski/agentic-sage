@@ -1,7 +1,7 @@
 # SAGE — the Old Wise One
 
 <p align="center">
-  <img src="assets/sage.png" width="320" alt="SAGE — the Old Wise One: “I don’t do the work. I judge it.”" />
+  <img src="assets/sage-banner.png" alt="SAGE — Session Awareness &amp; Guidance Engine: a passive, read-only fleet judge. “I don’t do the work. I judge it.”" />
 </p>
 
 **S**ession **A**wareness & **G**uidance **E**ngine: a passive, read-only **fleet judge** for
