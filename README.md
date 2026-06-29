@@ -77,6 +77,25 @@ That protocol ships as a Claude Code skill, [`skills/sage-fleet`](./skills/sage-
 It is **advisory**: the skill runs the verbs and surfaces collisions; it never blocks and never
 decides — that's the guard's job (opt-in) and the human's call. SAGE off ⇒ the skill is a no-op.
 
+## Statusline segment (optional)
+
+See when a session is *currently* taking SAGE's advice — an ephemeral status-bar segment
+(default `⚖️ Asking Sage`) that shows only while a session runs a consult verb
+(`territory`/`why-diverged`/`merge-brief`/`claim`/`fleet`), then disappears.
+
+It's driven by a flat per-session breadcrumb `~/.claude/sage/asking/<session_id>` (mtime = last
+consult) — keyed by the same `session_id` your statusline already receives, with **no repoId**, so
+you can read it two ways (see [`templates/statusline.snippet.md`](./templates/statusline.snippet.md)):
+
+- **the verb** — append `sage statusline --session "$ID" --cwd "$CWD"` to your statusline output;
+- **in-process** — `stat ~/.claude/sage/asking/<session_id>` and render your label if
+  `now - mtime < ttl` (zero extra spawn).
+
+`sage statusline` is **fail-open** — any error prints nothing and exits 0, so it can never break your
+status bar; it prints nothing when SAGE is off. Configure `statuslineLabel` / `statuslineTtlMs`
+(default `⚖️ Asking Sage` / `8000`ms) in `~/.claude/sage/config.json`. The statusline is **polled**
+(your `refreshInterval`), so the segment shows for a tick or two around a consult — not sub-second.
+
 ## Safety
 
 The emitter (`hooks/sage-emit.mjs`) fires on **every** session, so it's built to be invisible:

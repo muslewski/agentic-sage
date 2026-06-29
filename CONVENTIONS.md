@@ -43,6 +43,10 @@ These stay **advisory** (the guard below is the only thing that can act). As wit
 wire the one-line pointer (`templates/CLAUDE.snippet.md`) into your CLAUDE.md only when you
 activate SAGE — the protocol itself lives in the on-demand skill, not an always-loaded file.
 
+A SAGE-on session can also surface its consults in the status bar — an opt-in `⚖️ Asking Sage`
+segment that shows only while a consult verb runs (see README "Statusline segment"). Pure view of
+the same advisory consults; off by default, wired into your own statusline.
+
 ## The guard (the one hard stop) — built, default OFF
 
 `sage` can *block* an edit, but only when you explicitly arm it. Two independent flags gate a
