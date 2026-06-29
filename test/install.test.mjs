@@ -73,3 +73,40 @@ test('malformed settings.json → abort, original left intact', () => {
   assert.throws(() => runInstall(home)) // exit 1 → execFileSync throws
   assert.equal(fs.readFileSync(sp, 'utf8'), '{ bad json,, }') // never overwritten
 })
+
+test('symlinks the sage-fleet skill into ~/.claude/skills', () => {
+  const home = mkTmp('sage-h-')
+  runInstall(home)
+  const slink = path.join(home, '.claude', 'skills', 'sage-fleet')
+  assert.equal(fs.lstatSync(slink).isSymbolicLink(), true)
+  // resolves to the repo skill (SKILL.md readable through the link)
+  assert.match(fs.readFileSync(path.join(slink, 'SKILL.md'), 'utf8'), /name:\s*sage-fleet/)
+})
+
+test('SAGE_SKIP_SKILL=1 skips the skill symlink', () => {
+  const home = mkTmp('sage-h-')
+  execFileSync('node', [INSTALL], { encoding: 'utf8', env: { ...process.env, HOME: home, SAGE_SKIP_SKILL: '1' } })
+  assert.equal(fs.existsSync(path.join(home, '.claude', 'skills', 'sage-fleet')), false)
+})
+
+test('skill symlink is non-clobbering: backs up a real dir, leaves foreign skills', () => {
+  const home = mkTmp('sage-h-')
+  const skills = path.join(home, '.claude', 'skills')
+  fs.mkdirSync(path.join(skills, 'sage-fleet'), { recursive: true })
+  fs.writeFileSync(path.join(skills, 'sage-fleet', 'mine.md'), 'hand-written') // a real dir we did not create
+  fs.mkdirSync(path.join(skills, 'other'), { recursive: true })
+  fs.writeFileSync(path.join(skills, 'other', 'SKILL.md'), 'foreign') // unrelated skill
+  runInstall(home)
+  assert.equal(fs.lstatSync(path.join(skills, 'sage-fleet')).isSymbolicLink(), true) // now linked
+  assert.equal(fs.readFileSync(path.join(skills, 'sage-fleet.bak', 'mine.md'), 'utf8'), 'hand-written') // backed up
+  assert.equal(fs.readFileSync(path.join(skills, 'other', 'SKILL.md'), 'utf8'), 'foreign') // untouched
+})
+
+test('skill symlink is idempotent: second run keeps one link, no second .bak', () => {
+  const home = mkTmp('sage-h-')
+  runInstall(home)
+  runInstall(home)
+  const slink = path.join(home, '.claude', 'skills', 'sage-fleet')
+  assert.equal(fs.lstatSync(slink).isSymbolicLink(), true)
+  assert.equal(fs.existsSync(slink + '.bak'), false) // nothing real was ever clobbered
+})

@@ -97,11 +97,46 @@ if (!conf.includes(`${sageBin} board`)) {
   tmuxNote = `added \`bind j\` → run \`tmux source-file ~/.tmux.conf\` to apply`
 }
 
+// 5. symlink the sage-fleet skill into ~/.claude/skills (opt-out: SAGE_SKIP_SKILL=1).
+//    Same conservative discipline as the hook: skip-if-linked, back up a real collision.
+//    Presence is inert — the skill is a no-op until SAGE is on AND a session invokes it.
+let skillNote = 'skipped (SAGE_SKIP_SKILL=1)'
+if (!process.env.SAGE_SKIP_SKILL) {
+  const skillsDir = path.join(home, '.claude', 'skills')
+  fs.mkdirSync(skillsDir, { recursive: true })
+  const slink = path.join(skillsDir, 'sage-fleet')
+  const starget = path.join(repoRoot, 'skills', 'sage-fleet')
+  let sst = null
+  try {
+    sst = fs.lstatSync(slink)
+  } catch {
+    /* absent */
+  }
+  if (sst) {
+    if (sst.isSymbolicLink()) {
+      if (fs.readlinkSync(slink) !== starget) {
+        fs.unlinkSync(slink)
+        fs.symlinkSync(starget, slink)
+      }
+      skillNote = 'already linked'
+    } else {
+      fs.renameSync(slink, slink + '.bak') // back up a real dir/file we didn't create
+      fs.symlinkSync(starget, slink)
+      skillNote = 'backed up existing → sage-fleet.bak, linked'
+    }
+  } else {
+    fs.symlinkSync(starget, slink)
+    skillNote = 'linked'
+  }
+}
+
 console.log(`SAGE installed — DISABLED by default.
   config:   ${gc}
   hook:     ${link} -> ${target}
   settings: ${settingsPath} (backed up to .bak if it existed)
   tmux:     ${tmuxConf} — ${tmuxNote}
+  skill:    ~/.claude/skills/sage-fleet — ${skillNote}
+  pointer:  paste templates/CLAUDE.snippet.md into your repo/user CLAUDE.md to wire sessions in
 Enable when ready:  edit ${gc} → {"enabled": true}  (or: sage on)
 Fleet line:  add \`${sageBin} fleet\` to your session-sync tick for an always-on summary.
 Guard:    built but OFF — arm per repo with \`sage guard add <path>\` then \`sage guard on\`
