@@ -60,6 +60,23 @@ sage doctor             # validate dirs / hook / settings wiring / current repo
 sage off                # freeze judging
 ```
 
+## Sessions as participants — the flywheel
+
+The verbs above have **two audiences**. The **human** reads `board` / `fleet` at fleet
+altitude. But the payoff — many sessions adding features in parallel and merging smoothly —
+only lands when the **sessions themselves** coordinate: each one runs `territory` + `claim`
+when it starts, and `merge-brief` + `why-diverged` before it opens a PR or resolves a conflict.
+
+That protocol ships as a Claude Code skill, [`skills/sage-fleet`](./skills/sage-fleet/SKILL.md):
+
+- `install.mjs` symlinks it into `~/.claude/skills/sage-fleet` (opt out with `SAGE_SKIP_SKILL=1`).
+- Paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) — a single always-loaded
+  pointer line — into your repo or user `CLAUDE.md` so sessions reach for the skill at the right
+  moments. The protocol stays in the on-demand skill, so a disabled SAGE costs ~nothing.
+
+It is **advisory**: the skill runs the verbs and surfaces collisions; it never blocks and never
+decides — that's the guard's job (opt-in) and the human's call. SAGE off ⇒ the skill is a no-op.
+
 ## Safety
 
 The emitter (`hooks/sage-emit.mjs`) fires on **every** session, so it's built to be invisible:

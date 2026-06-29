@@ -28,6 +28,21 @@ that another already **claims** that path — before either has touched a file.
 > plan") **when you activate SAGE**. It is deliberately *not* pre-baked into an always-loaded
 > instruction file, because a step that calls a disabled tool is pure token cost every session.
 
+## Before a PR / on a conflict (the session-facing protocol)
+
+Claim-at-go is only the first touchpoint. The full session-facing protocol — shipped as the
+`sage-fleet` skill so a session loads it on demand — adds two more:
+
+- **Before opening a PR / finishing the branch:** `sage merge-brief` lists the contested paths
+  across the fleet; `sage why-diverged <file>` shows the other session's intent per file. For a
+  **generated** file, regenerate-don't-merge (re-run its generator on the merged source).
+- **On a git/merge conflict:** `sage why-diverged <file>` before you resolve, so you resolve with
+  the other session's intent in mind; generated file → regenerate rather than line-merge.
+
+These stay **advisory** (the guard below is the only thing that can act). As with claim-at-go,
+wire the one-line pointer (`templates/CLAUDE.snippet.md`) into your CLAUDE.md only when you
+activate SAGE — the protocol itself lives in the on-demand skill, not an always-loaded file.
+
 ## The guard (the one hard stop) — built, default OFF
 
 `sage` can *block* an edit, but only when you explicitly arm it. Two independent flags gate a
