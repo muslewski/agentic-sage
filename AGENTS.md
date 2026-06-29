@@ -44,7 +44,7 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
    - Then **help fill the stubs** from what you can see in their repo: do they have a backlog/worklog
      file? architectural-zone docs? generated outputs (lockfiles, codegen)? Wire `backlogRows` /
      `ownsZone` / `generatedGlobs` accordingly. The worked reference is
-     [`adapters/syndcast.mjs`](./adapters/syndcast.mjs); the contract is [`ADAPTERS.md`](./ADAPTERS.md).
+     [`adapters/acme.mjs`](./adapters/acme.mjs); the contract is [`ADAPTERS.md`](./ADAPTERS.md).
    - Don't invent logic you can't verify — leave a stub as a no-op `null`/`[]` rather than guess.
 6. **Verify** — run `/sage-doctor` (if you're a Claude Code session) or `sage doctor`. It checks the
    config, emitter hook, settings wiring, linked skills, current repo, and **project adapter**

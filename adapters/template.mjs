@@ -5,7 +5,7 @@
 // vocabulary so the board/territory show named work + zones instead of bare
 // paths. A repo with no adapter is first-class — every function below may stay
 // a no-op. Zero dependencies; read-only; `ctx` is always { repoRoot }.
-// Full guide: ADAPTERS.md. Worked reference: adapters/syndcast.mjs.
+// Full guide: ADAPTERS.md. Worked reference: adapters/acme.mjs.
 
 // Map a repo-relative path → an architectural-zone name (or null).
 export const ownsZone = (path, ctx) => null

@@ -10,7 +10,7 @@ reference paths, not named rows or zones.
 
 **Start here:** `sage adapter init` stamps a fully-commented no-op adapter at `<repoRoot>/.sage/
 adapter.mjs` (from [`adapters/template.mjs`](./adapters/template.mjs)) — fill in only what your repo
-can answer. The contract below explains each function; [`adapters/syndcast.mjs`](./adapters/syndcast.mjs)
+can answer. The contract below explains each function; [`adapters/acme.mjs`](./adapters/acme.mjs)
 is a complete worked example.
 
 ## The contract
@@ -50,7 +50,7 @@ export const backlogRows = (ctx) => []
   file into rows so `sage backlog` can report who holds each row + flag `.md` drift. `status` is the
   row's current glyph/checkbox (`✅`/`🟡`/`⬜`); read it from the **Status column**, not the first glyph
   on the line. Missing/garbage file → `[]` (fail-closed-to-empty; never throw). Absent ⇒ `sage backlog`
-  degrades to "no backlog adapter for this repo." The reference `adapters/syndcast.mjs` parses both the
+  degrades to "no backlog adapter for this repo." The reference `adapters/acme.mjs` parses both the
   A/B/C checklist items and the Section-D table.
 
 The core consumes these through thin enrichment helpers (`lib/adapter.mjs`): `zoneOf`, `rowOf`. A
@@ -86,12 +86,12 @@ Adapter globs use SAGE's dialect (shared with the guard and territory): `*` and 
 wildcards; `[ ] { }` are **literal** path characters (so a Next.js dynamic route `[channelSlug]`
 matches itself, not a regex char-class). Brace expansion (`{a,b}`) is **not** supported — a brace
 glob matches literally. Use `overlaps` from `lib/territory.mjs` if your adapter needs to match
-paths against globs (the syndcast adapter does).
+paths against globs (the acme adapter does).
 
-## Worked example — `adapters/syndcast.mjs`
+## Worked example — `adapters/acme.mjs`
 
-The shipped reference adapter for the Syndcast project reads its Obsidian "Mind" vault under
-`<repoRoot>/syndcast-mind/`:
+The shipped reference adapter for the Acme project reads its Obsidian "Mind" vault under
+`<repoRoot>/acme-mind/`:
 
 - **`ownsZone(path, ctx)`** — scans `map/zones/*.md`, parses each zone's `owns.globs` list with a
   zero-dependency line scanner (no YAML lib), and returns the zone slug whose globs `overlaps` the
@@ -99,15 +99,15 @@ The shipped reference adapter for the Syndcast project reads its Obsidian "Mind"
 - **`claimedWork(rec, ctx)`** — matches the session's `branch` against the **Lands** column of
   `BACKLOG.md` rows (column index taken from each table's header, so a branch token in another
   cell can't false-claim a row; `main`/`master` never claims a code row), returning `{ row, status }`.
-- **`backlogPath(ctx)`** — `<repoRoot>/syndcast-mind/BACKLOG.md` if present.
+- **`backlogPath(ctx)`** — `<repoRoot>/acme-mind/BACKLOG.md` if present.
 - **`generatedGlobs()`** — `payload-types.ts`, `importMap.js`, the Mind `map/index.md`, the visuals
-  manifest — syndcast's regenerate-don't-merge outputs.
+  manifest — acme's regenerate-don't-merge outputs.
 
 It is **read-only and zero-dependency** — a good template for your own.
 
 ### Out-of-tree adapters (the isolation pattern)
 
-The syndcast adapter source lives **here, in `agentic-sage/adapters/`**, not in syndcast's own git
+The acme adapter source lives **here, in `agentic-sage/adapters/`**, not in acme's own git
 tree, and is symlinked to `~/.claude/sage/repos/<id>/adapter.mjs` for live use. This keeps SAGE
 (meta-tooling) entirely out of the project it observes. If you'd rather version the adapter with
 your project, just commit it at `<repoRoot>/.sage/adapter.mjs` (discovery slot 1) — both work.

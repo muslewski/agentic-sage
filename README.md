@@ -62,9 +62,9 @@ A repo with **no adapter is first-class.** Scaffold one with `sage adapter init`
 [`ADAPTERS.md`](./ADAPTERS.md)) only when you want named work and zones.
 
 > **What's tailor-made vs universal.** This repo ships *one person's* setup as a worked example —
-> the `adapters/syndcast.mjs` adapter, a backlog format, worktrees under `.claude/worktrees`, a
+> the `adapters/acme.mjs` adapter, a backlog format, worktrees under `.claude/worktrees`, a
 > [superpowers](https://github.com/obra/superpowers)-style harness, an autopilot `CLAUDE.md`. **None
-> of that is required.** The universal core knows nothing about it. Treat `adapters/syndcast.mjs` and
+> of that is required.** The universal core knows nothing about it. Treat `adapters/acme.mjs` and
 > `CONVENTIONS.md` as *examples to adapt*, not steps to copy.
 
 ## Parts & options — what each piece is, and whether you need it
@@ -225,7 +225,7 @@ breadcrumb check, before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md
 bin/sage            CLI (argv dispatch, async adapter load)
 lib/*.mjs           pure, unit-tested logic (zero deps)
 hooks/sage-emit.mjs the one hook entry (fail-open, default-OFF)
-adapters/           template.mjs (scaffold) + syndcast.mjs (worked example) — out of the observed tree
+adapters/           template.mjs (scaffold) + acme.mjs (worked example) — out of the observed tree
 install.mjs         conservative wiring into ~/.claude
 uninstall/          surgical reversible uninstall (uninstall.mjs + README)
 test/*.test.mjs     node --test, hermetic (temp HOME, temp git repos)

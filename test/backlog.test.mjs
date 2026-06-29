@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { resolveRow, backlogStatus, renderBacklog } from '../lib/backlog.mjs'
 import { mkTmp } from './helpers.mjs'
-import { backlogRows } from '../adapters/syndcast.mjs'
+import { backlogRows } from '../adapters/acme.mjs'
 
 const live = (id, row, extra = {}) => ({ session_id: id, alive: true, resolvedRow: row, ...extra })
 const dead = (id, row, extra = {}) => ({ session_id: id, alive: false, resolvedRow: row, ...extra })
@@ -65,8 +65,8 @@ test('renderBacklog: quiet when clear, flags drift when present', () => {
 
 const fixtureRepo = (backlog) => {
   const root = mkTmp('sage-mind-')
-  fs.mkdirSync(path.join(root, 'syndcast-mind'), { recursive: true })
-  fs.writeFileSync(path.join(root, 'syndcast-mind', 'BACKLOG.md'), backlog)
+  fs.mkdirSync(path.join(root, 'acme-mind'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'acme-mind', 'BACKLOG.md'), backlog)
   return root
 }
 
@@ -98,6 +98,6 @@ test('backlogRows: parses A/B/C checklist + the D table with column-scoped statu
 })
 
 test('backlogRows: missing or garbage backlog → []', () => {
-  assert.deepEqual(backlogRows({ repoRoot: mkTmp('sage-empty-') }), []) // no syndcast-mind/BACKLOG.md
+  assert.deepEqual(backlogRows({ repoRoot: mkTmp('sage-empty-') }), []) // no acme-mind/BACKLOG.md
   assert.deepEqual(backlogRows({ repoRoot: fixtureRepo('not a table\njust prose\n') }), [])
 })

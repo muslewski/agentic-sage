@@ -1,13 +1,13 @@
-// Syndcast SAGE adapter (reference adapter — lives in agentic-sage, NOT in
-// syndcast's tree; symlinked to the state dir for live use). Resolves a path →
-// architectural zone and a branch → backlog row by reading syndcast-mind/ under
-// ctx.repoRoot. The CORE never names a syndcast path — this module owns all that
+// Acme SAGE adapter (reference adapter — lives in agentic-sage, NOT in
+// acme's tree; symlinked to the state dir for live use). Resolves a path →
+// architectural zone and a branch → backlog row by reading acme-mind/ under
+// ctx.repoRoot. The CORE never names an acme path — this module owns all that
 // knowledge. Read-only, zero-dep (no YAML lib; a line scanner reads owns.globs).
 import fs from 'node:fs'
 import path from 'node:path'
 import { overlaps } from '../lib/territory.mjs'
 
-const mindDir = (ctx) => path.join(ctx.repoRoot, 'syndcast-mind')
+const mindDir = (ctx) => path.join(ctx.repoRoot, 'acme-mind')
 
 // Extract a zone's `owns.globs` list. The block is:
 //   owns:
@@ -161,11 +161,11 @@ export const backlogRows = (ctx) => {
   return rows
 }
 
-// Syndcast-specific generated outputs — fed into P4 isGenerated(path, extraGlobs)
-// so a contested generated file is flagged "regenerate, don't merge" in syndcast.
+// Acme-specific generated outputs — fed into P4 isGenerated(path, extraGlobs)
+// so a contested generated file is flagged "regenerate, don't merge" in acme.
 export const generatedGlobs = () => [
   '**/payload-types.ts',
   '**/importMap.js',
-  'syndcast-mind/map/index.md',
-  'syndcast-mind/visuals/app/src/gallery/manifest.json',
+  'acme-mind/map/index.md',
+  'acme-mind/visuals/app/src/gallery/manifest.json',
 ]

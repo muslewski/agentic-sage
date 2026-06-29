@@ -135,7 +135,7 @@ test('PreCompact sidecar prefix is the repo basename (portable, no project liter
   const jsons = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'))
   assert.equal(jsons.length, 1)
   assert.ok(jsons[0].startsWith('zzz-portable-handoff-'), `prefix was: ${jsons[0]}`)
-  assert.ok(!jsons[0].includes('syndcast'))
+  assert.ok(!jsons[0].includes('acme'))
 })
 
 const seedOther = (home, id, rec) => {

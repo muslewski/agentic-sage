@@ -6,9 +6,9 @@ import { repoIdFromRoot, resolveRepoId } from '../lib/repo-id.mjs'
 import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 
 test('repoIdFromRoot is slug-shaped and deterministic', () => {
-  const a = repoIdFromRoot('/a/b/syndcast')
-  assert.match(a, /^syndcast-[0-9a-f]{8}$/)
-  assert.equal(a, repoIdFromRoot('/a/b/syndcast'))
+  const a = repoIdFromRoot('/a/b/acme')
+  assert.match(a, /^acme-[0-9a-f]{8}$/)
+  assert.equal(a, repoIdFromRoot('/a/b/acme'))
 })
 
 test('a worktree resolves to the same id as its main checkout', () => {

@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { parsePanes, paneForPid } from '../lib/tmux.mjs'
 
 test('parsePanes: tab rows → objects; skips blank/short/non-numeric', () => {
-  const raw = '111\tmain:0\t@1\n222\tsyndcast:0\t@2\n\nbad-line\nxyz\tfoo:0\t@3\n'
+  const raw = '111\tmain:0\t@1\n222\tacme:0\t@2\n\nbad-line\nxyz\tfoo:0\t@3\n'
   assert.deepEqual(parsePanes(raw), [
     { panePid: 111, pane: 'main:0', windowId: '@1' },
-    { panePid: 222, pane: 'syndcast:0', windowId: '@2' },
+    { panePid: 222, pane: 'acme:0', windowId: '@2' },
   ])
 })
 

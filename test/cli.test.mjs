@@ -238,14 +238,14 @@ test('consult verbs stamp the breadcrumb for a known session; board does not; un
   assert.equal(fs.existsSync(askingFile(home, 'ghost')), false) // no record ⇒ no stamp
 })
 
-// P11 — backlog coordination. Symlink the syndcast adapter into the state dir so
-// the repo gets backlogRows; seed a BACKLOG.md under the repo's syndcast-mind/.
-const ADAPTER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'adapters', 'syndcast.mjs')
+// P11 — backlog coordination. Symlink the acme adapter into the state dir so
+// the repo gets backlogRows; seed a BACKLOG.md under the repo's acme-mind/.
+const ADAPTER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'adapters', 'acme.mjs')
 const wireBacklog = (home, id, repo, backlog) => {
   fs.mkdirSync(repoDir(home, id), { recursive: true })
   fs.symlinkSync(ADAPTER, path.join(repoDir(home, id), 'adapter.mjs'))
-  fs.mkdirSync(path.join(repo, 'syndcast-mind'), { recursive: true })
-  fs.writeFileSync(path.join(repo, 'syndcast-mind', 'BACKLOG.md'), backlog)
+  fs.mkdirSync(path.join(repo, 'acme-mind'), { recursive: true })
+  fs.writeFileSync(path.join(repo, 'acme-mind', 'BACKLOG.md'), backlog)
 }
 const D_BACKLOG = `## D
 | ID | Mission | Status | Lands | Notes |
