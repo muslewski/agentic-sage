@@ -110,3 +110,16 @@ test('skill symlink is idempotent: second run keeps one link, no second .bak', (
   assert.equal(fs.lstatSync(slink).isSymbolicLink(), true)
   assert.equal(fs.existsSync(slink + '.bak'), false) // nothing real was ever clobbered
 })
+
+test('skill symlink never clobbers an existing .bak (leaves both in place)', () => {
+  const home = mkTmp('sage-h-')
+  const skills = path.join(home, '.claude', 'skills')
+  fs.mkdirSync(path.join(skills, 'sage-fleet'), { recursive: true })
+  fs.writeFileSync(path.join(skills, 'sage-fleet', 'mine.md'), 'real-dir')
+  fs.mkdirSync(path.join(skills, 'sage-fleet.bak'), { recursive: true })
+  fs.writeFileSync(path.join(skills, 'sage-fleet.bak', 'prior.md'), 'prior-backup')
+  runInstall(home) // must not crash, must not destroy either dir
+  assert.equal(fs.readFileSync(path.join(skills, 'sage-fleet.bak', 'prior.md'), 'utf8'), 'prior-backup') // prior backup kept
+  assert.equal(fs.lstatSync(path.join(skills, 'sage-fleet')).isSymbolicLink(), false) // real dir left as-is
+  assert.equal(fs.readFileSync(path.join(skills, 'sage-fleet', 'mine.md'), 'utf8'), 'real-dir')
+})

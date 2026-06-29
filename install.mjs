@@ -119,6 +119,9 @@ if (!process.env.SAGE_SKIP_SKILL) {
         fs.symlinkSync(starget, slink)
       }
       skillNote = 'already linked'
+    } else if (fs.existsSync(slink + '.bak')) {
+      // a real dir/file is here AND a .bak already exists — never clobber either; leave it.
+      skillNote = `left as-is — ${slink} exists and sage-fleet.bak is taken; symlink yourself if wanted`
     } else {
       fs.renameSync(slink, slink + '.bak') // back up a real dir/file we didn't create
       fs.symlinkSync(starget, slink)
