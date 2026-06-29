@@ -11,10 +11,14 @@ import { sageHome } from '../lib/paths.mjs'
 
 const home = os.homedir()
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url))) // uninstall/ → repo root
+const hookFile = path.join(home, '.claude', 'hooks', 'sage-emit.mjs') // the EXACT file install symlinked
+const sageBin = path.join(repoRoot, 'bin', 'sage') // tmux bind signature install wrote: `${sageBin} board`
 const report = []
+// "Ours" = a symlink whose target is strictly inside this repo. `+ path.sep` so a
+// sibling checkout that merely shares the name prefix (agentic-sage-2/) is NOT ours.
 const insideRepo = (p) => {
   try {
-    return fs.lstatSync(p).isSymbolicLink() && fs.readlinkSync(p).startsWith(repoRoot)
+    return fs.lstatSync(p).isSymbolicLink() && fs.readlinkSync(p).startsWith(repoRoot + path.sep)
   } catch {
     return false
   }
@@ -26,14 +30,23 @@ if (fs.existsSync(settingsPath)) {
   try {
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
     let removed = 0
-    if (settings.hooks) {
+    if (settings.hooks && typeof settings.hooks === 'object') {
       for (const ev of Object.keys(settings.hooks)) {
-        const before = (settings.hooks[ev] || []).length
-        settings.hooks[ev] = (settings.hooks[ev] || []).filter(
-          (group) =>
-            !(group.hooks || []).some((h) => typeof h.command === 'string' && h.command.includes('sage-emit')),
-        )
-        removed += before - settings.hooks[ev].length
+        const groups = Array.isArray(settings.hooks[ev]) ? settings.hooks[ev] : []
+        // Match the EXACT hook file install symlinked — not a loose `sage-emit`
+        // token — and filter at the INNER hook level, so a group bundling a SAGE
+        // hook next to a foreign one keeps the foreign one. A foreign command that
+        // merely mentions sage-emit is never touched.
+        for (const group of groups) {
+          if (!Array.isArray(group.hooks)) continue
+          const before = group.hooks.length
+          group.hooks = group.hooks.filter(
+            (h) => !(typeof h.command === 'string' && h.command.includes(hookFile)),
+          )
+          removed += before - group.hooks.length
+        }
+        // drop only a group WE emptied; keep any group still holding a foreign hook
+        settings.hooks[ev] = groups.filter((g) => !Array.isArray(g.hooks) || g.hooks.length)
         if (!settings.hooks[ev].length) delete settings.hooks[ev] // drop a now-empty event
       }
     }
@@ -53,12 +66,11 @@ if (fs.existsSync(settingsPath)) {
 }
 
 // 2. emitter hook symlink — only if it points into this repo.
-const hook = path.join(home, '.claude', 'hooks', 'sage-emit.mjs')
-if (insideRepo(hook)) {
-  fs.unlinkSync(hook)
-  report.push(`unlinked ${hook}`)
-} else if (fs.existsSync(hook)) {
-  report.push(`${hook} is not our symlink — left untouched`)
+if (insideRepo(hookFile)) {
+  fs.unlinkSync(hookFile)
+  report.push(`unlinked ${hookFile}`)
+} else if (fs.existsSync(hookFile)) {
+  report.push(`${hookFile} is not our symlink — left untouched`)
 }
 
 // 3. skill symlinks — only ours (sage-*) pointing into this repo.
@@ -81,9 +93,10 @@ const tmuxConf = path.join(home, '.tmux.conf')
 try {
   const conf = fs.readFileSync(tmuxConf, 'utf8')
   const lines = conf.split('\n')
-  const kept = lines.filter(
-    (l) => !(l.includes('bin/sage') && l.includes('board')) && l.trim() !== '# SAGE fleet pane (bind j)',
-  )
+  // Match the EXACT string install appended (`${sageBin} board`), not loose
+  // substrings — a user line with `bin/sage` + `keyboard` must NOT be removed.
+  const needle = `${sageBin} board`
+  const kept = lines.filter((l) => !l.includes(needle) && l.trim() !== '# SAGE fleet pane (bind j)')
   if (kept.length !== lines.length) {
     fs.copyFileSync(tmuxConf, tmuxConf + '.sage-uninstall.bak')
     fs.writeFileSync(tmuxConf, kept.join('\n'))

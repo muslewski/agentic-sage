@@ -15,7 +15,7 @@ is a complete worked example.
 
 ## The contract
 
-An adapter is a single ES module exporting up to four functions. All are optional — export only
+An adapter is a single ES module exporting up to five functions. All are optional — export only
 what your repo can answer. `ctx` is always `{ repoRoot }` (the absolute path to the repo root).
 
 ```js
