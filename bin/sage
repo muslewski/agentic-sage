@@ -39,6 +39,7 @@ import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
 import { isEnabled } from '../lib/enabled.mjs'
 import { globalConfig } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
+import { backlogStatus, renderBacklog } from '../lib/backlog.mjs'
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
@@ -51,6 +52,8 @@ const USAGE = `usage: sage <command>
   link <sid> [state]   manual link_state override (default: linked)
   unlink <sid>         mark a session unlinked (closed)
   claim <glob…>        register this session's intent (claimed_globs)
+  backlog              rows × live sessions: who holds what, orphans, .md drift
+  backlog claim <row>  register THIS session's backlog row (claimed_row)
   guard …              list | add <path> | rm <path> | on | off (default OFF)
   doctor               validate dirs / hook / settings / token-forecast
   statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
@@ -183,6 +186,53 @@ const main = async () => {
         /* ignore */
       }
       return console.log(`sage: claimed ${globs.join(' ')} on ${sid}`)
+    }
+    case 'backlog': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      if (a1 === 'claim') {
+        const row = (a2 || '').trim()
+        if (!row || /[\n\r -]/.test(row) || row.length > 40)
+          return console.log('usage: sage backlog claim <row>   (e.g. D11)')
+        const sid = resolveSelfSid(home, repoId)
+        if (!sid)
+          return console.log(
+            'sage: cannot resolve the current session — run inside an enabled session, or set SAGE_SELF_SID',
+          )
+        if (/[/\\]|\.\./.test(sid)) return console.log('sage: refusing an unsafe SAGE_SELF_SID')
+        if (!readRecord(home, repoId, sid))
+          return console.log(`sage: no open record for ${sid} here — claim from the session that owns it`)
+        mergeRecord(home, repoId, sid, {
+          claimed_row: row,
+          link_state: 'linked',
+          updated_at: new Date(now).toISOString(),
+        })
+        try {
+          markAsking(home, sid, 'backlog-claim') // best-effort breadcrumb
+        } catch {
+          /* ignore */
+        }
+        return console.log(`sage: claimed row ${row} on ${sid}`)
+      }
+      // read-only board
+      stampAsking(repoId, 'backlog')
+      const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
+      if (!adapter || typeof adapter.backlogRows !== 'function')
+        return console.log('sage: no backlog adapter for this repo')
+      let rows = []
+      try {
+        rows = adapter.backlogRows(ctx) || []
+      } catch {
+        rows = [] // fail-closed-to-empty: a throwing adapter never crashes the CLI
+      }
+      if (!rows.length) return console.log('sage: no backlog rows found')
+      const sessions = collectSessions(home, repoId, now)
+      const panes = tmuxPanes()
+      for (const s of sessions) {
+        if (panes.length && s.pid) s.tmux = paneForPid(s.pid, panes)
+        s.resolvedRow = s.claimed_row || rowOf(adapter, ctx, s)?.row || null
+      }
+      return console.log(renderBacklog(backlogStatus(rows, sessions, now), { repoId }))
     }
     case 'guard': {
       const repoId = resolveRepoId(cwd)

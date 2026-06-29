@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
-import { sessionsDir, globalConfig, sessionFile } from '../lib/paths.mjs'
+import { sessionsDir, globalConfig, sessionFile, repoDir } from '../lib/paths.mjs'
 import { readGuard } from '../lib/guard.mjs'
 import { markAsking, askingFile } from '../lib/asking.mjs'
 
@@ -224,4 +224,62 @@ test('consult verbs stamp the breadcrumb for a known session; board does not; un
   assert.equal(fs.existsSync(askingFile(home, 's1')), false) // board excluded
   run(['fleet'], home, repo, { SAGE_SELF_SID: 'ghost' })
   assert.equal(fs.existsSync(askingFile(home, 'ghost')), false) // no record ⇒ no stamp
+})
+
+// P11 — backlog coordination. Symlink the syndcast adapter into the state dir so
+// the repo gets backlogRows; seed a BACKLOG.md under the repo's syndcast-mind/.
+const ADAPTER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'adapters', 'syndcast.mjs')
+const wireBacklog = (home, id, repo, backlog) => {
+  fs.mkdirSync(repoDir(home, id), { recursive: true })
+  fs.symlinkSync(ADAPTER, path.join(repoDir(home, id), 'adapter.mjs'))
+  fs.mkdirSync(path.join(repo, 'syndcast-mind'), { recursive: true })
+  fs.writeFileSync(path.join(repo, 'syndcast-mind', 'BACKLOG.md'), backlog)
+}
+const D_BACKLOG = `## D
+| ID | Mission | Status | Lands | Notes |
+|---|---|---|---|---|
+| D11 | next | ⬜ | feat-x | — |
+`
+
+test('backlog: no adapter → clean line; with adapter → row board', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 's1', branch: 'feat-x', updated_at: '2026-06-28T12:00:00Z' })
+  assert.match(run(['backlog'], home, repo), /no backlog adapter/i) // no adapter yet
+  wireBacklog(home, id, repo, D_BACKLOG)
+  const out = run(['backlog'], home, repo)
+  assert.match(out, /D11/)                 // row surfaced
+  assert.match(out, /held-but-open|mark 🟡/) // s1's branch feat-x is the D11 Lands → inferred holder
+})
+
+test('backlog claim: stamps claimed_row + the asking breadcrumb; guards a missing record', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  run(['on'], home, repo)
+  seedSession(home, id, { session_id: 's1', pid: process.pid, branch: 'main', updated_at: '2026-06-28T12:00:00Z' })
+  wireBacklog(home, id, repo, D_BACKLOG)
+  // claim A5 explicitly as s1 (SAGE_SELF_SID pins identity in the test)
+  const ok = run(['backlog', 'claim', 'A5'], home, repo, { SAGE_SELF_SID: 's1' })
+  assert.match(ok, /claimed row A5 on s1/)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.equal(rec.claimed_row, 'A5')
+  assert.ok(fs.existsSync(askingFile(home, 's1'))) // breadcrumb stamped
+  // a sid with no record is refused (never fabricated)
+  assert.match(run(['backlog', 'claim', 'D11'], home, repo, { SAGE_SELF_SID: 'ghost' }), /no open record/i)
+  assert.ok(!fs.existsSync(sessionFile(home, id, 'ghost')))
+})
+
+test('backlog claim: bad input → usage; explicit claim overrides branch inference', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  run(['on'], home, repo)
+  seedSession(home, id, { session_id: 's1', pid: process.pid, branch: 'feat-x', claimed_row: 'A5', updated_at: '2026-06-28T12:00:00Z' })
+  wireBacklog(home, id, repo, D_BACKLOG)
+  assert.match(run(['backlog', 'claim'], home, repo, { SAGE_SELF_SID: 's1' }), /usage/i) // no row arg
+  // s1's branch feat-x would infer D11, but claimed_row:A5 wins → D11 shows no live holder
+  const out = run(['backlog'], home, repo)
+  assert.doesNotMatch(out, /held by s1/)
 })
