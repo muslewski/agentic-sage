@@ -1,5 +1,9 @@
 # Writing a SAGE adapter
 
+<p align="center">
+  <img src="assets/sage-adapters.png" alt="SAGE — Writing a SAGE adapter: teach SAGE your repo's vocabulary so the fleet judge shows named work and zones, not just paths. Optional, read-only, zero-risk. The five-function contract, discovery order, fail-closed-to-core." />
+</p>
+
 SAGE's **core** works on any repo with zero configuration — it reads git, tmux, the session
 registry, and a generic handoff sidecar. An **adapter** is *optional* per-project enrichment: it
 teaches SAGE your repo's vocabulary so the board and territory show **named work and zones**
