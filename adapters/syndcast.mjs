@@ -107,6 +107,60 @@ export const claimedWork = (rec, ctx) => {
   return null
 }
 
+// Read BACKLOG.md → the rows SAGE coordinates: the A/B/C checklist items and the
+// Section-D table. Status comes from the checkbox / the Status COLUMN (not the
+// first glyph on the line — the cell-scoping lesson from claimedWork). Read-only,
+// zero-dep; a missing/garbage file → [] (never throws — fail-closed-to-empty).
+export const backlogRows = (ctx) => {
+  const p = backlogPath(ctx)
+  if (!p) return []
+  let text = ''
+  try {
+    text = fs.readFileSync(p, 'utf8')
+  } catch {
+    return []
+  }
+  const rows = []
+  let cols = null // header column indices of the current table (id/status/mission/lands)
+  for (const line of text.split('\n')) {
+    // A/B/C checklist item: `- [x] **A5 — Mission…**` (em dash, en dash, or hyphen)
+    const li = line.match(/^- \[([ xX])\]\s*\*\*([A-Za-z]\d+)\s*[—–-]\s*([^*]+)\*\*/)
+    if (li) {
+      const status = li[1].toLowerCase() === 'x' ? '✅' : /🟡/.test(line) ? '🟡' : '⬜'
+      rows.push({ id: li[2], status, mission: li[3].trim().slice(0, 120), lands: '' })
+      continue
+    }
+    if (!line.startsWith('|')) {
+      cols = null // left the table
+      continue
+    }
+    const cells = line.split('|').map((c) => c.trim())
+    if (/^-+$/.test(cells[1] || '')) continue // separator row
+    const lower = cells.map((c) => c.toLowerCase())
+    const idIdx = lower.indexOf('id')
+    if (idIdx >= 0) {
+      cols = {
+        id: idIdx,
+        status: lower.indexOf('status'),
+        mission: lower.indexOf('mission'),
+        lands: lower.indexOf('lands'),
+      }
+      continue
+    }
+    if (!cols || cells.length <= cols.id) continue
+    const id = cells[cols.id]
+    if (!/^[A-Za-z]\d+$/.test(id)) continue // not a row id (blank / heading cell)
+    const statusCell = cols.status >= 0 ? cells[cols.status] : ''
+    rows.push({
+      id,
+      status: (statusCell.match(/[🟡✅⬜🅓]/u) || [''])[0],
+      mission: cols.mission >= 0 ? cells[cols.mission] : '',
+      lands: cols.lands >= 0 ? cells[cols.lands] : '',
+    })
+  }
+  return rows
+}
+
 // Syndcast-specific generated outputs — fed into P4 isGenerated(path, extraGlobs)
 // so a contested generated file is flagged "regenerate, don't merge" in syndcast.
 export const generatedGlobs = () => [

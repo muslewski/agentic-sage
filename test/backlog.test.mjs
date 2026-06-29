@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { resolveRow, backlogStatus, renderBacklog } from '../lib/backlog.mjs'
+import { mkTmp } from './helpers.mjs'
+import { backlogRows } from '../adapters/syndcast.mjs'
 
 const live = (id, row, extra = {}) => ({ session_id: id, alive: true, resolvedRow: row, ...extra })
 const dead = (id, row, extra = {}) => ({ session_id: id, alive: false, resolvedRow: row, ...extra })
@@ -55,4 +59,45 @@ test('renderBacklog: quiet when clear, flags drift when present', () => {
   assert.match(drifted, /D11/)
   assert.match(drifted, /held by s1/)
   assert.match(drifted, /held-but-open|mark 🟡/)
+})
+
+// ── Task 2: adapter backlogRows ───────────────────────────────────────────────
+
+const fixtureRepo = (backlog) => {
+  const root = mkTmp('sage-mind-')
+  fs.mkdirSync(path.join(root, 'syndcast-mind'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'syndcast-mind', 'BACKLOG.md'), backlog)
+  return root
+}
+
+const BACKLOG = `# Backlog
+
+- [x] **A0 — Prereq: merged thing.** done.
+- [ ] **A5 — PermissionModes collection.** governance floor.
+- [ ] **B5 — Builtin describe.** 🟡 partial.
+
+## D. Side Missions
+
+| ID | Mission | Status | Lands | Notes |
+|---|---|---|---|---|
+| D9 | Int-test rehab | ✅ | fix/editor-test-type-drift | done |
+| D11 | next side mission | ⬜ | \`feat/…\` | — |
+`
+
+test('backlogRows: parses A/B/C checklist + the D table with column-scoped status', () => {
+  const root = fixtureRepo(BACKLOG)
+  const rows = backlogRows({ repoRoot: root })
+  const byId = Object.fromEntries(rows.map((r) => [r.id, r]))
+  assert.equal(byId.A0.status, '✅')          // [x] → done
+  assert.equal(byId.A5.status, '⬜')          // [ ], no glyph → open
+  assert.equal(byId.B5.status, '🟡')          // [ ] + inline 🟡 → in-progress
+  assert.equal(byId.D9.status, '✅')          // Status COLUMN, not the first glyph
+  assert.equal(byId.D9.lands, 'fix/editor-test-type-drift')
+  assert.equal(byId.D11.status, '⬜')
+  assert.match(byId.A5.mission, /PermissionModes/)
+})
+
+test('backlogRows: missing or garbage backlog → []', () => {
+  assert.deepEqual(backlogRows({ repoRoot: mkTmp('sage-empty-') }), []) // no syndcast-mind/BACKLOG.md
+  assert.deepEqual(backlogRows({ repoRoot: fixtureRepo('not a table\njust prose\n') }), [])
 })
