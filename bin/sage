@@ -192,7 +192,10 @@ const main = async () => {
       if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
       if (a1 === 'claim') {
         const row = (a2 || '').trim()
-        if (!row || /[\n\r -]/.test(row) || row.length > 40)
+        // Strict id shape — the SAME shape backlogRows recognizes (letter+digits);
+        // rejects spaces, control chars, and any punctuation noise (a guard, since
+        // the value is stored + rendered). A1·R-style sub-rows aren't coordinated.
+        if (!/^[A-Za-z]\d{1,6}$/.test(row))
           return console.log('usage: sage backlog claim <row>   (e.g. D11)')
         const sid = resolveSelfSid(home, repoId)
         if (!sid)

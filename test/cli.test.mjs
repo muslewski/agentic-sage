@@ -279,6 +279,8 @@ test('backlog claim: bad input → usage; explicit claim overrides branch infere
   seedSession(home, id, { session_id: 's1', pid: process.pid, branch: 'feat-x', claimed_row: 'A5', updated_at: '2026-06-28T12:00:00Z' })
   wireBacklog(home, id, repo, D_BACKLOG)
   assert.match(run(['backlog', 'claim'], home, repo, { SAGE_SELF_SID: 's1' }), /usage/i) // no row arg
+  assert.match(run(['backlog', 'claim', 'D1!'], home, repo, { SAGE_SELF_SID: 's1' }), /usage/i) // punctuation rejected
+  assert.match(run(['backlog', 'claim', 'a b'], home, repo, { SAGE_SELF_SID: 's1' }), /usage/i) // space rejected
   // s1's branch feat-x would infer D11, but claimed_row:A5 wins → D11 shows no live holder
   const out = run(['backlog'], home, repo)
   assert.doesNotMatch(out, /held by s1/)
