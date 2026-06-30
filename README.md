@@ -236,3 +236,16 @@ test/*.test.mjs     node --test, hermetic (temp HOME, temp git repos)
 [`ADAPTERS.md`](./ADAPTERS.md) — write a per-project adapter. ·
 [`CONVENTIONS.md`](./CONVENTIONS.md) — an *example* controller setup (worktree-at-go, the guard). ·
 [`uninstall/`](./uninstall/README.md) — undo it. · `LICENSE` — MIT.
+
+## Contact
+
+SAGE is in **early, active development** — a beta. I run it daily and it works, but
+expect rough edges, and expect things to change as it finds its shape.
+
+I'm building it in the open and I'd genuinely value any feedback — a bug, a question,
+a half-formed idea, or just hello. Nothing is too small.
+
+- **Email** — <kontakt@muslewski.com>
+- **GitHub** — [open an issue](https://github.com/muslewski/agentic-sage/issues) — the lightest way to reach me
+
+— [Mateusz](https://muslewski.com)
