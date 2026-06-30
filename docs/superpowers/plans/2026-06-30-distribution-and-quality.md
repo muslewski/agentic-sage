@@ -67,7 +67,7 @@ Add a `files` whitelist and `engines.node` to `package.json` so the npm tarball 
       "CONVENTIONS.md"
     ],
     "engines": {
-      "node": ">=18.0.0"
+      "node": ">=20.0.0"
     },
     "scripts": {
       "test": "node --test"
@@ -623,7 +623,7 @@ Add a GitHub Actions workflow that gates every push and PR on lint + tests.
       runs-on: ubuntu-latest
       strategy:
         matrix:
-          node: ['18', '20', '22']
+          node: ['20', '22', '24']
         fail-fast: false
 
       steps:
@@ -647,7 +647,7 @@ Add a GitHub Actions workflow that gates every push and PR on lint + tests.
 - [ ] Commit:
 
   ```
-  ci: add GitHub Actions CI workflow (lint + test, Node 18/20/22)
+  ci: add GitHub Actions CI workflow (lint + test, Node 20/22/24)
   ```
 
 ---
@@ -1179,7 +1179,7 @@ Add shields.io badges and reorder README sections to follow the dify-style conve
       <img src="https://img.shields.io/github/actions/workflow/status/muslewski/agentic-sage/ci.yml?label=CI&style=flat" alt="CI">
     </a>
     <img src="https://img.shields.io/badge/license-MIT-green?style=flat" alt="MIT license">
-    <img src="https://img.shields.io/badge/node-%3E%3D18-blue?style=flat" alt="Node >=18">
+    <img src="https://img.shields.io/badge/node-%3E%3D20-blue?style=flat" alt="Node >=20">
   </p>
   ```
 
