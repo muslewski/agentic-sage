@@ -29,7 +29,7 @@ answers two questions cheaply:
 1. **Who is doing what — and how stale is that knowledge?**
 2. **Why did these branches diverge / am I about to collide with another session?**
 
-One judge per repo. Zero dependencies, Node ≥ 18, `node --test`.
+One judge per repo. Zero dependencies, Node ≥ 20, `node --test`.
 
 ## Quickstart
 
