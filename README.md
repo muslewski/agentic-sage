@@ -1,7 +1,24 @@
-# SAGE — the Old Wise One
+<p align="center">
+  <img src="./assets/sage-banner.png" alt="SAGE — the fleet judge" width="900">
+</p>
 
 <p align="center">
-  <img src="assets/sage-banner.png" alt="SAGE — Session Awareness &amp; Guidance Engine: a passive, read-only fleet judge. “I don’t do the work. I judge it.”" />
+  <a href="#install">Install</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="./SETUP.md">Full setup guide</a> ·
+  <a href="./ADAPTERS.md">Adapters</a> ·
+  <a href="https://github.com/muslewski/agentic-sage/releases">Changelog</a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/agentic-sage">
+    <img src="https://img.shields.io/npm/v/agentic-sage?label=npm&style=flat" alt="npm version">
+  </a>
+  <a href="https://github.com/muslewski/agentic-sage/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/muslewski/agentic-sage/ci.yml?label=CI&style=flat" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat" alt="MIT license">
+  <img src="https://img.shields.io/badge/node-%3E%3D20-blue?style=flat" alt="Node >=20">
 </p>
 
 **S**ession **A**wareness & **G**uidance **E**ngine: a passive, read-only **fleet judge** for
@@ -30,6 +47,8 @@ config we run ourselves — in **[`SETUP.md`](./SETUP.md)**.
 repo."* It reads **[`AGENTS.md`](./AGENTS.md)** — the deterministic setup runbook — and walks the
 install → enable → wire → (optional) adapter → verify steps for you. Fully reversible:
 `node uninstall/uninstall.mjs` (see [`uninstall/`](./uninstall/README.md)).
+
+<a id="how-it-works"></a>
 
 ## Why — keep the human at fleet altitude
 
@@ -102,15 +121,36 @@ Undo all of it any time: `node uninstall/uninstall.mjs` (surgical — see [`unin
 
 ## Install
 
+**Option 1 — global npm (recommended):**
+
 ```bash
-node install.mjs        # wires into ~/.claude — installs DISABLED; you opt in
-sage on                 # globally enable judging (default OFF)
+npm install -g agentic-sage
+sage init                    # wires skills + hooks into ~/.claude
+sage on                      # enable globally (default OFF)
 ```
 
-`install.mjs` is conservative: it seeds a **disabled** config (never overwrites an existing one),
-symlinks the emitter hook (backing up any real-file collision), and merges its lifecycle hooks into
-`~/.claude/settings.json` with a one-time `.bak`, **skip-if-present**, and an **abort** (never an
-overwrite) on malformed JSON. It never auto-enables.
+**Option 2 — Claude Code marketplace:**
+
+```
+/plugin marketplace add muslewski/agentic-sage
+/plugin install
+```
+
+Skills (`sage-fleet`, `sage-doctor`) are linked; no further setup needed for skill-only
+use. To use the `sage` CLI verbs (`board`, `territory`, …) also run the global npm
+install above.
+
+**Option 3 — git clone (for contributors / local development):**
+
+```bash
+git clone https://github.com/muslewski/agentic-sage.git
+cd agentic-sage
+node install.mjs             # same as sage init, from source
+sage on
+```
+
+> **Demo:** a board-spinner asciinema recording is planned — see
+> [#tracking-issue](https://github.com/muslewski/agentic-sage/issues) for status.
 
 ## Use
 
@@ -236,6 +276,12 @@ test/*.test.mjs     node --test, hermetic (temp HOME, temp git repos)
 [`ADAPTERS.md`](./ADAPTERS.md) — write a per-project adapter. ·
 [`CONVENTIONS.md`](./CONVENTIONS.md) — an *example* controller setup (worktree-at-go, the guard). ·
 [`uninstall/`](./uninstall/README.md) — undo it. · `LICENSE` — MIT.
+
+## Community
+
+- [Issues](https://github.com/muslewski/agentic-sage/issues) — bugs + feature requests
+- [Discussions](https://github.com/muslewski/agentic-sage/discussions) — Q&A + ideas
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — how to contribute
 
 ## Contact
 
