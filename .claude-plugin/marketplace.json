@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agentic-sage",
+  "description": "Passive fleet judge for parallel Claude Code sessions — board, territory checks, merge briefings.",
+  "owner": {
+    "name": "Mateusz Muślewski",
+    "url": "https://github.com/muslewski"
+  },
+  "plugins": [
+    {
+      "name": "sage-fleet",
+      "description": "Use when starting work, before opening a PR, or resolving a merge conflict while other agent sessions may be running in parallel on the same repo. Coordinate through the sage CLI — collision check, claim intent, merge brief, why-diverged — so parallel sessions merge smoothly. Advisory only; a silent no-op when SAGE is off or not installed.",
+      "source": "./",
+      "category": "productivity"
+    },
+    {
+      "name": "sage-doctor",
+      "description": "Validate the SAGE fleet-judge install — config, emitter hook, settings wiring, linked skills, current repo. Trigger: /sage-doctor",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
