@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## [0.2.1](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v0.2.0...agentic-sage-v0.2.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* point npm homepage at project site ([#6](https://github.com/muslewski/agentic-sage/issues/6)) ([1f089b2](https://github.com/muslewski/agentic-sage/commit/1f089b2e1e6d39ef257654cb2a175f198d360799))
+
 ## [0.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v0.1.0...agentic-sage-v0.2.0) (2026-06-30)
 
 
