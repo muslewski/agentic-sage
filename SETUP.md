@@ -1,7 +1,11 @@
 # Setting up SAGE
 
 <p align="center">
-  <img src="assets/sage-setup.png" alt="SAGE — Easy Setup: four steps — Clone, Install, Enable, Doctor. Four simple steps to a coordinated fleet." />
+  <picture>
+    <source srcset="assets/sage-setup.avif" type="image/avif">
+    <source srcset="assets/sage-setup.webp" type="image/webp">
+    <img src="assets/sage-setup.webp" alt="SAGE — Easy Setup: three steps — Install (npm install -g agentic-sage), Wire (sage init), Enable (sage on). Three simple steps to a coordinated fleet." />
+  </picture>
 </p>
 
 A linear walkthrough from clone to a coordinating fleet. Three required steps; everything else is

@@ -1,7 +1,11 @@
 # SAGE conventions
 
 <p align="center">
-  <img src="assets/sage-conventions.png" alt="SAGE — Conventions: the controller's side of the contract. Worktree after design, consult before a PR or on conflict, the optional guard, full enable/disable control. Passive by design, fail-open, default-off, hot-path-cheap." />
+  <picture>
+    <source srcset="assets/sage-conventions.avif" type="image/avif">
+    <source srcset="assets/sage-conventions.webp" type="image/webp">
+    <img src="assets/sage-conventions.webp" alt="SAGE — Conventions: the controller's side of the contract. Worktree after design, consult before a PR or on conflict, the optional guard, full enable/disable control. Passive by design, fail-open, default-off, hot-path-cheap." />
+  </picture>
 </p>
 
 How a controller (the human, or an autopilot loop) should use SAGE so the fleet judge has

@@ -1,7 +1,11 @@
 # Writing a SAGE adapter
 
 <p align="center">
-  <img src="assets/sage-adapters.png" alt="SAGE — Writing a SAGE adapter: teach SAGE your repo's vocabulary so the fleet judge shows named work and zones, not just paths. Optional, read-only, zero-risk. The five-function contract, discovery order, fail-closed-to-core." />
+  <picture>
+    <source srcset="assets/sage-adapters.avif" type="image/avif">
+    <source srcset="assets/sage-adapters.webp" type="image/webp">
+    <img src="assets/sage-adapters.webp" alt="SAGE — Writing a SAGE adapter: teach SAGE your repo's vocabulary so the fleet judge shows named work and zones, not just paths. Optional, read-only, zero-risk. The five-function contract, discovery order, fail-closed-to-core." />
+  </picture>
 </p>
 
 SAGE's **core** works on any repo with zero configuration — it reads git, tmux, the session

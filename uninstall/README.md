@@ -1,7 +1,11 @@
 # Uninstalling SAGE
 
 <p align="center">
-  <img src="../assets/sage-uninstall.png" alt="SAGE — Goodbye, SAGE! Uninstall anytime; we clean up after ourselves. Removes only SAGE's own hook, symlinks, and tmux line; keeps your state, config, history, and other hooks untouched. One command, surgical, fully reversible." />
+  <picture>
+    <source srcset="../assets/sage-uninstall.avif" type="image/avif">
+    <source srcset="../assets/sage-uninstall.webp" type="image/webp">
+    <img src="../assets/sage-uninstall.webp" alt="SAGE — Goodbye, SAGE! Uninstall anytime; we clean up after ourselves. Removes only SAGE's own hook, symlinks, and tmux line; keeps your state, config, history, and other hooks untouched. One command, surgical, fully reversible." />
+  </picture>
 </p>
 
 SAGE is built to be safe to remove. One command unwires it — **surgically**, touching only SAGE's
