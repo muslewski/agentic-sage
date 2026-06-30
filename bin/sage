@@ -101,7 +101,8 @@ const main = async () => {
       if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
       const panes = tmuxPanes() // best-effort: jumpable pane per live session
       if (panes.length) for (const s of sessions) { if (s.pid) s.tmux = paneForPid(s.pid, panes) }
-      return console.log(renderBoard(sessions, { repoId, now }))
+      const wide = a1 === '--wide' || a1 === '-w'
+      return console.log(renderBoard(sessions, { repoId, wide }))
     }
     case 'fleet': {
       const repoId = resolveRepoId(cwd)

@@ -45,3 +45,28 @@ test('renderBoard shows branches + bucket; empty → no sessions', () => {
   assert.match(txt, /fresh/)
   assert.match(renderBoard([], { repoId: id, now: NOW }), /no sessions/)
 })
+
+test('renderBoard is branch-led with zone + ✎ + balanced header; UUID hidden', () => {
+  const sessions = [
+    { session_id: 'uuid-aaaa1111', branch: 'feat/auth', liveness: 'active', dirty: true,
+      touched_globs: ['src/auth/x.ts', 'src/auth/y.ts'], handoff_bucket: 'fresh', handoff_age: '8m ago',
+      ctx_used: 62, ctx_window: 100 },
+  ]
+  const txt = renderBoard(sessions, { repoId: 'repo' })
+  assert.match(txt, /^SAGE · repo · 1 session\n/) // singular, no "board"
+  assert.match(txt, /feat\/auth ✎/) // branch identity + uncommitted marker
+  assert.match(txt, /src\/auth\//) // zone = where they work
+  assert.match(txt, /active · 62%/) // status carries ctx
+  assert.ok(!txt.includes('uuid-aaaa1111')) // UUID hidden by default
+})
+
+test('renderBoard flags an orphan (dead holds a row); --wide reveals the sid', () => {
+  const sessions = [
+    { session_id: 'deadbeef-9999', branch: 'feat/x', liveness: 'dead', row: 'M3',
+      handoff_bucket: 'stale', handoff_age: '3h ago', touched_globs: ['data/loader.py'] },
+  ]
+  const plain = renderBoard(sessions, { repoId: 'repo' })
+  assert.match(plain, /↳M3 ⚠/)
+  assert.ok(!plain.includes('deadbeef'))
+  assert.match(renderBoard(sessions, { repoId: 'repo', wide: true }), /deadbeef/) // reachable for link/unlink
+})
