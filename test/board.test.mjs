@@ -4,7 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
-import { handoffBucket, collectSessions, renderBoard } from '../lib/board.mjs'
+import { handoffBucket, collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import { SPINNER_FRAMES } from '../lib/spinner.mjs'
 
 const seed = (home, repoId, sid, rec) => {
   const dir = sessionsDir(home, repoId)
@@ -69,4 +70,23 @@ test('renderBoard flags an orphan (dead holds a row); --wide reveals the sid', (
   assert.match(plain, /↳M3 ⚠/)
   assert.ok(!plain.includes('deadbeef'))
   assert.match(renderBoard(sessions, { repoId: 'repo', wide: true }), /deadbeef/) // reachable for link/unlink
+})
+
+test('spinnerize swaps the ● of working rows only; header + idle untouched', () => {
+  const sessions = [
+    { branch: 'feat/a', liveness: 'working', touched_globs: ['src/a.ts'] },
+    { branch: 'feat/b', liveness: 'idle', touched_globs: ['src/b.ts'] },
+  ]
+  const text = renderBoard(sessions, { repoId: 'repo' })
+  const frame = SPINNER_FRAMES[0]
+  const out = spinnerize(text, sessions, frame).split('\n')
+  assert.ok(out[0].startsWith('SAGE ·')) // header untouched
+  assert.equal(out[1], '') // blank line untouched
+  assert.ok(out[2].startsWith(`${frame} feat/a`)) // active row leads with the frame
+  assert.ok(out[3].startsWith('● feat/b')) // idle row keeps its static ●
+})
+
+test('spinnerize leaves an empty board untouched', () => {
+  const text = renderBoard([], { repoId: 'repo' })
+  assert.equal(spinnerize(text, [], SPINNER_FRAMES[0]), text)
 })

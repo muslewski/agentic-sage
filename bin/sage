@@ -7,7 +7,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
-import { collectSessions, renderBoard } from '../lib/board.mjs'
+import { collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
   setEnabled,
   linkSession,
@@ -49,7 +50,7 @@ const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>
-  board                roster of this repo's sessions
+  board [--watch]      roster of this repo's sessions (--watch = live)
   fleet                one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
@@ -71,6 +72,27 @@ const USAGE = `usage: sage <command>
 const adapterCtx = async (home, repoId, cwd) => {
   const ctx = { repoRoot: resolveRepoRoot(cwd) }
   return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
+}
+
+// Live board: alt-screen + hidden cursor, repaint every frame (re-collecting
+// sessions so liveness/ctx/age refresh live), Ctrl-C restores and exits. `build`
+// renders the board for a given spinner frame. TTY-only (the caller guards).
+const runWatch = (build) => {
+  const W = process.stdout
+  let i = 0
+  W.write('\x1b[?1049h\x1b[?25l') // enter alt screen, hide cursor
+  const draw = () => {
+    W.write('\x1b[H\x1b[2J' + paint(build(SPINNER_FRAMES[i % SPINNER_FRAMES.length])) + '\n')
+    i++
+  }
+  draw()
+  const t = setInterval(draw, SPINNER_INTERVAL_MS)
+  const stop = () => {
+    clearInterval(t)
+    W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt screen
+    process.exit(0)
+  }
+  process.on('SIGINT', stop)
 }
 
 const main = async () => {
@@ -96,13 +118,22 @@ const main = async () => {
     case 'board': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
-      const sessions = collectSessions(home, repoId, now)
+      const flags = process.argv.slice(3)
+      const watch = flags.includes('--watch')
+      const wide = flags.includes('--wide') || flags.includes('-w')
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
-      if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
-      const panes = tmuxPanes() // best-effort: jumpable pane per live session
-      if (panes.length) for (const s of sessions) { if (s.pid) s.tmux = paneForPid(s.pid, panes) }
-      const wide = a1 === '--wide' || a1 === '-w'
-      return console.log(renderBoard(sessions, { repoId, wide }))
+      // build(frame): re-collect + render. frame == null → static (no spinner).
+      const build = (frame) => {
+        const sessions = collectSessions(home, repoId, Date.now())
+        if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
+        const panes = tmuxPanes() // best-effort: jumpable pane per live session
+        if (panes.length) for (const s of sessions) { if (s.pid) s.tmux = paneForPid(s.pid, panes) }
+        const text = renderBoard(sessions, { repoId, wide })
+        return frame == null ? text : spinnerize(text, sessions, frame)
+      }
+      // --watch animates, but only on a real TTY; piped/non-TTY → one static frame.
+      if (!watch || !process.stdout.isTTY) return console.log(build(null))
+      return runWatch(build)
     }
     case 'fleet': {
       const repoId = resolveRepoId(cwd)

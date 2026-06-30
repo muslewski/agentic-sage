@@ -35,6 +35,19 @@ test('coloring preserves the plain text when stripped of ANSI', () => {
   })
 })
 
+test('the real CLI "working" status word is painted gold', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    assert.match(paint('● feat/a  working · 71%  src/a/'), /\x1b\[33mworking\x1b\[0m/)
+  })
+})
+
+test('an active-row spinner frame is painted gold', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const out = paint('⠋ feat/a  active  src/a/')
+    assert.match(out, /\x1b\[33m⠋\x1b\[0m/) // gold spinner frame
+  })
+})
+
 test('multiline text is colorized per line', () => {
   withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
     const out = paint('SAGE doctor\n  ✓ sage home — ok\n  ✗ broken — bad')
