@@ -41,6 +41,12 @@ import { isEnabled } from '../lib/enabled.mjs'
 import { globalConfig } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
 import { backlogStatus, renderBacklog } from '../lib/backlog.mjs'
+import { paint } from '../lib/color.mjs'
+
+// Colorize all string output at the single print chokepoint. paint() is a
+// no-op when piped / NO_COLOR, so captured output (tests, pipes) stays plain.
+const _log = console.log.bind(console)
+console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>
   board                roster of this repo's sessions
