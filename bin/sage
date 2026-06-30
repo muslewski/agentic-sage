@@ -64,6 +64,7 @@ const USAGE = `usage: sage <command>
   backlog claim <row>  register THIS session's backlog row (claimed_row)
   guard …              list | add <path> | rm <path> | on | off (default OFF)
   adapter init         scaffold .sage/adapter.mjs from the template
+  init                 wire skills + hooks into ~/.claude (run after npm install)
   doctor               validate dirs / hook / settings / token-forecast
   statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
 
@@ -361,6 +362,18 @@ const main = async () => {
           `  → edit it to teach SAGE your repo's vocabulary (see ADAPTERS.md)\n` +
           `  → it's committable; or symlink it out-of-tree to ~/.claude/sage/repos/<id>/adapter.mjs`,
       )
+    }
+    case 'init': {
+      const { wireAll, formatResult } = await import('../lib/wiring.mjs')
+      const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+      let result
+      try {
+        result = wireAll({ home, repoRoot })
+      } catch (e) {
+        console.error(e.message)
+        process.exit(1)
+      }
+      return console.log(formatResult(result))
     }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))

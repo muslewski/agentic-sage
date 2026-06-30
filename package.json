@@ -25,7 +25,8 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "author": "Mateusz Muślewski <10kento10@gmail.com>",
   "license": "MIT",
