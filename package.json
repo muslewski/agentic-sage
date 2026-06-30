@@ -1,14 +1,45 @@
 {
   "name": "agentic-sage",
   "version": "0.1.0",
-  "description": "SAGE — a passive, read-only fleet judge for many parallel agent coding sessions. One judge per repo.",
   "type": "module",
+  "description": "Passive fleet judge for parallel Claude Code sessions — board, territory checks, merge briefings.",
   "bin": {
     "sage": "./bin/sage"
   },
-  "scripts": {
-    "test": "node --test"
+  "files": [
+    "bin",
+    "lib",
+    "hooks",
+    "skills",
+    "adapters",
+    "templates",
+    "uninstall",
+    "install.mjs",
+    "scripts",
+    "AGENTS.md",
+    "SETUP.md",
+    "ADAPTERS.md",
+    "CONVENTIONS.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
   },
+  "scripts": {
+    "test": "node --test",
+    "postinstall": "node scripts/postinstall.mjs",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "author": "Mateusz Muślewski <10kento10@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muslewski/agentic-sage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/muslewski/agentic-sage/issues"
+  },
+  "homepage": "https://github.com/muslewski/agentic-sage#readme",
   "keywords": [
     "claude-code",
     "agents",
@@ -18,14 +49,7 @@
     "sessions",
     "orchestration"
   ],
-  "author": "Mateusz Muślewski <10kento10@gmail.com>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/muslewski/agentic-sage.git"
-  },
-  "bugs": {
-    "url": "https://github.com/muslewski/agentic-sage/issues"
-  },
-  "homepage": "https://github.com/muslewski/agentic-sage#readme",
-  "license": "MIT"
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1"
+  }
 }

@@ -1,0 +1,35 @@
+name: Publish to npm
+
+# release-please prepares the release PR + CHANGELOG + version tag. To publish, a human
+# pushes the tag (`git push origin vX.Y.Z`) — a human-pushed tag triggers this workflow —
+# or runs it manually via workflow_dispatch. A tag auto-pushed by release-please's
+# GITHUB_TOKEN will NOT trigger this; add a PAT/GitHub-App token to release-please for
+# full release automation.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # Required for --provenance attestation
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Publish with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

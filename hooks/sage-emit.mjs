@@ -97,10 +97,15 @@ const main = () => {
         source: payload.source || null,
         status: 'active',
         liveness: 'idle',
-        opened_at: (prev && prev.opened_at) || at, // preserve true open time across resume/clear
+        opened_at: prev?.opened_at || at, // preserve true open time across resume/clear
         updated_at: at,
       })
-      appendEvent(home, repoId, { event: 'open', session_id: sid, source: payload.source || null, at })
+      appendEvent(home, repoId, {
+        event: 'open',
+        session_id: sid,
+        source: payload.source || null,
+        at,
+      })
       // The one sanctioned auto-injection (design §10.3): a one-line fleet brief.
       // SessionStart-only, only when other sessions exist (never noise when solo).
       // Inside main()'s try/catch (fail-open) and behind the enable gate above;
@@ -117,7 +122,7 @@ const main = () => {
 
     case 'PostToolUse': {
       const rec = readRecord(home, repoId, sid)
-      const last = rec && rec.last_tool_at ? Date.parse(rec.last_tool_at) : 0
+      const last = rec?.last_tool_at ? Date.parse(rec.last_tool_at) : 0
       if (now - last < POST_TOOL_THROTTLE_MS) break // throttle chatter
       mergeRecord(home, repoId, sid, { last_tool_at: at, liveness: 'working', updated_at: at })
       break
@@ -164,7 +169,12 @@ const main = () => {
         liveness: 'closed',
         updated_at: at,
       })
-      appendEvent(home, repoId, { event: 'close', session_id: sid, reason: payload.reason || null, at })
+      appendEvent(home, repoId, {
+        event: 'close',
+        session_id: sid,
+        reason: payload.reason || null,
+        at,
+      })
       break
 
     case 'PreToolUse': {
@@ -183,11 +193,17 @@ const main = () => {
         // its own try. Write the reason SYNCHRONOUSLY (fs.writeSync, not the
         // buffered stderr.write) so exit(2) can't truncate it on a pipe.
         try {
-          appendEvent(home, repoId, { event: 'guard-block', session_id: sid, path: rel, matched, at })
+          appendEvent(home, repoId, {
+            event: 'guard-block',
+            session_id: sid,
+            path: rel,
+            matched,
+            at,
+          })
         } catch {
           /* best-effort log; the block still fires */
         }
-        fs.writeSync(2, blockMessage(rel, matched) + '\n')
+        fs.writeSync(2, `${blockMessage(rel, matched)}\n`)
         process.exit(2)
       }
       break
