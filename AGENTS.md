@@ -26,7 +26,7 @@ hook); all state lives under `~/.claude/sage/`, **never in the user's repo tree*
 
 Run these in order. Tell the user what each step does; stop and ask if anything is ambiguous.
 
-1. **Check Node ≥ 18** — `node --version`. SAGE is zero-dependency; nothing to build.
+1. **Check Node ≥ 20** — `node --version`. SAGE is zero-dependency; nothing to build.
 2. **Install (wires into `~/.claude`, DISABLED)** — `node install.mjs`. It is conservative: seeds a
    **disabled** config (never overwrites an existing one), symlinks the emitter hook, **merges** its
    lifecycle hooks into `~/.claude/settings.json` (backs it up once, skips-if-present, **aborts** on

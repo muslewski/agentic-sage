@@ -19,18 +19,20 @@ config we use ourselves — copy it for a proven setup.
 
 ## Required
 
-### 1. Clone
+### 1. Install
 
 ```bash
-git clone https://github.com/muslewski/agentic-sage && cd agentic-sage
+npm install -g agentic-sage
 ```
 
-Zero dependencies, Node ≥ 18. Nothing to build.
+Zero dependencies, Node ≥ 20. **From source instead?**
+`git clone https://github.com/muslewski/agentic-sage && cd agentic-sage` — then use
+`node install.mjs` in place of `sage init` below.
 
-### 2. Install (wires into `~/.claude`, **disabled**)
+### 2. Wire (`~/.claude`, **disabled**)
 
 ```bash
-node install.mjs
+sage init
 ```
 
 Conservative and idempotent: seeds a **disabled** config (never overwrites an existing one),

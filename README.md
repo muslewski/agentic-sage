@@ -34,8 +34,8 @@ One judge per repo. Zero dependencies, Node ≥ 20, `node --test`.
 ## Quickstart
 
 ```bash
-git clone https://github.com/muslewski/agentic-sage && cd agentic-sage
-node install.mjs        # conservative wiring into ~/.claude — installs DISABLED
+npm install -g agentic-sage
+sage init               # conservative wiring into ~/.claude — installs DISABLED
 sage on                 # opt in (default OFF)
 ```
 
@@ -43,7 +43,7 @@ Then paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into y
 `CLAUDE.md` and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
 config we run ourselves — in **[`SETUP.md`](./SETUP.md)**.
 
-**Prefer to let your agent do it?** Clone, then tell your coding agent *"set up agentic-sage for this
+**Prefer to let your agent do it?** Install, then tell your coding agent *"set up agentic-sage for this
 repo."* It reads **[`AGENTS.md`](./AGENTS.md)** — the deterministic setup runbook — and walks the
 install → enable → wire → (optional) adapter → verify steps for you. Fully reversible:
 `node uninstall/uninstall.mjs` (see [`uninstall/`](./uninstall/README.md)).
