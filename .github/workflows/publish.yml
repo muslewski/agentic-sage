@@ -1,8 +1,14 @@
 name: Publish to npm
 
+# release-please prepares the release PR + CHANGELOG + version tag. To publish, a human
+# pushes the tag (`git push origin vX.Y.Z`) — a human-pushed tag triggers this workflow —
+# or runs it manually via workflow_dispatch. A tag auto-pushed by release-please's
+# GITHUB_TOKEN will NOT trigger this; add a PAT/GitHub-App token to release-please for
+# full release automation.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
