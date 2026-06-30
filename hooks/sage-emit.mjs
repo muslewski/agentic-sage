@@ -97,7 +97,7 @@ const main = () => {
         source: payload.source || null,
         status: 'active',
         liveness: 'idle',
-        opened_at: (prev && prev.opened_at) || at, // preserve true open time across resume/clear
+        opened_at: prev?.opened_at || at, // preserve true open time across resume/clear
         updated_at: at,
       })
       appendEvent(home, repoId, {
@@ -122,7 +122,7 @@ const main = () => {
 
     case 'PostToolUse': {
       const rec = readRecord(home, repoId, sid)
-      const last = rec && rec.last_tool_at ? Date.parse(rec.last_tool_at) : 0
+      const last = rec?.last_tool_at ? Date.parse(rec.last_tool_at) : 0
       if (now - last < POST_TOOL_THROTTLE_MS) break // throttle chatter
       mergeRecord(home, repoId, sid, { last_tool_at: at, liveness: 'working', updated_at: at })
       break
@@ -203,7 +203,7 @@ const main = () => {
         } catch {
           /* best-effort log; the block still fires */
         }
-        fs.writeSync(2, blockMessage(rel, matched) + '\n')
+        fs.writeSync(2, `${blockMessage(rel, matched)}\n`)
         process.exit(2)
       }
       break
