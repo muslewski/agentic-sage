@@ -57,7 +57,33 @@ test('staged rename consumes its orig-path token (no phantom entry)', () => {
 
 test('non-git path degrades to safe defaults', () => {
   const sig = gitSignals(mkTmp('sage-norepo-'))
-  assert.deepEqual(sig, { head: null, dirty: false, touched: [] })
+  assert.deepEqual(sig, { head: null, dirty: false, touched: [], trunk: null })
+})
+
+test('gitSignals: trunk hint is used verbatim and included in touched detection', () => {
+  const repo = mkGitRepo()
+  git(repo, 'checkout', '-qb', 'feature')
+  fs.writeFileSync(path.join(repo, 'newfile.txt'), 'x')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-qm', 'add newfile')
+  const sig = gitSignals(repo, { trunk: 'main' })
+  assert.ok(sig.touched.includes('newfile.txt'))
+  assert.equal(sig.trunk, 'main')
+})
+
+test('gitSignals: a bad trunk hint short-circuits trunkOf (diff fails, porcelain-only)', () => {
+  const repo = mkGitRepo()
+  git(repo, 'checkout', '-qb', 'feature')
+  fs.writeFileSync(path.join(repo, 'newfile.txt'), 'x')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-qm', 'add newfile')
+  const sig = gitSignals(repo, { trunk: 'no-such-branch' })
+  assert.ok(!sig.touched.includes('newfile.txt'), `touched was: ${sig.touched}`)
+})
+
+test('gitSignals: no hint ⇒ trunk is derived (main)', () => {
+  const sig = gitSignals(mkGitRepo())
+  assert.equal(sig.trunk, 'main')
 })
 
 test('branchOf returns the current branch', () => {
