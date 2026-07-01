@@ -37,7 +37,8 @@ export const ownsZone = (p, ctx) => /* zone slug */ null
 export const claimedWork = (rec, ctx) => /* { row: 'D9', status: '🟡' } */ null
 
 // backlogPath(ctx) → string | null
-//   Absolute path to the repo's backlog/worklog file, if it has one.
+//   Convenience for YOUR OWN functions (e.g. backlogRows) — the core never
+//   calls this. Only backlogRows powers `sage backlog`.
 export const backlogPath = (ctx) => null
 
 // generatedGlobs() → string[]
@@ -61,8 +62,10 @@ export const backlogRows = (ctx) => []
   degrades to "no backlog adapter for this repo." The reference `adapters/acme.mjs` parses both the
   A/B/C checklist items and the Section-D table.
 
-The core consumes these through thin enrichment helpers (`lib/adapter.mjs`): `zoneOf`, `rowOf`. A
-missing export simply yields no enrichment for that dimension.
+The core consumes four of these: `ownsZone`/`claimedWork` through the thin enrichment helpers in
+`lib/adapter.mjs` (`zoneOf`, `rowOf`), and `backlogRows`/`generatedGlobs` directly from the CLI
+(`sage backlog`, `sage merge-brief`). `backlogPath` is a private convenience for your own adapter
+code — the core never invokes it. A missing export simply yields no enrichment for that dimension.
 
 ## Discovery order
 

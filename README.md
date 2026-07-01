@@ -115,7 +115,7 @@ abort on malformed JSON · never auto-enable). All fire the one emitter, all **f
 |---|---|
 | `SessionStart` | record/refresh this session; the one optional one-line fleet brief |
 | `UserPromptSubmit` | refresh liveness/timestamp |
-| `PostToolUse` | refresh `touched_globs` (git numstat) |
+| `PostToolUse` | refresh liveness timestamp (throttled to ~1/30 s) |
 | `Stop` | last-turn-fresh record (survives `/clear`) |
 | `PreCompact` | lightweight handoff sidecar dump |
 | `SessionEnd` | mark the session closed |
@@ -153,8 +153,8 @@ node install.mjs             # same as sage init, from source
 sage on
 ```
 
-> **Demo:** a board-spinner asciinema recording is planned — see
-> [#tracking-issue](https://github.com/muslewski/agentic-sage/issues) for status.
+> **Demo:** run `sage board --watch` in a repo with live sessions for the
+> animated board. (A recorded asciinema demo may land in a future release.)
 
 ## Use
 

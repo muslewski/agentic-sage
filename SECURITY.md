@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 0.1.x | Yes |
+| latest 0.x minor (currently 0.2.x) | Yes |
+| older | No — upgrade first |
 
 ## Reporting a vulnerability
 
