@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { readRecord, writeRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
-import { eventsFile } from '../lib/paths.mjs'
+import { eventsFile, sessionFile } from '../lib/paths.mjs'
 import { mkTmp } from './helpers.mjs'
 
 const pexecFile = promisify(execFile)
@@ -79,4 +79,32 @@ test('concurrent appendEvent lines are all present and parseable', async () => {
   const lines = fs.readFileSync(eventsFile(home, 'r'), 'utf8').split('\n').filter(Boolean)
   assert.equal(lines.length, N * M)
   for (const l of lines) JSON.parse(l) // throws on a torn line
+})
+
+test('stale lock is taken over — mergeRecord succeeds and clears it', () => {
+  const home = mkTmp('sage-h-')
+  writeRecord(home, 'r', 's', { a: 1 })
+  const lock = `${sessionFile(home, 'r', 's')}.lock`
+  fs.mkdirSync(lock, { recursive: true })
+  const old = new Date(Date.now() - 10_000)
+  fs.utimesSync(lock, old, old)
+
+  const out = mergeRecord(home, 'r', 's', { b: 2 })
+  assert.deepEqual(out, { a: 1, b: 2 })
+  assert.deepEqual(readRecord(home, 'r', 's'), { a: 1, b: 2 })
+  assert.equal(fs.existsSync(lock), false)
+})
+
+test('fresh foreign lock does not deadlock — bounded wait, fail-open write', () => {
+  const home = mkTmp('sage-h-')
+  writeRecord(home, 'r', 's', { a: 1 })
+  const lock = `${sessionFile(home, 'r', 's')}.lock`
+  fs.mkdirSync(lock, { recursive: true }) // fresh — not stale
+
+  const t0 = Date.now()
+  const out = mergeRecord(home, 'r', 's', { b: 2 })
+  assert.ok(Date.now() - t0 < 2000, 'mergeRecord must return within the retry budget')
+  assert.deepEqual(out, { a: 1, b: 2 })
+
+  fs.rmdirSync(lock)
 })
