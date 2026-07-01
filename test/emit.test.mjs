@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionFile, eventsFile, sageHome, sessionsDir } from '../lib/paths.mjs'
 import { readSidecar } from '../lib/handoff.mjs'
@@ -347,4 +347,26 @@ test('SessionStart stores the derived trunk on the record', () => {
   emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
   const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
   assert.equal(rec.trunk, 'main')
+})
+
+test('emitter exits 0 even when stdin never closes (never-block backstop)', async () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const child = spawn('node', [EMIT], {
+    env: { ...process.env, HOME: home },
+    stdio: ['pipe', 'ignore', 'ignore'],
+  })
+  child.stdin.write('{"hook_event_name":"Stop","session_id":"s1"')
+  // deliberately no end() — the writer holds the pipe open
+  const code = await new Promise((resolve) => {
+    const killer = setTimeout(() => {
+      child.kill('SIGKILL')
+      resolve('timed-out')
+    }, 5000)
+    child.on('exit', (c) => {
+      clearTimeout(killer)
+      resolve(c)
+    })
+  })
+  assert.equal(code, 0)
 })

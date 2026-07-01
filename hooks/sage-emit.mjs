@@ -30,24 +30,21 @@ import {
   shouldBlock,
   blockMessage,
 } from '../lib/guard.mjs'
+import { readStdinWithDeadline } from '../lib/stdin.mjs'
 
 const POST_TOOL_THROTTLE_MS = 30000
+const STDIN_DEADLINE_MS = 1500
 
-const main = () => {
-  // Never block on a TTY: a hook always pipes its payload; a TTY stdin would
-  // hang readFileSync(0) until EOF. The watchdog (below) is the backstop.
+const main = async () => {
+  // Never block on a TTY: a hook always pipes its payload (a TTY would sit
+  // at an interactive read). The deadline below is the real backstop for a
+  // pipe whose writer never closes it — either way we exit, never hang.
   try {
     if (process.stdin.isTTY) return
   } catch {
     /* ignore */
   }
-
-  let raw = ''
-  try {
-    raw = fs.readFileSync(0, 'utf8') // fd 0 = stdin
-  } catch {
-    return
-  }
+  const raw = await readStdinWithDeadline(STDIN_DEADLINE_MS)
 
   let payload
   try {
@@ -119,7 +116,10 @@ const main = () => {
       // core-only (no adapter load) to keep the hot path cheap. stdout on a
       // SessionStart hook is injected as session context by Claude Code.
       const brief = fleetLine(collectSessions(home, repoId, now), { selfSid: sid })
-      if (brief) console.log(`sage: ${brief}`)
+      // Synchronous write, not a buffered stdout call: stdout on a hook is a
+      // pipe, and the trailing process.exit(0) could truncate a buffered
+      // write — same hardening as the guard's stderr.
+      if (brief) fs.writeSync(1, `sage: ${brief}\n`)
       break
     }
 
@@ -228,7 +228,7 @@ const main = () => {
 }
 
 try {
-  main()
+  await main()
 } catch {
   /* fail-open: never let SAGE break a hook */
 }

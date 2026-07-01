@@ -28,6 +28,7 @@ import {
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
+import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
   readGuard,
   addGuardPath,
@@ -324,7 +325,7 @@ const main = async () => {
         let scwd = flag('--cwd')
         if ((!sid || !scwd) && !process.stdin.isTTY) {
           try {
-            const p = JSON.parse(fs.readFileSync(0, 'utf8'))
+            const p = JSON.parse(await readStdinWithDeadline(300))
             sid = sid || p.session_id
             scwd = scwd || p.cwd
           } catch {
