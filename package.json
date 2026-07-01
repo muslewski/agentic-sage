@@ -1,6 +1,6 @@
 {
   "name": "agentic-sage",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Passive fleet judge for parallel Claude Code sessions — board, territory checks, merge briefings.",
   "bin": {
