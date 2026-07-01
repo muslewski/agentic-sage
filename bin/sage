@@ -140,7 +140,7 @@ const main = async () => {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
       stampAsking(repoId, 'fleet')
-      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const selfSid = resolveSelfSid(home, repoId) || undefined
       const line = fleetLine(collectSessions(home, repoId, now), { selfSid })
       return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
     }
@@ -150,7 +150,7 @@ const main = async () => {
       stampAsking(repoId, 'territory')
       const queries = process.argv.slice(3)
       if (!queries.length) return console.log('usage: sage territory <glob> [glob…]')
-      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const selfSid = resolveSelfSid(home, repoId) || undefined
       const overlaps = territory(home, repoId, queries, { now, selfSid })
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       if (adapter) for (const o of overlaps) o.zone = zoneOf(adapter, ctx, o.hit)
@@ -161,7 +161,7 @@ const main = async () => {
       if (!repoId) return console.log('sage: not a git repo')
       stampAsking(repoId, 'why-diverged')
       if (!a1) return console.log('usage: sage why-diverged <file>')
-      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const selfSid = resolveSelfSid(home, repoId) || undefined
       const touches = whyDiverged(home, repoId, a1, { now, selfSid })
       // Tier 2 (on demand): real cross-branch numstat for each session that has a
       // live worktree, compared against the first other contesting branch.
@@ -177,7 +177,7 @@ const main = async () => {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
       stampAsking(repoId, 'merge-brief')
-      const selfSid = process.env.SAGE_SELF_SID || undefined
+      const selfSid = resolveSelfSid(home, repoId) || undefined
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       const extraGlobs = adapter?.generatedGlobs?.() ?? []
       const contested = mergeBrief(home, repoId, { now, selfSid, extraGlobs })

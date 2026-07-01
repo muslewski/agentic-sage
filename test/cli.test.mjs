@@ -101,6 +101,39 @@ test('fleet with no other sessions says so', () => {
   assert.match(run(['fleet'], home, repo), /no other sessions/)
 })
 
+const HAS_PROC = fs.existsSync('/proc/self/stat')
+
+test('read verbs exclude the current session via pid-walk (no SAGE_SELF_SID)', { skip: !HAS_PROC }, () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  // "me" = a record whose pid is an ancestor of the spawned CLI (the test process)
+  seedSession(home, id, {
+    session_id: 'me',
+    pid: process.pid,
+    branch: 'feat-me',
+    touched_globs: ['src/a.ts'],
+    updated_at: '2026-06-28T12:00:00Z',
+  })
+  const env = { SAGE_SELF_SID: '' } // neutralize any ambient value; '' is falsy in the resolver
+  assert.match(run(['fleet'], home, repo, env), /no other sessions/)
+  assert.match(run(['territory', 'src/**'], home, repo, env), /clear/i)
+  assert.match(run(['merge-brief'], home, repo, env), /no contested paths/i)
+  assert.match(run(['why-diverged', 'src/a.ts'], home, repo, env), /no other session/i)
+})
+
+test('read verbs still report a genuinely OTHER session alongside self', { skip: !HAS_PROC }, () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, { session_id: 'me', pid: process.pid, branch: 'feat-me', touched_globs: ['src/a.ts'], updated_at: '2026-06-28T12:00:00Z' })
+  seedSession(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/a.ts'], updated_at: '2026-06-28T11:00:00Z' })
+  const env = { SAGE_SELF_SID: '' }
+  const out = run(['territory', 'src/**'], home, repo, env)
+  assert.match(out, /feat-other/)
+  assert.doesNotMatch(out, /feat-me/)
+})
+
 test('guard add/list/on/off/rm round-trip', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
