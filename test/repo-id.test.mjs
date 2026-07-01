@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { repoIdFromRoot, resolveRepoId } from '../lib/repo-id.mjs'
+import { repoIdFromRoot, resolveRepoId, resolveRepoRoot, resolveRepo } from '../lib/repo-id.mjs'
 import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 
 test('repoIdFromRoot is slug-shaped and deterministic', () => {
@@ -22,4 +22,14 @@ test('non-git path resolves to null', () => {
   const notRepo = mkTmp('sage-norepo-')
   fs.writeFileSync(path.join(notRepo, 'x'), 'x')
   assert.equal(resolveRepoId(notRepo), null)
+})
+
+test('resolveRepo returns { root, id } consistent with the individual resolvers', () => {
+  const repo = mkGitRepo()
+  const result = resolveRepo(repo)
+  assert.deepEqual(result, { root: resolveRepoRoot(repo), id: resolveRepoId(repo) })
+})
+
+test('resolveRepo on a non-repo temp dir returns null', () => {
+  assert.equal(resolveRepo(mkTmp('sage-norepo-')), null)
 })
