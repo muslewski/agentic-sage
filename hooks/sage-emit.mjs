@@ -12,7 +12,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
+import { resolveRepo } from '../lib/repo-id.mjs'
 import { isGloballyEnabled, isEnabled } from '../lib/enabled.mjs'
 import { readRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
 import { gitSignals, branchOf } from '../lib/git.mjs'
@@ -21,6 +21,7 @@ import { pidForSession } from '../lib/registry.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
+import { postToolDue, markPostTool } from '../lib/throttle.mjs'
 import {
   guardsActive,
   readGuard,
@@ -64,13 +65,19 @@ const main = () => {
   // DEFAULT-OFF fast path — tier-1 check FIRST (one file read), before any git.
   if (!isGloballyEnabled(home)) return
 
+  // PostToolUse fires on EVERY tool call; ~29/30 are inside the 30s window.
+  // Decide that from one stat on a flat breadcrumb BEFORE any git spawn.
+  if (event === 'PostToolUse' && !postToolDue(home, sid, Date.now(), POST_TOOL_THROTTLE_MS))
+    return
+
   // HOT-PATH-CHEAP: PreToolUse fires before every tool call. With no guard armed
   // anywhere (the default), skip on a single cheap breadcrumb check — no git, no
   // per-repo read, no chance of a block.
   if (event === 'PreToolUse' && !guardsActive(home)) return
 
-  const repoId = resolveRepoId(cwd)
-  if (!repoId) return // not a git repo → nothing to judge
+  const repo = resolveRepo(cwd)
+  if (!repo) return // not a git repo → nothing to judge
+  const repoId = repo.id
 
   // Full gate (re-confirms global + per-repo + per-session opt-out).
   if (!isEnabled({ home, repoId, cwd })) return
@@ -91,6 +98,7 @@ const main = () => {
         head: sig.head,
         dirty: sig.dirty,
         touched_globs: sig.touched,
+        trunk: sig.trunk,
         pid: pid || undefined,
         alive: pid ? isAlive(pid) : true,
         link_state: 'scoping',
@@ -121,21 +129,27 @@ const main = () => {
       break
 
     case 'PostToolUse': {
+      // The breadcrumb gate above already applied the throttle window; the
+      // record read below is only a safety net if the breadcrumb was wiped.
       const rec = readRecord(home, repoId, sid)
       const last = rec?.last_tool_at ? Date.parse(rec.last_tool_at) : 0
       if (now - last < POST_TOOL_THROTTLE_MS) break // throttle chatter
       mergeRecord(home, repoId, sid, { last_tool_at: at, liveness: 'working', updated_at: at })
+      markPostTool(home, sid)
       break
     }
 
     case 'Stop': {
-      // Fires after EVERY turn → the record is always last-turn-fresh. This is
-      // what keeps fleet truth correct through an un-announced /clear (no pre-hook).
-      const sig = gitSignals(cwd)
+      // Fires after EVERY turn → the record is always last-turn-fresh (this is
+      // what survives an un-announced /clear). Trunk is cached on the record at
+      // SessionStart so each turn skips the 1-3 trunk-detection spawns.
+      const prev = readRecord(home, repoId, sid)
+      const sig = gitSignals(cwd, { trunk: prev?.trunk })
       mergeRecord(home, repoId, sid, {
         head: sig.head,
         dirty: sig.dirty,
         touched_globs: sig.touched,
+        trunk: sig.trunk,
         liveness: 'idle',
         updated_at: at,
       })
@@ -148,7 +162,7 @@ const main = () => {
       // so the human need not remember /handoff. A hook has no conversation
       // access, so the dump is git/registry signals only (no narrative).
       appendEvent(home, repoId, { event: 'precompact', session_id: sid, at })
-      const prefix = path.basename(resolveRepoRoot(cwd) || cwd)
+      const prefix = path.basename(repo.root)
       const tmpDir = process.env.SAGE_TMPDIR || os.tmpdir()
       const { jsonPath } = autoDump({
         cwd,
@@ -186,7 +200,7 @@ const main = () => {
       if (!guard.enabled || !guard.paths.length) break
       const target = targetPath(payload.tool_name, payload.tool_input)
       if (!target) break
-      const rel = relForRepo(target, resolveRepoRoot(cwd) || cwd)
+      const rel = relForRepo(target, repo.root)
       const { blocked, matched } = shouldBlock(rel, guard)
       if (blocked) {
         // Logging must never downgrade a verified block to an allow, so it gets
