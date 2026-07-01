@@ -28,6 +28,33 @@ test('a branch commit shows in touched (vs main)', () => {
   assert.ok(gitSignals(repo).touched.includes('newfile.txt'))
 })
 
+test('touched paths survive unicode filenames (core.quotePath)', () => {
+  const repo = mkGitRepo()
+  fs.writeFileSync(path.join(repo, 'café-münü.txt'), 'x')
+  const sig = gitSignals(repo)
+  assert.equal(sig.dirty, true)
+  assert.ok(sig.touched.includes('café-münü.txt'), `touched was: ${sig.touched}`)
+  assert.ok(!sig.touched.some((p) => p.includes('\\') || p.startsWith('"')))
+})
+
+test('touched paths survive unicode filenames committed on a branch (diff path)', () => {
+  const repo = mkGitRepo()
+  git(repo, 'checkout', '-qb', 'feature')
+  fs.writeFileSync(path.join(repo, 'naïve.ts'), 'x')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-qm', 'add naïve.ts')
+  assert.ok(gitSignals(repo).touched.includes('naïve.ts'))
+})
+
+test('staged rename consumes its orig-path token (no phantom entry)', () => {
+  const repo = mkGitRepo()
+  git(repo, 'checkout', '-qb', 'feature')
+  git(repo, 'mv', 'README.md', 'RENAMED café.md')
+  const sig = gitSignals(repo)
+  assert.ok(sig.touched.includes('RENAMED café.md'), `touched was: ${sig.touched}`)
+  assert.ok(!sig.touched.includes('README.md'), `touched was: ${sig.touched}`)
+})
+
 test('non-git path degrades to safe defaults', () => {
   const sig = gitSignals(mkTmp('sage-norepo-'))
   assert.deepEqual(sig, { head: null, dirty: false, touched: [] })
