@@ -67,8 +67,7 @@ const main = () => {
 
   // PostToolUse fires on EVERY tool call; ~29/30 are inside the 30s window.
   // Decide that from one stat on a flat breadcrumb BEFORE any git spawn.
-  if (event === 'PostToolUse' && !postToolDue(home, sid, Date.now(), POST_TOOL_THROTTLE_MS))
-    return
+  if (event === 'PostToolUse' && !postToolDue(home, sid, Date.now(), POST_TOOL_THROTTLE_MS)) return
 
   // HOT-PATH-CHEAP: PreToolUse fires before every tool call. With no guard armed
   // anywhere (the default), skip on a single cheap breadcrumb check — no git, no
