@@ -14,7 +14,8 @@ export const ownsZone = (path, ctx) => null
 // e.g. read your backlog and return { row: 'D9', status: '🟡' }.
 export const claimedWork = (rec, ctx) => null
 
-// Absolute path to your backlog/worklog file, if you have one.
+// Convenience for your own functions (e.g. backlogRows) — the core never
+// calls backlogPath; only backlogRows powers `sage backlog`.
 export const backlogPath = (ctx) => null
 
 // Globs for THIS repo's generated outputs (lockfiles, codegen, built
