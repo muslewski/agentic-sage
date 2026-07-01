@@ -8,6 +8,7 @@ import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionFile, eventsFile, sageHome, sessionsDir } from '../lib/paths.mjs'
 import { readSidecar } from '../lib/handoff.mjs'
 import { addGuardPath, setGuardEnabled } from '../lib/guard.mjs'
+import { lastToolFile } from '../lib/throttle.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'sage-emit.mjs')
@@ -259,4 +260,91 @@ test('PreCompact on a non-repo cwd writes nothing and does not throw', () => {
     }),
   )
   assert.equal(fs.readdirSync(tmpDir).length, 0)
+})
+
+// ---- Step 6: previously-uncovered events + new throttle/trunk mechanics ----
+
+test('UserPromptSubmit sets last_prompt_at and marks the session working', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  emit({ hook_event_name: 'UserPromptSubmit', session_id: 's1', cwd: repo }, home)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.ok(rec.last_prompt_at)
+  assert.equal(rec.liveness, 'working')
+})
+
+test('SessionEnd closes the record and logs a close event', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  emit({ hook_event_name: 'SessionEnd', session_id: 's1', cwd: repo, reason: 'clear' }, home)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.equal(rec.status, 'closed')
+  assert.equal(rec.link_state, 'closed')
+  assert.equal(rec.liveness, 'closed')
+  const events = fs.readFileSync(eventsFile(home, id), 'utf8').split('\n').filter(Boolean)
+  assert.ok(events.map((l) => JSON.parse(l).event).includes('close'))
+})
+
+test('PostToolUse first firing sets last_tool_at, marks working, and drops a breadcrumb', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  emit({ hook_event_name: 'PostToolUse', session_id: 's1', cwd: repo, tool_name: 'Edit' }, home)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.ok(rec.last_tool_at)
+  assert.equal(rec.liveness, 'working')
+  assert.ok(fs.existsSync(lastToolFile(home, 's1')))
+})
+
+test('PostToolUse within the throttle window leaves last_tool_at unchanged', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  emit({ hook_event_name: 'PostToolUse', session_id: 's1', cwd: repo, tool_name: 'Edit' }, home)
+  const before = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8')).last_tool_at
+  emit({ hook_event_name: 'PostToolUse', session_id: 's1', cwd: repo, tool_name: 'Edit' }, home)
+  const after = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8')).last_tool_at
+  assert.equal(after, before)
+})
+
+test('PostToolUse after the throttle window updates last_tool_at', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  emit({ hook_event_name: 'PostToolUse', session_id: 's1', cwd: repo, tool_name: 'Edit' }, home)
+  const before = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8')).last_tool_at
+
+  // Backdate both the breadcrumb and the record's last_tool_at past the window.
+  const old = new Date(Date.now() - 60_000)
+  fs.utimesSync(lastToolFile(home, 's1'), old, old)
+  const recPath = sessionFile(home, id, 's1')
+  const rec = JSON.parse(fs.readFileSync(recPath, 'utf8'))
+  rec.last_tool_at = old.toISOString()
+  fs.writeFileSync(recPath, JSON.stringify(rec))
+
+  emit({ hook_event_name: 'PostToolUse', session_id: 's1', cwd: repo, tool_name: 'Edit' }, home)
+  const after = JSON.parse(fs.readFileSync(recPath, 'utf8')).last_tool_at
+  assert.notEqual(after, before)
+})
+
+test('SessionStart stores the derived trunk on the record', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.equal(rec.trunk, 'main')
 })
