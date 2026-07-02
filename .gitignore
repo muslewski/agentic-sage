@@ -2,4 +2,4 @@ node_modules/
 *.tmp.*
 *.bak
 docs/superpowers/
-plans/
+advisor-plans/
