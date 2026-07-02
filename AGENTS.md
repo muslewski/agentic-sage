@@ -19,20 +19,53 @@ collide with another session*. It does no work, spawns nothing, **edits nothing*
   rows, architectural zones). A repo with **no adapter is first-class**. Don't force one.
 
 **Safety facts (true regardless of what you wire):** SAGE is **default-OFF** (nothing runs until
-`sage on`); the emitter is **fail-open** (any error → it allows the action, never blocks/slows a
-hook); all state lives under `~/.claude/sage/`, **never in the user's repo tree**.
+you enable it — `sage on` global / `sage enable` project); the emitter is **fail-open** (any error
+→ it allows the action, never blocks/slows a hook). By default all state lives under
+`~/.claude/agentic-sage/`, never in the user's repo tree — a **project**-scope install is the one
+exception, and only when the user explicitly chose it at `sage init` time (see "Scope" below).
+
+## Scope: global or project?
+
+`sage init` wires the hook at one of two independent scopes — decide this *before* step 2:
+
+- **Global** (default, recommended) — wires `~/.claude/settings.json` once; every repo the user
+  works in is covered, and each repo opts in/out individually (`sage enable` / `sage disable`).
+  Pick this unless told otherwise.
+- **Project** (`sage init --project`) — wires only `<repo>/.claude/settings.json` and, by default,
+  stores data in `<repo>/.agentic-sage/` (override with `--storage sibling|agent-home` to keep
+  state out of the repo tree). **Ignores the global master entirely** — use `sage enable` /
+  `sage disable` in this repo, not `sage on` / `sage off`. Pick this when the user explicitly
+  wants SAGE scoped to one repo (e.g. a shared/managed machine where a global hook isn't wanted),
+  or when they lack write access to `~/.claude`.
+
+Storage location is a **separate** choice from scope — inspect the resolved combination any time
+with `sage where` / `sage init --show`, and see [`CONVENTIONS.md`](./CONVENTIONS.md) for the full
+storage precedence chain.
 
 ## Setup procedure
 
 Run these in order. Tell the user what each step does; stop and ask if anything is ambiguous.
 
 1. **Check Node ≥ 20** — `node --version`. SAGE is zero-dependency; nothing to build.
-2. **Install (wires into `~/.claude`, DISABLED)** — `node install.mjs`. It is conservative: seeds a
-   **disabled** config (never overwrites an existing one), symlinks the emitter hook, **merges** its
-   lifecycle hooks into `~/.claude/settings.json` (backs it up once, skips-if-present, **aborts** on
-   malformed JSON — never clobbers), and symlinks every skill in `skills/*`. It **never auto-enables**.
-3. **Enable** — `sage on` (or edit `~/.claude/sage/config.json` → `{"enabled": true}`). Default is OFF.
-   Make sure `bin/sage` is on `PATH`, or call `node <repo>/bin/sage`.
+2. **Install (wires the hook, DISABLED)** — non-interactively, from the cloned repo:
+
+   ```bash
+   node bin/sage init --global [--enable]              # whole machine (default scope)
+   node bin/sage init --project [--path <dir>] [--storage repo-root|sibling|agent-home] [--enable]  # this repo only
+   ```
+
+   (`node install.mjs` is the legacy equivalent of `sage init --global` with no flags.) Already
+   installed and the wiring looks broken? `sage init --repair` re-asserts it and performs the safe
+   legacy-state-dir rename (never clobbers). Conservative either way: seeds a **disabled** config
+   (never overwrites an existing one), symlinks the emitter hook, **merges** its lifecycle hooks
+   into the target `settings.json` (backs it up once, skips-if-present, **aborts** on malformed
+   JSON — never clobbers), and symlinks every skill in `skills/*`. **Never auto-enables** unless
+   you pass `--enable`.
+3. **Enable** — scope-dependent:
+   - Global install: `sage on` (or edit `~/.claude/agentic-sage/config.json` → `{"enabled": true}`).
+   - Project install: `sage enable` (per-repo; there is no global master to defer to in this scope).
+     `sage disable` opts back out.
+   Default is OFF either way. Make sure `bin/sage` is on `PATH`, or call `node <repo>/bin/sage`.
 4. **Wire sessions in** — paste the one-line pointer from
    [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into the user's repo or user
    `CLAUDE.md`. It makes sessions reach for the on-demand `sage-fleet` skill at the right moments
@@ -40,7 +73,8 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
    costs ~nothing.
 5. **Offer a project adapter (optional).** A repo with no adapter is fine. If the user wants named
    work/zones, scaffold one:
-   - `sage adapter init` — stamps `.sage/adapter.mjs` from `adapters/template.mjs` (won't overwrite).
+   - `sage adapter init` — stamps `.agentic-sage/adapter.mjs` from `adapters/template.mjs` (won't
+     overwrite).
    - Then **help fill the stubs** from what you can see in their repo: do they have a backlog/worklog
      file? architectural-zone docs? generated outputs (lockfiles, codegen)? Wire `backlogRows` /
      `ownsZone` / `generatedGlobs` accordingly. The worked reference is
@@ -66,14 +100,17 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
   that can block an edit. Default-off is the safe state.
 - **Do not touch the user's other hooks or settings.** `install.mjs` merges; never hand-edit
   `settings.json` to remove foreign entries.
-- **Do not commit `.sage/adapter.mjs`** unless the user wants it versioned. It's committable by design
-  (discovery slot 1), but that's their call — they may prefer it out-of-tree
-  (`~/.claude/sage/repos/<id>/adapter.mjs`).
-- **Do not `sage on` silently** — enabling starts judging across *all* the user's repos; confirm.
+- **Do not commit `.agentic-sage/adapter.mjs`** unless the user wants it versioned. It's committable
+  by design (discovery slot 1), but that's their call — they may prefer it out-of-tree
+  (`~/.claude/agentic-sage/repos/<id>/adapter.mjs`, or wherever this repo's storage resolves to —
+  see `sage where`).
+- **Do not enable silently** — `sage on` (global) starts judging across *all* the user's repos;
+  `sage enable` (project) starts it for this one. Confirm either way before running it.
 
 ## Uninstall
 
 Fully reversible: `node uninstall/uninstall.mjs` removes SAGE's wiring **surgically** (only its own
-hook entries + symlinks, foreign config untouched) and **keeps** `~/.claude/sage/` state for a manual
-delete. See [`uninstall/README.md`](./uninstall/README.md) — and confirm with the user before any
-`rm -rf` of their state.
+hook entries + symlinks, foreign config untouched) and **keeps** `~/.claude/agentic-sage/` (or
+legacy `~/.claude/sage/`) state for a manual delete. See
+[`uninstall/README.md`](./uninstall/README.md) — and confirm with the user before any `rm -rf` of
+their state.

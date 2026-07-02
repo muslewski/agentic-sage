@@ -19,6 +19,43 @@ of it runs.
 > Adapt the *shape* (register intent at "go"; consult before a PR / on a conflict) to your own
 > harness — don't copy the literal paths.
 
+## Scope vs storage — two independent axes
+
+`sage init` sets **where the hook is wired** (scope) and **where a repo's data lives** (storage)
+separately — don't conflate them:
+
+|  | **Install scope** (hook wiring) | **Storage root** (data location) |
+|---|---|---|
+| Global (default) | hook in `~/.claude/settings.json` | resolved via the precedence chain below; built-in default `~/.claude/agentic-sage` |
+| Project (`sage init --project`) | hook in `<repo>/.claude/settings.json` | `<repo>/.agentic-sage` by default; `--storage sibling\|agent-home` for elsewhere |
+| Master switch | `sage on` / `sage off` — **global scope only**; project scope ignores it | n/a |
+| Per-repo switch | `sage enable` / `sage disable` — works in both scopes | n/a |
+
+Inspect the resolved combination for the current repo with `sage where`; the full breakdown
+(harness, hooks, skills, storage, enablement) with `sage init --show`.
+
+## Storage: the precedence chain
+
+Independent of scope above, this is the order `sage` walks to find *this repo's* `config.json` /
+`sessions/` / `events.ndjson` / `guard.json` — first hit wins:
+
+0. `$SAGE_STORAGE_ROOT` — env override (power users / tests) — names a storage **root**.
+1. In-repo marker `<mainRoot>/.agentic-sage/config.json` — `storageRoot` set →
+   `<storageRoot>/repos/<id>`; unset → the marker dir itself (repo-root mode). Written by
+   `sage init --project`.
+2. Central registry `~/.claude/agentic-sage/registry.json` → `repos[id].dataDir`.
+3. Global config `defaultRoot` → `<defaultRoot>/repos/<id>`.
+4. Built-in default → `~/.claude/agentic-sage/repos/<id>`.
+5. Legacy fallback → `~/.claude/sage/repos/<id>` — only reached when the built-in dir (rule 4)
+   has no `repos/<id>` yet AND the legacy one does. An existing legacy `repos/<id>` is then the
+   repo's live data dir: it keeps receiving that repo's reads **and writes** until you migrate —
+   that continued use in place is the "npm update, no re-init" guarantee. What's guaranteed:
+   nothing ever *creates* the legacy root or a new `repos/<id>` under it, and nothing renames or
+   migrates it except `sage init` / `init --repair` (see "Naming" below).
+
+Every rule fails open: a corrupt marker or registry falls through to the next rule rather than
+throwing, so a broken file never breaks a hook's hot path.
+
 ## Worktree-after-design (register intent at "go")
 
 Linking ≠ worktree. A session **links** at SessionStart in the primary checkout (`link_state:
@@ -90,13 +127,49 @@ a `Bash`-driven write is out of scope.
 2. **DEFAULT-OFF.** Nothing blocks unless **both** `sage on` **and** `sage guard on` (per repo). A
    fresh install, or the normal SAGE-on-but-guard-off judging mode, never blocks.
 3. **HOT-PATH-CHEAP.** `PreToolUse` fires before every tool call. With no guard armed anywhere, the
-   hook short-circuits on a single breadcrumb existence check (`~/.claude/sage/guards-active`) —
-   no git spawn, no per-repo read. The cost is paid only when a guard is actually armed.
+   hook short-circuits on a single breadcrumb existence check (`~/.claude/agentic-sage/guards-active`)
+   — no git spawn, no per-repo read. The cost is paid only when a guard is actually armed.
 
-## Enable / disable (full control)
+## Enable / disable (full control) — v2: opt-out always wins
 
-- **Global:** `sage on` / `sage off` → `~/.claude/sage/config.json {enabled}`. The emitter checks
-  it first-line and no-ops when off.
-- **Per-repo:** `~/.claude/sage/repos/<id>/config.json {enabled:false}` to mute one repo.
-- **Per-session:** `SAGE_OPT_OUT=1`, or a `.sage-ignore` file in cwd, keeps a scratch session off
-  the board.
+Three tiers; tier 3 (opt-out) applies identically in both install scopes and beats the other two:
+
+- **Global master** (global scope only): `sage on` / `sage off` →
+  `~/.claude/agentic-sage/config.json {enabled}`. On a legacy-only install (only
+  `~/.claude/sage/config.json` exists), reads *and writes* both use that legacy file in place —
+  deliberately, so the two paths can never disagree — until you migrate. The emitter checks it
+  first-line and no-ops when off. **A project-scope install ignores this tier entirely** — see
+  the scope table above.
+- **Per-repo:** `sage enable` / `sage disable` — writes `{enabled:false}` into *this repo's own*
+  `config.json`, wherever the storage precedence chain resolves it. Works the same in both scopes:
+  in global scope it's a per-repo opt-out of the master; in project scope, since there's no
+  master, it's the repo's *only* switch (`sage init --project` defaults new installs to OFF —
+  run `sage enable` to opt in).
+- **Per-session opt-out (always wins):** `SAGE_OPT_OUT=1` in the environment, or a `.sage-ignore`
+  file in cwd, keeps a scratch session off the board regardless of scope or the other two tiers.
+
+## Naming: typed `sage`, on-disk `agentic-sage`
+
+What you **type** stays short; what's **on disk** carries the full package name (the shared
+`~/.claude/` tree has other tools in it):
+
+| Surface | Name |
+|---|---|
+| Binary | `sage` (primary) — `agentic-sage` is also installed, as an alias to the same file |
+| Skills | `sage-fleet`, `sage-doctor` |
+| Env vars | `SAGE_STORAGE_ROOT`, `SAGE_OPT_OUT`, `SAGE_SELF_SID`, `SAGE_SKIP_SKILL` |
+| State dir (current) | `~/.claude/agentic-sage/` |
+| Emitter hook (current) | `hooks/agentic-sage-emit.mjs` |
+| In-repo adapter/marker dir | `.agentic-sage/` |
+
+### Legacy (pre-rename) — used in place until `init` / `init --repair` migrates it
+
+| Surface | Legacy name | Handling |
+|---|---|---|
+| State dir | `~/.claude/sage/` | fallback used **in place** — an existing legacy `repos/<id>` keeps receiving that repo's reads and writes (precedence rule 5) until migrated; never created anew; `sage init` / `init --repair` performs the safe rename (never clobbers — both-exist ⇒ prefers the new dir and warns) |
+| Global config | `~/.claude/sage/config.json` | the new path wins when present; when only the legacy config exists, reads **and writes** both use it in place (so the two paths can never disagree); when neither exists, writes create the new path |
+| Emitter hook | `hooks/sage-emit.mjs` | uninstall recognizes both names; `init` / `init --repair` cleans up a stale legacy symlink |
+| In-repo adapter | `<repoRoot>/.sage/adapter.mjs` | still discovered (read-alias), checked *after* `.agentic-sage/adapter.mjs` — see `ADAPTERS.md` |
+
+No forced migration: an existing `~/.claude/sage/` install keeps working after `npm update` with
+no re-init required.

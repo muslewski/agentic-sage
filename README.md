@@ -39,9 +39,16 @@ One judge per repo. Zero dependencies, Node ≥ 20, `node --test`.
 
 ```bash
 npm install -g agentic-sage
-sage init               # conservative wiring into ~/.claude — installs DISABLED
-sage on                 # opt in (default OFF)
+sage init               # interactive wizard — 4 questions, safe defaults: global + OFF
+sage on                 # opt in (skip if you enabled during the wizard)
+sage doctor             # ✓/✗ per check
 ```
+
+`sage init` asks **scope** (global vs this-project-only), **harness**, **storage**, and
+**enable now** — defaulting to global + built-in storage + **OFF** at every step. No TTY
+(CI/agents/piped)? Same defaults apply with no prompts — see `sage init --global`/`--project`
+flags in [`AGENTS.md`](./AGENTS.md). Check the resolved wiring any time with `sage where`
+(this repo) or `sage init --show` (full breakdown).
 
 Then paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into your repo/user
 `CLAUDE.md` and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
@@ -81,7 +88,7 @@ SAGE has one boundary, and everything in these docs hangs off it:
 | If absent | always present | core still fully works — warnings reference *paths*, not named rows/zones |
 
 A repo with **no adapter is first-class.** Scaffold one with `sage adapter init` (writes
-`.sage/adapter.mjs` from [`adapters/template.mjs`](./adapters/template.mjs); guide in
+`.agentic-sage/adapter.mjs` from [`adapters/template.mjs`](./adapters/template.mjs); guide in
 [`ADAPTERS.md`](./ADAPTERS.md)) only when you want named work and zones.
 
 > **What's tailor-made vs universal.** This repo ships *one person's* setup as a worked example —
@@ -97,7 +104,7 @@ A repo with **no adapter is first-class.** Scaffold one with `sage adapter init`
 | `sage` CLI + emitter hook | the judge: records sessions, answers `board`/`territory`/… | universal | **required** | `install.mjs` + `sage on` |
 | `sage-fleet` skill + CLAUDE pointer | sessions coordinate themselves (claim, merge-brief, why-diverged) | universal | recommended | paste `templates/CLAUDE.snippet.md` |
 | `sage-doctor` skill (`/sage-doctor`) | one-command config-validity check | universal | recommended | auto-linked by `install.mjs` |
-| Adapter (`.sage/adapter.mjs`) | names *your* rows + zones on the board | your project | optional | `sage adapter init` |
+| Adapter (`.agentic-sage/adapter.mjs`) | names *your* rows + zones on the board | your project | optional | `sage adapter init` |
 | Backlog coordination | who-holds-which-row + `.md` drift, without owning the file | needs an adapter | optional | adapter's `backlogRows` + `sage backlog` |
 | Worktree-at-go convention | register intent the instant a worktree exists | example (controller) | optional | adapt from `CONVENTIONS.md` |
 | The guard | **blocks** edits to contested paths (`exit 2`) | universal | optional, off | `sage guard add <p>` + `sage guard on` |
@@ -125,11 +132,28 @@ Undo all of it any time: `node uninstall/uninstall.mjs` (surgical — see [`unin
 
 ## Install
 
+### Scope vs storage — two independent axes
+
+`sage init` sets **where the hook is wired** (scope) and **where data lives** (storage) —
+independently:
+
+|  | Global scope (default) | Project scope (`sage init --project`) |
+|---|---|---|
+| Hook wired into | `~/.claude/settings.json` | `<repo>/.claude/settings.json` |
+| Storage default | `~/.claude/agentic-sage` | `<repo>/.agentic-sage` (or `--storage sibling\|agent-home`) |
+| Master switch | `sage on` / `sage off` | ignored — a project install works even with the global master OFF |
+| Per-repo switch | `sage enable` / `sage disable` | `sage enable` / `sage disable` (the *only* switch in this scope) |
+
+Storage resolves through a precedence chain (env override → in-repo marker → registry →
+global default → built-in → legacy fallback) — full order in
+[`CONVENTIONS.md`](./CONVENTIONS.md). `sage where` prints the resolved scope + storage +
+which rule matched for the current repo.
+
 **Option 1 — global npm (recommended):**
 
 ```bash
 npm install -g agentic-sage
-sage init                    # wires skills + hooks into ~/.claude
+sage init                    # wizard, or --global/--project — see AGENTS.md for flags
 sage on                      # enable globally (default OFF)
 ```
 
@@ -149,12 +173,19 @@ install above.
 ```bash
 git clone https://github.com/muslewski/agentic-sage.git
 cd agentic-sage
-node install.mjs             # same as sage init, from source
+node install.mjs             # same as sage init --global, from source
 sage on
 ```
 
 > **Demo:** run `sage board --watch` in a repo with live sessions for the
 > animated board. (A recorded asciinema demo may land in a future release.)
+
+> **Upgrading from an older SAGE?** Nothing breaks after `npm update` — an existing
+> `~/.claude/sage/` (the pre-rename state dir) keeps working in place (reads and writes) for
+> config, storage, and adapter discovery, so no re-init is required. Run `sage init` or
+> `sage init --repair` when convenient to perform the one-time, non-destructive rename to
+> `~/.claude/agentic-sage/` (never clobbers; if both exist, the new dir wins and a warning
+> prints).
 
 ## Use
 
@@ -164,9 +195,10 @@ sage fleet              # one-line fleet summary (fold into a status tick)
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file
 sage merge-brief        # all contested paths + the regenerate-don't-merge rule
-sage adapter init       # scaffold .sage/adapter.mjs (optional, for named work/zones)
+sage adapter init       # scaffold .agentic-sage/adapter.mjs (optional, for named work/zones)
 sage doctor             # validate config / hook / settings / linked skills / adapter
-sage off                # freeze judging
+sage where              # this repo's resolved scope + storage + which rule matched
+sage off                # freeze judging (global master — see "Scope vs storage" above)
 ```
 
 ## Sessions as participants — the flywheel
@@ -216,27 +248,30 @@ See when a session is *currently* taking SAGE's advice — an ephemeral status-b
 (default `⚖️ Asking Sage`) that shows only while a session runs a consult verb
 (`territory`/`why-diverged`/`merge-brief`/`claim`/`fleet`), then disappears.
 
-It's driven by a flat per-session breadcrumb `~/.claude/sage/asking/<session_id>` (mtime = last
-consult) — keyed by the same `session_id` your statusline already receives, with **no repoId**, so
-you can read it two ways (see [`templates/statusline.snippet.md`](./templates/statusline.snippet.md)):
+It's driven by a flat per-session breadcrumb `~/.claude/agentic-sage/asking/<session_id>` (mtime =
+last consult) — keyed by the same `session_id` your statusline already receives, with **no repoId**,
+so you can read it two ways (see [`templates/statusline.snippet.md`](./templates/statusline.snippet.md)):
 
 - **the verb** — append `sage statusline --session "$ID" --cwd "$CWD"` to your statusline output;
-- **in-process** — `stat ~/.claude/sage/asking/<session_id>` and render your label if
+- **in-process** — `stat ~/.claude/agentic-sage/asking/<session_id>` and render your label if
   `now - mtime < ttl` (zero extra spawn).
 
 `sage statusline` is **fail-open** — any error prints nothing and exits 0, so it can never break your
 status bar; it prints nothing when SAGE is off. Configure `statuslineLabel` / `statuslineTtlMs`
-(default `⚖️ Asking Sage` / `8000`ms) in `~/.claude/sage/config.json`. The statusline is **polled**
-(your `refreshInterval`), so the segment shows for a tick or two around a consult — not sub-second.
+(default `⚖️ Asking Sage` / `8000`ms) in `~/.claude/agentic-sage/config.json`. The statusline is
+**polled** (your `refreshInterval`), so the segment shows for a tick or two around a consult — not
+sub-second.
 
 ## Safety
 
-The emitter (`hooks/sage-emit.mjs`) fires on **every** session, so it's built to be invisible:
+The emitter (`hooks/agentic-sage-emit.mjs` — legacy installs symlink `hooks/sage-emit.mjs`) fires on
+**every** session, so it's built to be invisible:
 
 - **Fail-open.** All work is inside a `try/catch`; any error → `exit 0`. It never blocks or slows a
   hook.
-- **Default-OFF.** No `~/.claude/sage/config.json` ⇒ disabled. The enable check is the first line —
-  an instant no-op when off.
+- **Default-OFF.** No global config (`~/.claude/agentic-sage/config.json`; a legacy-only
+  `~/.claude/sage/config.json` still counts and stays in use until migrated) ⇒ disabled. The
+  enable check is the first line — an instant no-op when off.
 - **Non-clobbering installer.** Backs up, skips-if-present, aborts on malformed `settings.json`.
 
 ### The guard (the one thing that can act) — built, default OFF
@@ -250,8 +285,8 @@ breadcrumb check, before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md
 ## Optional integrations
 
 - **token-forecast** — if you run a token-forecast system, add
-  `"tokenForecastPath": "~/.local/share/token-forecast"` to `~/.claude/sage/config.json` to surface
-  it in `sage doctor`. Unset ⇒ the check stays green and says "not configured".
+  `"tokenForecastPath": "~/.local/share/token-forecast"` to `~/.claude/agentic-sage/config.json` to
+  surface it in `sage doctor`. Unset ⇒ the check stays green and says "not configured".
 - **tmux fleet pane** — `install.mjs` offers a `bind j` → `display-popup` running `sage board`
   (run `tmux source-file ~/.tmux.conf` to apply).
 
@@ -266,13 +301,15 @@ breadcrumb check, before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md
 ## Layout
 
 ```
-bin/sage            CLI (argv dispatch, async adapter load)
-lib/*.mjs           pure, unit-tested logic (zero deps)
-hooks/sage-emit.mjs the one hook entry (fail-open, default-OFF)
-adapters/           template.mjs (scaffold) + acme.mjs (worked example) — out of the observed tree
-install.mjs         conservative wiring into ~/.claude
-uninstall/          surgical reversible uninstall (uninstall.mjs + README)
-test/*.test.mjs     node --test, hermetic (temp HOME, temp git repos)
+bin/sage                     CLI (argv dispatch, async adapter load)
+lib/*.mjs                    pure, unit-tested logic (zero deps) — incl. roots.mjs (storage
+                              resolver) and init.mjs (wizard + non-interactive flags)
+hooks/agentic-sage-emit.mjs  the one hook entry (fail-open, default-OFF)
+adapters/                    template.mjs (scaffold) + acme.mjs (worked example) — out of the observed tree
+install.mjs                  conservative global-scope wiring into ~/.claude (equivalent to
+                              `sage init --global`)
+uninstall/                   surgical reversible uninstall (uninstall.mjs + README)
+test/*.test.mjs              node --test, hermetic (temp HOME, temp git repos)
 ```
 
 **Docs:** [`AGENTS.md`](./AGENTS.md) — agent setup runbook ("set it up for my repo"). ·

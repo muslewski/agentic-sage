@@ -15,6 +15,13 @@ config we use ourselves — copy it for a proven setup.
 > SAGE is **read-only and default-OFF**. Installing changes nothing until you `sage on`; it never
 > edits your repo, never spawns, never blocks (unless you explicitly arm the optional guard).
 
+> **Upgrading from an older SAGE?** Nothing breaks after `npm update` — an existing
+> `~/.claude/sage/` (the pre-rename state dir) keeps working in place (reads and writes) for
+> config, storage, and adapter discovery, so no re-init is required. Run `sage init` or
+> `sage init --repair` when convenient to perform the one-time, non-destructive rename to
+> `~/.claude/agentic-sage/` (never clobbers; if both exist, the new dir wins and a warning
+> prints).
+
 > **Want your agent to do this?** Clone the repo, then tell your coding agent *"set up agentic-sage
 > for this repo."* It follows **[`AGENTS.md`](./AGENTS.md)** (the deterministic runbook) through the
 > same steps below. This page is the human path; AGENTS.md is the agent path — same destination.
@@ -33,22 +40,39 @@ Zero dependencies, Node ≥ 20. **From source instead?**
 `git clone https://github.com/muslewski/agentic-sage && cd agentic-sage` — then use
 `node install.mjs` in place of `sage init` below.
 
-### 2. Wire (`~/.claude`, **disabled**)
+### 2. Wire (`~/.claude` by default, **disabled**)
 
 ```bash
 sage init
 ```
 
-Conservative and idempotent: seeds a **disabled** config (never overwrites an existing one),
-symlinks the emitter hook, merges its lifecycle hooks into `~/.claude/settings.json` (backs it up
-once, skips-if-present, **aborts** on malformed JSON), and symlinks every skill in `skills/*` into
-`~/.claude/skills`. It never auto-enables.
+With a TTY, `sage init` runs a **4-question interactive wizard** — scope (global vs
+this-project-only), harness, storage location, and enable-now — defaulting to the safe choice at
+every step (**global**, built-in storage, **OFF**). Without a TTY (CI, agents, piped) it applies
+those same defaults with no prompts. Conservative and idempotent either way: seeds a **disabled**
+config (never overwrites an existing one), symlinks the emitter hook, merges its lifecycle hooks
+into `~/.claude/settings.json` — or `<repo>/.claude/settings.json` for a project-scope install
+(backs it up once, skips-if-present, **aborts** on malformed JSON) — and symlinks every skill in
+`skills/*` into `~/.claude/skills`. It never auto-enables.
+
+Non-interactive flags (agents, CI, scripting) — full reference in [`AGENTS.md`](./AGENTS.md):
+
+```bash
+sage init --global [--enable]
+sage init --project [--path <dir>] [--storage repo-root|sibling|agent-home] [--yes] [--enable]
+sage init --repair      # re-assert wiring + perform the safe legacy-state-dir rename
+sage init --show        # full breakdown: scope, storage, rule matched, enablement
+```
 
 ### 3. Enable
 
 ```bash
-sage on        # globally enable judging (default OFF)
+sage on        # globally enable judging (default OFF) — global-scope installs only
 ```
+
+A **project-scope** install (`sage init --project`) ignores the global master entirely — use
+`sage enable` / `sage disable` in that repo instead. `sage where` shows which one applies to the
+current repo.
 
 Add `agentic-sage/bin` to your `PATH`, or call `node /path/to/agentic-sage/bin/sage`.
 
@@ -57,6 +81,10 @@ Add `agentic-sage/bin` to your `PATH`, or call `node /path/to/agentic-sage/bin/s
 ```bash
 sage doctor    # ✓/✗ per check + an `N ok · M need attention` verdict
 ```
+
+A failed check prints a `→ run: …` remedy line — the exact command to fix it (often
+`sage init --repair`, which re-asserts the wiring and performs the safe legacy-state-dir rename
+described above).
 
 ---
 
@@ -140,10 +168,11 @@ Fully reversible whenever you want:
 node uninstall/uninstall.mjs
 ```
 
-It removes SAGE's wiring **surgically** — only its own `sage-emit` hook entries + symlinks + the tmux
-`bind j` line; **every foreign hook/setting is left intact** (settings.json is backed up first). It
-**keeps** your `~/.claude/sage/` state (config + session history) and prints the exact `rm -rf` for a
-manual delete — never automatic. Details + the safety guarantees: [`uninstall/`](./uninstall/README.md).
+It removes SAGE's wiring **surgically** — only its own `agentic-sage-emit`/legacy `sage-emit` hook
+entries + symlinks + the tmux `bind j` line; **every foreign hook/setting is left intact**
+(settings.json is backed up first). It **keeps** your `~/.claude/agentic-sage/` (or legacy
+`~/.claude/sage/`) state (config + session history) and prints the exact `rm -rf` for a manual
+delete — never automatic. Details + the safety guarantees: [`uninstall/`](./uninstall/README.md).
 
 ---
 

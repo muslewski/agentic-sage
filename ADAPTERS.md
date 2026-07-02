@@ -16,10 +16,10 @@ teaches SAGE your repo's vocabulary so the board and territory show **named work
 **A repo with no adapter is a first-class citizen.** Everything still works; warnings just
 reference paths, not named rows or zones.
 
-**Start here:** `sage adapter init` stamps a fully-commented no-op adapter at `<repoRoot>/.sage/
-adapter.mjs` (from [`adapters/template.mjs`](./adapters/template.mjs)) — fill in only what your repo
-can answer. The contract below explains each function; [`adapters/acme.mjs`](./adapters/acme.mjs)
-is a complete worked example.
+**Start here:** `sage adapter init` stamps a fully-commented no-op adapter at
+`<repoRoot>/.agentic-sage/adapter.mjs` (from [`adapters/template.mjs`](./adapters/template.mjs)) —
+fill in only what your repo can answer. The contract below explains each function;
+[`adapters/acme.mjs`](./adapters/acme.mjs) is a complete worked example.
 
 ## The contract
 
@@ -71,10 +71,14 @@ code — the core never invokes it. A missing export simply yields no enrichment
 
 When the CLI runs in a repo, it looks for an adapter in this order and uses the first it finds:
 
-1. `<repoRoot>/.sage/adapter.mjs` — in-repo (the generic, committable location).
-2. `~/.claude/sage/repos/<repo-id>/adapter.mjs` — out-of-tree (symlinked; keeps the adapter out
-   of the project's own git history — see "Out-of-tree adapters" below).
-3. none — core-only.
+1. `<repoRoot>/.agentic-sage/adapter.mjs` — in-repo (the generic, committable location).
+2. `<repoRoot>/.sage/adapter.mjs` — **legacy** read-alias (the pre-rename in-repo location; still
+   discovered, but a fresh `sage adapter init` writes to slot 1 instead).
+3. `<this repo's storage dir>/adapter.mjs` — out-of-tree (symlinked; keeps the adapter out of the
+   project's own git history — see "Out-of-tree adapters" below). The storage dir is resolved
+   through the same precedence chain as everything else (see `CONVENTIONS.md`) — by default
+   `~/.claude/agentic-sage/repos/<repo-id>/adapter.mjs`.
+4. none — core-only.
 
 ## Fail-closed-to-core
 
@@ -119,9 +123,11 @@ It is **read-only and zero-dependency** — a good template for your own.
 ### Out-of-tree adapters (the isolation pattern)
 
 The acme adapter source lives **here, in `agentic-sage/adapters/`**, not in acme's own git
-tree, and is symlinked to `~/.claude/sage/repos/<id>/adapter.mjs` for live use. This keeps SAGE
-(meta-tooling) entirely out of the project it observes. If you'd rather version the adapter with
-your project, just commit it at `<repoRoot>/.sage/adapter.mjs` (discovery slot 1) — both work.
+tree, and is symlinked to `~/.claude/agentic-sage/repos/<id>/adapter.mjs` (this repo's built-in
+storage dir — see `CONVENTIONS.md` if a custom storage root is in play) for live use. This keeps
+SAGE (meta-tooling) entirely out of the project it observes. If you'd rather version the adapter
+with your project, just commit it at `<repoRoot>/.agentic-sage/adapter.mjs` (discovery slot 1) —
+both work.
 
 ## Extension points (not yet wired)
 
