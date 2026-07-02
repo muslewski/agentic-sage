@@ -2,18 +2,25 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { mkTmp } from './helpers.mjs'
+import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { sessionsDir, globalConfig, sageHome } from '../lib/paths.mjs'
 import { readRecord } from '../lib/store.mjs'
+import { writeRegistryEntry } from '../lib/roots.mjs'
+import { resolveRepoId } from '../lib/repo-id.mjs'
+import { wireProject } from '../lib/wiring.mjs'
+import { fileURLToPath } from 'node:url'
 import {
   setEnabled,
   readEnabled,
+  setRepoEnabled,
   linkSession,
   unlinkSession,
   listRepos,
   doctor,
   renderDoctor,
 } from '../lib/control.mjs'
+
+const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 test('setEnabled/readEnabled roundtrip + creates dir', () => {
   const home = mkTmp('sage-c-')
@@ -128,4 +135,92 @@ test('doctor: project adapter check — none ⇒ ok + "core-only"', () => {
   const c = doctor(home, mkTmp('sage-norepo-')).find((c) => c.name === 'project adapter')
   assert.equal(c.ok, true)
   assert.match(c.detail, /none/)
+})
+
+// --- P10: doctor remedies + listRepos aggregation ---
+
+test('doctor: failing checks carry a fix; renderDoctor prints the remedy line', () => {
+  const home = mkTmp('sage-fix-')
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const hook = checks.find((c) => c.name === 'emitter hook')
+  assert.equal(hook.ok, false)
+  assert.equal(hook.fix, 'sage init --repair')
+  const rendered = renderDoctor(checks)
+  assert.match(rendered, /✗ emitter hook — [^\n]*\n\s+→ run: sage init --repair/)
+})
+
+test('doctor: missing global config recommends `sage init` (not --repair)', () => {
+  const home = mkTmp('sage-fix-')
+  const gc = doctor(home, mkTmp('sage-norepo-')).find((c) => c.name === 'global config')
+  assert.equal(gc.ok, false)
+  assert.equal(gc.fix, 'sage init')
+})
+
+test('doctor: a passing check never gets a remedy line', () => {
+  const home = mkTmp('sage-fix-')
+  setEnabled(home, true)
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const gc = checks.find((c) => c.name === 'global config')
+  assert.equal(gc.ok, true)
+  assert.equal('fix' in gc, false)
+  // the line directly under "global config" must NOT be a remedy line (other,
+  // still-failing checks further down legitimately have their own → run:)
+  assert.doesNotMatch(renderDoctor(checks), /global config[^\n]*\n\s*→ run:/)
+})
+
+test('doctor: scope + storage check is informational inside a repo (built-in, before any init)', () => {
+  const home = mkTmp('sage-fix-')
+  const repo = mkGitRepo()
+  const c = doctor(home, repo).find((cc) => cc.name === 'scope + storage')
+  assert.equal(c.ok, true)
+  assert.match(c.detail, /global · .* · via built-in/)
+})
+
+test('doctor: storage dir + scope check are informational (n/a) outside a git repo', () => {
+  const home = mkTmp('sage-fix-')
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  assert.equal(checks.find((c) => c.name === 'storage dir').detail, 'n/a (not a git repo)')
+  assert.equal(checks.find((c) => c.name === 'scope + storage').detail, 'n/a (not a git repo)')
+})
+
+test('setRepoEnabled: read-merge-write roundtrip, preserves other keys', () => {
+  const home = mkTmp('sage-re-')
+  const dataDir = path.join(home, 'data')
+  fs.mkdirSync(dataDir, { recursive: true })
+  fs.writeFileSync(path.join(dataDir, 'config.json'), JSON.stringify({ storageRoot: '/x' }))
+  setRepoEnabled(dataDir, true)
+  let cfg = JSON.parse(fs.readFileSync(path.join(dataDir, 'config.json'), 'utf8'))
+  assert.equal(cfg.enabled, true)
+  assert.equal(cfg.storageRoot, '/x')
+  setRepoEnabled(dataDir, false)
+  cfg = JSON.parse(fs.readFileSync(path.join(dataDir, 'config.json'), 'utf8'))
+  assert.equal(cfg.enabled, false)
+})
+
+test('listRepos: unions the repos/ scan with registry-only entries (dedupe by id)', () => {
+  const home = mkTmp('sage-lr-')
+  fs.mkdirSync(sessionsDir(home, 'repo-built-in'), { recursive: true })
+  fs.writeFileSync(path.join(sessionsDir(home, 'repo-built-in'), 's1.json'), '{}')
+
+  const extDir = mkTmp('sage-ext-')
+  fs.mkdirSync(path.join(extDir, 'sessions'), { recursive: true })
+  fs.writeFileSync(path.join(extDir, 'sessions', 's1.json'), '{}')
+  fs.writeFileSync(path.join(extDir, 'sessions', 's2.json'), '{}')
+  writeRegistryEntry(home, 'repo-external', { dataDir: extDir, scope: 'project', mainRoot: extDir })
+
+  const repos = listRepos(home)
+  const byId = Object.fromEntries(repos.map((r) => [r.repoId, r]))
+  assert.equal(byId['repo-built-in'].sessions, 1)
+  assert.equal(byId['repo-external'].sessions, 2)
+})
+
+test('listRepos: a repo present in BOTH the scan and the registry is not double-counted', () => {
+  const home = mkTmp('sage-lr-')
+  const repo = mkGitRepo()
+  wireProject({ home, repoRoot: REPO_ROOT, projectRoot: repo, storage: 'agent-home' })
+  const id = resolveRepoId(repo)
+  fs.mkdirSync(sessionsDir(home, id), { recursive: true })
+  fs.writeFileSync(path.join(sessionsDir(home, id), 's1.json'), '{}')
+  const matches = listRepos(home).filter((r) => r.repoId === id)
+  assert.equal(matches.length, 1)
 })
