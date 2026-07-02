@@ -12,7 +12,7 @@ import { lastToolFile } from '../lib/throttle.mjs'
 import { MARKER_DIR, registryPath } from '../lib/roots.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
-const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'sage-emit.mjs')
+const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'agentic-sage-emit.mjs')
 
 const emit = (payload, home) =>
   execFileSync('node', [EMIT], {

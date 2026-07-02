@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Passive fleet judge for parallel Claude Code sessions — board, territory checks, merge briefings.",
   "bin": {
-    "sage": "./bin/sage"
+    "sage": "./bin/sage",
+    "agentic-sage": "./bin/sage"
   },
   "files": [
     "bin",

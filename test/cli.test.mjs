@@ -46,12 +46,12 @@ test('unknown command prints usage; exit 0', () => {
   assert.match(run(['wat'], home, mkTmp('sage-norepo-')), /usage/i)
 })
 
-test('sage adapter init scaffolds .sage/adapter.mjs; re-run won’t overwrite; non-git → clear line', () => {
+test('sage adapter init scaffolds .agentic-sage/adapter.mjs; re-run won’t overwrite; non-git → clear line', () => {
   const home = mkTmp('sage-ai-')
   const repo = mkGitRepo()
   const out1 = run(['adapter', 'init'], home, repo)
-  assert.match(out1, /scaffolded \.sage\/adapter\.mjs/)
-  assert.ok(fs.existsSync(path.join(repo, '.sage', 'adapter.mjs')))
+  assert.match(out1, /scaffolded \.agentic-sage\/adapter\.mjs/)
+  assert.ok(fs.existsSync(path.join(repo, '.agentic-sage', 'adapter.mjs')))
   const out2 = run(['adapter', 'init'], home, repo)
   assert.match(out2, /already exists/)
   const out3 = run(['adapter', 'init'], home, mkTmp('sage-ai-norepo-'))
@@ -341,7 +341,7 @@ test('init --global: prints the exact 4-line DISABLED summary; wires the hook', 
   const lines = out.trimEnd().split('\n')
   assert.equal(lines[0], '✓ SAGE wired · global · DISABLED')
   assert.ok(lines.length <= 5)
-  assert.equal(fs.lstatSync(path.join(home, '.claude', 'hooks', 'sage-emit.mjs')).isSymbolicLink(), true)
+  assert.equal(fs.lstatSync(path.join(home, '.claude', 'hooks', 'agentic-sage-emit.mjs')).isSymbolicLink(), true)
 })
 
 test('init --global --enable: prints ENABLED and flips the global config on', () => {
@@ -398,6 +398,48 @@ test('init --repair: re-asserts current wiring without changing enablement', () 
   const out = run(['init', '--repair'], home, cwd)
   assert.match(out, /re-asserted global wiring/)
   assert.match(out, /ENABLED/)
+})
+
+// ── plan 011: legacy-install upgrade (npm-update-no-re-init guarantee) ─────
+
+test('plan 011 e2e: a legacy install (~/.claude/sage) reads fine via fallback with no init; `sage init --global` migrates it in place; a second init is a noop', () => {
+  const home = mkTmp('sage-mig-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+
+  // Seed a fake LEGACY install (pre-rename on-disk shape) — as if this
+  // were a real ~/.claude/sage/ left behind by a pre-plan-011 install.
+  const legacyHome = path.join(home, '.claude', 'sage')
+  fs.mkdirSync(legacyHome, { recursive: true })
+  fs.writeFileSync(path.join(legacyHome, 'config.json'), JSON.stringify({ enabled: true }))
+  const legacySessions = path.join(legacyHome, 'repos', id, 'sessions')
+  fs.mkdirSync(legacySessions, { recursive: true })
+  const seededRecord = { session_id: 's1', branch: 'feat-legacy', updated_at: '2026-06-28T12:00:00Z' }
+  fs.writeFileSync(path.join(legacySessions, 's1.json'), JSON.stringify(seededRecord))
+
+  // Reads work via the legacy fallback WITHOUT running init — the
+  // npm-update-no-re-init guarantee: an upgraded npm package must not
+  // require a re-init just to keep reading an existing install.
+  assert.match(run(['board'], home, repo), /feat-legacy/)
+  assert.equal(fs.existsSync(path.join(home, '.claude', 'agentic-sage')), false) // read-only: untouched
+
+  // `sage init --global` migrates the state dir in place (safe rename).
+  const out = run(['init', '--global'], home, repo)
+  assert.match(out, /migrated legacy state dir/)
+  assert.equal(fs.existsSync(legacyHome), false) // legacy dir gone (renamed, not copied)
+  const newSessionFile = path.join(home, '.claude', 'agentic-sage', 'repos', id, 'sessions', 's1.json')
+  assert.equal(fs.existsSync(newSessionFile), true) // the record moved intact
+  assert.deepEqual(JSON.parse(fs.readFileSync(newSessionFile, 'utf8')), seededRecord)
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8')),
+    { enabled: true },
+  )
+
+  // A second init is a noop for the migration (state dir is new-only now).
+  const out2 = run(['init', '--global'], home, repo)
+  assert.doesNotMatch(out2, /migrated legacy state dir/)
+  assert.doesNotMatch(out2, /both .* exist/)
+  assert.equal(fs.existsSync(newSessionFile), true) // record still intact, untouched
 })
 
 test('where: not a git repo → clear line', () => {

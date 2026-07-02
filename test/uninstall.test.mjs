@@ -27,16 +27,16 @@ test('uninstall removes sage wiring, keeps foreign hooks + state', () => {
   // sanity: install added sage-emit refs + the hook/skill symlinks
   let s = JSON.parse(fs.readFileSync(path.join(sdir, 'settings.json'), 'utf8'))
   assert.ok(JSON.stringify(s).includes('sage-emit'))
-  assert.ok(fs.existsSync(path.join(sdir, 'hooks', 'sage-emit.mjs')))
+  assert.ok(fs.existsSync(path.join(sdir, 'hooks', 'agentic-sage-emit.mjs')))
 
   runScript('uninstall/uninstall.mjs', home)
   s = JSON.parse(fs.readFileSync(path.join(sdir, 'settings.json'), 'utf8'))
   assert.equal(JSON.stringify(s).includes('sage-emit'), false) // 0 sage refs
   assert.equal(s.model, 'opus') // foreign key intact
   assert.ok(s.hooks.SessionStart.some((g) => g.hooks.some((h) => h.command === 'echo foreign'))) // foreign hook intact
-  assert.equal(fs.existsSync(path.join(sdir, 'hooks', 'sage-emit.mjs')), false) // hook symlink gone
+  assert.equal(fs.existsSync(path.join(sdir, 'hooks', 'agentic-sage-emit.mjs')), false) // hook symlink gone
   assert.equal(fs.existsSync(path.join(sdir, 'skills', 'sage-doctor')), false) // skill symlink gone
-  assert.ok(fs.existsSync(path.join(sdir, 'sage'))) // state kept
+  assert.ok(fs.existsSync(path.join(sdir, 'agentic-sage'))) // state kept
 })
 
 test('uninstall: exact-signature matching keeps a bundled foreign hook + a substring-only foreign hook', () => {

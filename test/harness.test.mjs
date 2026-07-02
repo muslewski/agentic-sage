@@ -9,7 +9,7 @@ test('getHarness("claude") returns paths ending as expected', () => {
   assert.ok(h.projectSettings('/r').endsWith('/.claude/settings.json'))
   assert.ok(h.hooksDir('/h').endsWith('/.claude/hooks'))
   assert.ok(h.skillsDir('/h').endsWith('/.claude/skills'))
-  assert.ok(h.storageDefault('/h').endsWith('/.claude/sage'))
+  assert.ok(h.storageDefault('/h').endsWith('/.claude/agentic-sage'))
   assert.equal(h.tmux, true)
 })
 

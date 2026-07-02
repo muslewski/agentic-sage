@@ -29,6 +29,6 @@ test('a sid containing separators produces a flat filename (no subdir created)',
   const home = mkTmp('sage-h-')
   markPostTool(home, '../../etc/passwd')
   const f = lastToolFile(home, '../../etc/passwd')
-  assert.equal(path.dirname(f), path.join(home, '.claude', 'sage', 'last-tool'))
+  assert.equal(path.dirname(f), path.join(home, '.claude', 'agentic-sage', 'last-tool'))
   assert.equal(fs.existsSync(path.join(home, 'etc', 'passwd')), false)
 })

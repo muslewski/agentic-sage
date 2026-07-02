@@ -7,14 +7,17 @@ import {
   resolveRepoDataDir,
   registryPath,
   writeRegistryEntry,
+  sageHome,
+  legacySageHome,
+  migrateStateDir,
 } from '../lib/roots.mjs'
 import { resolveRepoRoot } from '../lib/repo-id.mjs'
-import { mkTmp, mkGitRepo, git, writeGlobalConfig } from './helpers.mjs'
+import { mkTmp, mkGitRepo, git, writeGlobalConfig, writeLegacyGlobalConfig } from './helpers.mjs'
 
 test('default: no env, no marker, no registry, no defaultRoot ⇒ built-in', () => {
   const home = mkTmp('sage-h-')
   const { dir, rule, scope } = explainRepoDataDir({ home, repoId: 'r' })
-  assert.ok(dir.endsWith('/.claude/sage/repos/r'))
+  assert.ok(dir.endsWith('/.claude/agentic-sage/repos/r'))
   assert.equal(rule, 'built-in')
   assert.equal(scope, 'global')
 })
@@ -116,5 +119,103 @@ test('worktree stability: a linked worktree resolves to the same main root', () 
 
 test('resolveRepoDataDir returns just the dir', () => {
   const home = mkTmp('sage-h-')
-  assert.equal(resolveRepoDataDir({ home, repoId: 'r' }), path.join(home, '.claude', 'sage', 'repos', 'r'))
+  assert.equal(
+    resolveRepoDataDir({ home, repoId: 'r' }),
+    path.join(home, '.claude', 'agentic-sage', 'repos', 'r'),
+  )
+})
+
+// ── legacy fallback + migration (plan 011) ──────────────────────────────────
+
+test('legacy fallback: built-in repos/<id> absent, legacy repos/<id> present ⇒ rule "legacy"', () => {
+  const home = mkTmp('sage-h-')
+  const legacyRepoDir = path.join(legacySageHome(home), 'repos', 'r')
+  fs.mkdirSync(legacyRepoDir, { recursive: true })
+  const { dir, rule, scope } = explainRepoDataDir({ home, repoId: 'r' })
+  assert.equal(dir, legacyRepoDir)
+  assert.equal(rule, 'legacy')
+  assert.equal(scope, 'global')
+})
+
+test('legacy fallback: new-dir presence beats legacy even when legacy also exists', () => {
+  const home = mkTmp('sage-h-')
+  fs.mkdirSync(path.join(legacySageHome(home), 'repos', 'r'), { recursive: true })
+  const newRepoDir = path.join(sageHome(home), 'repos', 'r')
+  fs.mkdirSync(newRepoDir, { recursive: true })
+  const { dir, rule } = explainRepoDataDir({ home, repoId: 'r' })
+  assert.equal(dir, newRepoDir)
+  assert.equal(rule, 'built-in')
+})
+
+test('legacy fallback: neither dir exists ⇒ built-in (no legacy dir created)', () => {
+  const home = mkTmp('sage-h-')
+  const { dir, rule } = explainRepoDataDir({ home, repoId: 'r' })
+  assert.equal(dir, path.join(sageHome(home), 'repos', 'r'))
+  assert.equal(rule, 'built-in')
+  assert.equal(fs.existsSync(legacySageHome(home)), false)
+})
+
+test('global config resolution: legacy-only config is read (defaultRoot honored) without migrating', () => {
+  const home = mkTmp('sage-h-')
+  const defaultRoot = mkTmp('sage-default-')
+  writeLegacyGlobalConfig(home, { enabled: true, defaultRoot })
+  const { dir, rule } = explainRepoDataDir({ home, repoId: 'r' })
+  assert.equal(dir, path.join(defaultRoot, 'repos', 'r'))
+  assert.equal(rule, 'default-root')
+  // read-only: no migration happened as a side effect of resolving.
+  assert.equal(fs.existsSync(sageHome(home)), false)
+  assert.equal(fs.existsSync(legacySageHome(home)), true)
+})
+
+test('global config resolution: new config wins over legacy when both present', () => {
+  const home = mkTmp('sage-h-')
+  const legacyRoot = mkTmp('sage-legacy-root-')
+  const newRoot = mkTmp('sage-new-root-')
+  writeLegacyGlobalConfig(home, { enabled: true, defaultRoot: legacyRoot })
+  writeGlobalConfig(home, { enabled: true, defaultRoot: newRoot })
+  const { dir } = explainRepoDataDir({ home, repoId: 'r' })
+  assert.equal(dir, path.join(newRoot, 'repos', 'r'))
+})
+
+test('migrateStateDir: legacy exists, new absent ⇒ renames legacy → new, returns "renamed"', () => {
+  const home = mkTmp('sage-h-')
+  fs.mkdirSync(path.join(legacySageHome(home), 'repos', 'r'), { recursive: true })
+  fs.writeFileSync(path.join(legacySageHome(home), 'config.json'), JSON.stringify({ enabled: true }))
+  const result = migrateStateDir(home)
+  assert.equal(result, 'renamed')
+  assert.equal(fs.existsSync(legacySageHome(home)), false)
+  assert.equal(fs.existsSync(path.join(sageHome(home), 'repos', 'r')), true)
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(sageHome(home), 'config.json'), 'utf8')),
+    { enabled: true },
+  )
+})
+
+test('migrateStateDir: both exist ⇒ "both-warn", neither dir is touched (never merges)', () => {
+  const home = mkTmp('sage-h-')
+  fs.mkdirSync(path.join(legacySageHome(home), 'repos', 'legacy-only'), { recursive: true })
+  fs.mkdirSync(path.join(sageHome(home), 'repos', 'new-only'), { recursive: true })
+  const result = migrateStateDir(home)
+  assert.equal(result, 'both-warn')
+  // both dirs intact, untouched, unmerged — legacy-only stays legacy-only.
+  assert.equal(fs.existsSync(path.join(legacySageHome(home), 'repos', 'legacy-only')), true)
+  assert.equal(fs.existsSync(path.join(sageHome(home), 'repos', 'new-only')), true)
+  assert.equal(fs.existsSync(path.join(sageHome(home), 'repos', 'legacy-only')), false)
+  assert.equal(fs.existsSync(path.join(legacySageHome(home), 'repos', 'new-only')), false)
+})
+
+test('migrateStateDir: neither exists ⇒ "noop", creates nothing', () => {
+  const home = mkTmp('sage-h-')
+  const result = migrateStateDir(home)
+  assert.equal(result, 'noop')
+  assert.equal(fs.existsSync(sageHome(home)), false)
+  assert.equal(fs.existsSync(legacySageHome(home)), false)
+})
+
+test('migrateStateDir: new-only (already migrated) ⇒ "noop", left alone', () => {
+  const home = mkTmp('sage-h-')
+  fs.mkdirSync(path.join(sageHome(home), 'repos', 'r'), { recursive: true })
+  const result = migrateStateDir(home)
+  assert.equal(result, 'noop')
+  assert.equal(fs.existsSync(path.join(sageHome(home), 'repos', 'r')), true)
 })

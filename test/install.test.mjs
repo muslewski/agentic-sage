@@ -15,9 +15,9 @@ const runInstall = (home) =>
 test('seeds default-OFF config, symlinks the hook, wires all 7 events', () => {
   const home = mkTmp('sage-h-')
   const out = runInstall(home)
-  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'sage', 'config.json'), 'utf8'))
+  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8'))
   assert.deepEqual(cfg, { enabled: false })
-  const link = path.join(home, '.claude', 'hooks', 'sage-emit.mjs')
+  const link = path.join(home, '.claude', 'hooks', 'agentic-sage-emit.mjs')
   assert.equal(fs.lstatSync(link).isSymbolicLink(), true)
   const settings = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'))
   for (const ev of EVENTS) assert.ok((settings.hooks[ev] || []).length >= 1, `missing ${ev}`)
@@ -45,7 +45,7 @@ test('preserves a pre-existing unrelated hook and never enables', () => {
   const cmds = settings.hooks.Stop.flatMap((g) => g.hooks.map((h) => h.command))
   assert.ok(cmds.includes('echo other'))
   assert.equal(cmds.length, 2)
-  const cfg = JSON.parse(fs.readFileSync(path.join(claude, 'sage', 'config.json'), 'utf8'))
+  const cfg = JSON.parse(fs.readFileSync(path.join(claude, 'agentic-sage', 'config.json'), 'utf8'))
   assert.equal(cfg.enabled, false)
 })
 
@@ -131,7 +131,7 @@ test('plan 009 regression: global install never creates .agentic-sage or registr
   const home = mkTmp('sage-h-')
   runInstall(home)
   assert.equal(fs.existsSync(path.join(home, '.agentic-sage')), false)
-  assert.equal(fs.existsSync(path.join(home, '.claude', 'sage', 'registry.json')), false)
+  assert.equal(fs.existsSync(path.join(home, '.claude', 'agentic-sage', 'registry.json')), false)
   // and the existing assertions still hold — a full second run stays idempotent.
   runInstall(home)
   const settings = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'))

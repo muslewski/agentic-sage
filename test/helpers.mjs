@@ -23,8 +23,16 @@ export const mkGitRepo = () => {
   return dir
 }
 
-// Seed ~/.claude/sage/config.json under a temp home.
+// Seed ~/.claude/agentic-sage/config.json under a temp home.
 export const writeGlobalConfig = (home, obj) => {
+  const dir = path.join(home, '.claude', 'agentic-sage')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(obj))
+}
+
+// Seed a LEGACY ~/.claude/sage/config.json under a temp home (pre-rename
+// on-disk shape) — for legacy-fallback / migration test cases.
+export const writeLegacyGlobalConfig = (home, obj) => {
   const dir = path.join(home, '.claude', 'sage')
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(obj))

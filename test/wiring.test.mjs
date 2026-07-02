@@ -16,8 +16,8 @@ test('wireAll: returns expected result shape', () => {
   const home = mkTmp('sage-w-')
   const r = wireAll({ home, repoRoot: REPO_ROOT })
   assert.ok(r.gc.includes('sage'))
-  assert.ok(r.link.includes('sage-emit.mjs'))
-  assert.ok(r.target.endsWith('hooks/sage-emit.mjs'))
+  assert.ok(r.link.includes('agentic-sage-emit.mjs'))
+  assert.ok(r.target.endsWith('hooks/agentic-sage-emit.mjs'))
   assert.ok(r.settingsPath.endsWith('settings.json'))
   assert.ok(typeof r.tmuxNote === 'string')
   assert.ok(typeof r.skillNote === 'string')
@@ -27,7 +27,7 @@ test('wireAll: returns expected result shape', () => {
 test('wireAll: seeds default-OFF config and wires all 7 hook events', () => {
   const home = mkTmp('sage-w-')
   wireAll({ home, repoRoot: REPO_ROOT })
-  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'sage', 'config.json'), 'utf8'))
+  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8'))
   assert.deepEqual(cfg, { enabled: false })
   const settings = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'))
   for (const ev of EVENTS) assert.ok((settings.hooks[ev] || []).length >= 1, `missing ${ev}`)
@@ -44,9 +44,9 @@ test('wireAll: idempotent — second call adds no duplicate hooks', () => {
 test('wireAll: idempotent — second call does not overwrite existing config', () => {
   const home = mkTmp('sage-w-')
   wireAll({ home, repoRoot: REPO_ROOT })
-  const cfg1 = fs.readFileSync(path.join(home, '.claude', 'sage', 'config.json'), 'utf8')
+  const cfg1 = fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8')
   wireAll({ home, repoRoot: REPO_ROOT })
-  const cfg2 = fs.readFileSync(path.join(home, '.claude', 'sage', 'config.json'), 'utf8')
+  const cfg2 = fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8')
   assert.equal(cfg1, cfg2)
 })
 
@@ -78,11 +78,68 @@ test('wireAll: hook symlink — real-file collision backed up, relinked', () => 
   const home = mkTmp('sage-w-')
   const hooksDir = path.join(home, '.claude', 'hooks')
   fs.mkdirSync(hooksDir, { recursive: true })
-  const link = path.join(hooksDir, 'sage-emit.mjs')
+  const link = path.join(hooksDir, 'agentic-sage-emit.mjs')
   fs.writeFileSync(link, '// original')
   wireAll({ home, repoRoot: REPO_ROOT })
   assert.equal(fs.lstatSync(link).isSymbolicLink(), true)
   assert.equal(fs.readFileSync(link + '.bak', 'utf8'), '// original')
+})
+
+// ── plan 011: rewire a pre-rename install in place, no double-fire ─────────
+
+test('wireAll: re-init over a pre-rename (sage-emit.mjs) install rewires in place — one hook entry per event, no stale old-name entry, old symlink removed', () => {
+  const home = mkTmp('sage-w-')
+  const hooksDir = path.join(home, '.claude', 'hooks')
+  fs.mkdirSync(hooksDir, { recursive: true })
+  // Simulate a pre-rename install: an old-named symlink pointing into this
+  // repo, plus a settings.json wired against that old link path.
+  const oldLink = path.join(hooksDir, 'sage-emit.mjs')
+  fs.symlinkSync(path.join(REPO_ROOT, 'hooks', 'sage-emit.mjs'), oldLink)
+  const claude = path.join(home, '.claude')
+  fs.mkdirSync(claude, { recursive: true })
+  const settingsPath = path.join(claude, 'settings.json')
+  const oldCommand = `${JSON.stringify(process.execPath)} ${JSON.stringify(oldLink)}`
+  const settings = { hooks: {} }
+  for (const ev of EVENTS) settings.hooks[ev] = [{ hooks: [{ type: 'command', command: oldCommand }] }]
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+
+  wireAll({ home, repoRoot: REPO_ROOT })
+
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+  for (const ev of EVENTS) {
+    const cmds = after.hooks[ev].flatMap((g) => g.hooks.map((h) => h.command))
+    assert.equal(cmds.length, 1, `expected exactly one hook for ${ev}, got ${cmds.length}`)
+    assert.ok(cmds[0].includes('agentic-sage-emit.mjs'))
+    assert.ok(!cmds.some((c) => c === oldCommand))
+  }
+  // the stale old-named symlink (ours) was removed
+  assert.equal(fs.existsSync(oldLink), false)
+  // the new-named symlink is in place
+  const newLink = path.join(hooksDir, 'agentic-sage-emit.mjs')
+  assert.equal(fs.lstatSync(newLink).isSymbolicLink(), true)
+})
+
+test('wireAll: rewire never touches a FOREIGN hook that merely mentions the sage-emit token', () => {
+  const home = mkTmp('sage-w-')
+  const hooksDir = path.join(home, '.claude', 'hooks')
+  fs.mkdirSync(hooksDir, { recursive: true })
+  const claude = path.join(home, '.claude')
+  fs.mkdirSync(claude, { recursive: true })
+  const settingsPath = path.join(claude, 'settings.json')
+  const foreignCommand = 'echo this mentions sage-emit.mjs but is not our hook'
+  fs.writeFileSync(
+    settingsPath,
+    JSON.stringify({
+      hooks: { Stop: [{ hooks: [{ type: 'command', command: foreignCommand }] }] },
+    }),
+  )
+
+  wireAll({ home, repoRoot: REPO_ROOT })
+
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+  const cmds = after.hooks.Stop.flatMap((g) => g.hooks.map((h) => h.command))
+  assert.ok(cmds.includes(foreignCommand)) // foreign hook survives untouched
+  assert.equal(cmds.length, 2) // foreign + our new one
 })
 
 // ── wireProject: project-scope install (plan 009) ──────────────────────────
@@ -194,7 +251,7 @@ test('wireAll: global-scope install with a custom storage root merges defaultRoo
   const storageRoot = mkTmp('sage-custom-root-')
   wireAll({ home, repoRoot: REPO_ROOT, storageRoot })
 
-  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'sage', 'config.json'), 'utf8'))
+  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8'))
   assert.equal(cfg.enabled, false)
   assert.equal(cfg.defaultRoot, storageRoot)
 })

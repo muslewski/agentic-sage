@@ -11,6 +11,11 @@ const writeAdapter = (dir, body) => {
   fs.writeFileSync(path.join(dir, '.sage', 'adapter.mjs'), body)
 }
 
+const writeNewAdapter = (dir, body) => {
+  fs.mkdirSync(path.join(dir, '.agentic-sage'), { recursive: true })
+  fs.writeFileSync(path.join(dir, '.agentic-sage', 'adapter.mjs'), body)
+}
+
 test('adapterPathFor prefers repo .sage, then state dir, then null', () => {
   const home = mkTmp('sage-h-')
   const root = mkTmp('sage-root-')
@@ -20,6 +25,23 @@ test('adapterPathFor prefers repo .sage, then state dir, then null', () => {
   assert.equal(adapterPathFor(home, 'r1', root), path.join(repoDir(home, 'r1'), 'adapter.mjs'))
   writeAdapter(root, 'export const ownsZone = () => null')
   assert.match(adapterPathFor(home, 'r1', root), /\.sage\/adapter\.mjs$/)
+})
+
+// ── plan 011: .agentic-sage primary, .sage legacy read-alias ────────────────
+
+test('adapterPathFor: .agentic-sage/adapter.mjs (new default) wins over legacy .sage/adapter.mjs', () => {
+  const home = mkTmp('sage-h-')
+  const root = mkTmp('sage-root-')
+  writeAdapter(root, 'export const ownsZone = () => "legacy"')
+  writeNewAdapter(root, 'export const ownsZone = () => "new"')
+  assert.equal(adapterPathFor(home, 'r1', root), path.join(root, '.agentic-sage', 'adapter.mjs'))
+})
+
+test('adapterPathFor: legacy .sage/adapter.mjs is honored as a read-alias when .agentic-sage is absent', () => {
+  const home = mkTmp('sage-h-')
+  const root = mkTmp('sage-root-')
+  writeAdapter(root, 'export const ownsZone = () => "legacy"')
+  assert.equal(adapterPathFor(home, 'r1', root), path.join(root, '.sage', 'adapter.mjs'))
 })
 
 test('loadAdapter imports a real adapter; broken/missing → null', async () => {
