@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { mkTmp, mkGitRepo } from './helpers.mjs'
+import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionsDir, globalConfig, sessionFile, repoDir } from '../lib/paths.mjs'
 import { readGuard } from '../lib/guard.mjs'
@@ -329,4 +329,139 @@ test('backlog claim: bad input → usage; explicit claim overrides branch infere
   // s1's branch feat-x would infer D11, but claimed_row:A5 wins → D11 shows no live holder
   const out = run(['backlog'], home, repo)
   assert.doesNotMatch(out, /held by s1/)
+})
+
+// P10 — sage init wizard/flags, sage where, sage enable|disable. Every `run()`
+// spawn here has a piped (non-TTY) stdin, so the wizard branch never fires —
+// exercised directly against lib/init.mjs in test/init-wizard.test.mjs.
+
+test('init --global: prints the exact 4-line DISABLED summary; wires the hook', () => {
+  const home = mkTmp('sage-i-')
+  const out = run(['init', '--global'], home, mkTmp('sage-i-cwd-'))
+  const lines = out.trimEnd().split('\n')
+  assert.equal(lines[0], '✓ SAGE wired · global · DISABLED')
+  assert.ok(lines.length <= 5)
+  assert.equal(fs.lstatSync(path.join(home, '.claude', 'hooks', 'sage-emit.mjs')).isSymbolicLink(), true)
+})
+
+test('init --global --enable: prints ENABLED and flips the global config on', () => {
+  const home = mkTmp('sage-i-')
+  const out = run(['init', '--global', '--enable'], home, mkTmp('sage-i-cwd-'))
+  assert.match(out, /^✓ SAGE wired · global · ENABLED/)
+  assert.equal(JSON.parse(fs.readFileSync(globalConfig(home), 'utf8')).enabled, true)
+})
+
+test('init --project: DISABLED by default (never auto-enable); wires project settings + marker', () => {
+  const home = mkTmp('sage-i-')
+  const repo = mkGitRepo()
+  const out = run(['init', '--project'], home, repo)
+  assert.match(out, /^✓ SAGE wired · project · DISABLED/)
+  assert.ok(fs.existsSync(path.join(repo, '.agentic-sage', 'config.json')))
+  assert.ok(fs.existsSync(path.join(repo, '.claude', 'settings.json')))
+  const marker = JSON.parse(fs.readFileSync(path.join(repo, '.agentic-sage', 'config.json'), 'utf8'))
+  assert.equal(marker.enabled, false)
+})
+
+test('init --project --enable: prints ENABLED; repo config.json has enabled:true', () => {
+  const home = mkTmp('sage-i-')
+  const repo = mkGitRepo()
+  const out = run(['init', '--project', '--enable'], home, repo)
+  assert.match(out, /^✓ SAGE wired · project · ENABLED/)
+  const marker = JSON.parse(fs.readFileSync(path.join(repo, '.agentic-sage', 'config.json'), 'utf8'))
+  assert.equal(marker.enabled, true)
+})
+
+test('init --show: prints the full breakdown, writes nothing', () => {
+  const home = mkTmp('sage-i-')
+  const cwd = mkTmp('sage-i-cwd-')
+  const out = run(['init', '--show'], home, cwd)
+  assert.match(out, /SAGE — full breakdown/)
+  assert.equal(fs.existsSync(path.join(home, '.claude')), false)
+})
+
+test('init with no flags and non-TTY stdin defaults to global, OFF', () => {
+  const home = mkTmp('sage-i-')
+  const out = run(['init'], home, mkTmp('sage-i-cwd-'))
+  assert.match(out, /^✓ SAGE wired · global · DISABLED/)
+})
+
+test('init: unknown flag prints a clear hint (usage), no crash', () => {
+  const home = mkTmp('sage-i-')
+  const out = run(['init', '--bogus'], home, mkTmp('sage-i-cwd-'))
+  assert.match(out, /unknown flag --bogus/)
+})
+
+test('init --repair: re-asserts current wiring without changing enablement', () => {
+  const home = mkTmp('sage-i-')
+  const cwd = mkTmp('sage-i-cwd-')
+  run(['init', '--global', '--enable'], home, cwd)
+  const out = run(['init', '--repair'], home, cwd)
+  assert.match(out, /re-asserted global wiring/)
+  assert.match(out, /ENABLED/)
+})
+
+test('where: not a git repo → clear line', () => {
+  const home = mkTmp('sage-w-')
+  assert.match(run(['where'], home, mkTmp('sage-w-nogit-')), /not a git repo/)
+})
+
+test('where: fresh repo before any init → built-in rule, global scope', () => {
+  const home = mkTmp('sage-w-')
+  const repo = mkGitRepo()
+  const out = run(['where'], home, repo)
+  assert.match(out, /scope\s+global/)
+  assert.match(out, /matched\s+built-in/)
+})
+
+test('where: after project init → marker rule, project scope', () => {
+  const home = mkTmp('sage-w-')
+  const repo = mkGitRepo()
+  run(['init', '--project'], home, repo)
+  const out = run(['where'], home, repo)
+  assert.match(out, /scope\s+project/)
+  assert.match(out, /matched\s+marker/)
+})
+
+test('enable/disable: flips the resolved repo data dir config.json', () => {
+  const home = mkTmp('sage-ed-')
+  const repo = mkGitRepo()
+  run(['init', '--project'], home, repo) // DISABLED by default
+  let out = run(['disable'], home, repo)
+  assert.match(out, /disabled for/)
+  let marker = JSON.parse(fs.readFileSync(path.join(repo, '.agentic-sage', 'config.json'), 'utf8'))
+  assert.equal(marker.enabled, false)
+  out = run(['enable'], home, repo)
+  assert.match(out, /enabled for/)
+  marker = JSON.parse(fs.readFileSync(path.join(repo, '.agentic-sage', 'config.json'), 'utf8'))
+  assert.equal(marker.enabled, true)
+})
+
+test('enable/disable: non-git cwd → clear line', () => {
+  const home = mkTmp('sage-ed-')
+  const cwd = mkTmp('sage-ed-nogit-')
+  assert.match(run(['enable'], home, cwd), /not a git repo/)
+  assert.match(run(['disable'], home, cwd), /not a git repo/)
+})
+
+test('init --project from a linked worktree with repo-root storage refuses and redirects to the main checkout', () => {
+  const home = mkTmp('sage-wt-')
+  const main = mkGitRepo()
+  const wt = path.join(mkTmp('sage-wtp-'), 'wt')
+  git(main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch')
+  const out = run(['init', '--project'], home, wt)
+  assert.match(out, /repo-root storage must be set up from the main checkout/)
+  assert.match(out, new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.equal(fs.existsSync(path.join(wt, '.agentic-sage')), false)
+  assert.equal(fs.existsSync(path.join(main, '.agentic-sage')), false)
+})
+
+test('init --project --storage sibling from a linked worktree is allowed (writes land at the main root)', () => {
+  const home = mkTmp('sage-wt-')
+  const main = mkGitRepo()
+  const wt = path.join(mkTmp('sage-wtp-'), 'wt')
+  git(main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch2')
+  const out = run(['init', '--project', '--storage', 'sibling'], home, wt)
+  assert.match(out, /^✓ SAGE wired · project · DISABLED/)
+  assert.equal(fs.existsSync(path.join(main, '.claude', 'settings.json')), true)
+  assert.equal(fs.existsSync(path.join(wt, '.claude', 'settings.json')), false)
 })

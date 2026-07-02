@@ -4,6 +4,7 @@
 import os from 'node:os'
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
@@ -11,6 +12,8 @@ import { collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
 import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
   setEnabled,
+  readEnabled,
+  setRepoEnabled,
   linkSession,
   unlinkSession,
   listRepos,
@@ -65,7 +68,9 @@ const USAGE = `usage: sage <command>
   backlog claim <row>  register THIS session's backlog row (claimed_row)
   guard …              list | add <path> | rm <path> | on | off (default OFF)
   adapter init         scaffold .sage/adapter.mjs from the template
-  init                 wire skills + hooks into ~/.claude (run after npm install)
+  init                 wizard (TTY) or --global|--project|--repair|--show — wire skills+hooks
+  where                this repo's resolved scope, storage dir, and matched rule
+  enable | disable     per-repo enable override (independent of global on/off)
   doctor               validate dirs / hook / settings / token-forecast
   statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
 
@@ -188,7 +193,11 @@ const main = async () => {
     case 'repos': {
       const repos = listRepos(home)
       if (!repos.length) return console.log('sage: no judged repos yet')
-      return console.log(repos.map((r) => `  ${r.repoId}  (${r.sessions} session(s))`).join('\n'))
+      return console.log(
+        repos
+          .map((r) => `  ${r.repoId.replace(/-[0-9a-f]{8}$/, '')} (${r.repoId} · ${r.sessions} session(s))`)
+          .join('\n'),
+      )
     }
     case 'on':
     case 'off':
@@ -365,16 +374,160 @@ const main = async () => {
       )
     }
     case 'init': {
-      const { wireAll, formatResult } = await import('../lib/wiring.mjs')
+      const initLib = await import('../lib/init.mjs')
+      const { parseInitArgs, runWizard, renderSummary, renderShow } = initLib
+      const { wireAll, wireProject } = await import('../lib/wiring.mjs')
+      const { explainRepoDataDir, sageHome } = await import('../lib/roots.mjs')
       const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+      let parsed = parseInitArgs(process.argv.slice(3))
+      if (parsed.error) return console.log(`sage: ${parsed.error}\n${USAGE}`)
+
+      if (parsed.mode === 'wizard') {
+        if (process.stdin.isTTY && process.stdout.isTTY) {
+          parsed = await runWizard({ input: process.stdin, output: process.stderr, cwd })
+        } else {
+          // No decisive flag + no TTY (agents / CI / piped) → safe default: global, OFF.
+          parsed = { mode: 'apply', scope: 'global', harness: 'claude', yes: true, enable: false }
+        }
+      }
+
+      if (parsed.mode === 'show') return console.log(renderShow({ home, cwd }))
+
+      // Worktree refusal (design §12): a linked worktree must never grow its
+      // own repo-root storage — redirect the user to the main checkout.
+      const isLinkedWorktree = (dir) => {
+        const mainRoot = resolveRepoRoot(dir)
+        if (!mainRoot) return false
+        try {
+          const top = fs.realpathSync(
+            execFileSync('git', ['-C', dir, 'rev-parse', '--show-toplevel'], {
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+            }).trim(),
+          )
+          return top !== mainRoot
+        } catch {
+          return false
+        }
+      }
+
+      if (parsed.mode === 'repair') {
+        const mainRoot = resolveRepoRoot(cwd)
+        // Only ask explainRepoDataDir when a mainRoot (or repoId) is
+        // resolvable — with neither, its built-in-default rule joins a path
+        // with an undefined id and throws.
+        const info = mainRoot ? explainRepoDataDir({ home, mainRoot }) : null
+        if (mainRoot && info.scope === 'project') {
+          let result
+          try {
+            result = wireProject({ home, repoRoot, projectRoot: cwd })
+          } catch (e) {
+            return console.log(`sage: ${e.message}`)
+          }
+          console.log(`sage: re-asserted project wiring (${result.mainRoot})`)
+          const enabled = isEnabled({
+            home,
+            repoId: result.repoId,
+            cwd: result.mainRoot,
+            scope: 'project',
+          })
+          return console.log(
+            renderSummary({ scope: 'project', enabled, dataDir: result.dataDir, home }),
+          )
+        }
+        let result
+        try {
+          result = wireAll({ home, repoRoot })
+        } catch (e) {
+          return console.log(`sage: ${e.message}`)
+        }
+        console.log('sage: re-asserted global wiring')
+        return console.log(
+          renderSummary({
+            scope: 'global',
+            enabled: readEnabled(home),
+            dataDir: sageHome(home),
+            home,
+          }),
+        )
+      }
+
+      // apply
+      if (parsed.scope === 'project') {
+        const projectPath = parsed.projectPath || cwd
+        const mainRoot = resolveRepoRoot(projectPath)
+        if (!mainRoot)
+          return console.log('sage: not a git repo (cd into a repo to init project scope)')
+        const storage = parsed.storage || 'repo-root'
+        if (storage === 'repo-root' && isLinkedWorktree(projectPath))
+          return console.log(
+            `sage: repo-root storage must be set up from the main checkout: ${mainRoot}`,
+          )
+        let result
+        try {
+          result = wireProject({ home, repoRoot, projectRoot: projectPath, storage })
+        } catch (e) {
+          return console.log(`sage: ${e.message}`)
+        }
+        // Never auto-enable: project scope defaults isEnabled() to true absent
+        // explicit config, so an un-enabled init must write {enabled:false}.
+        setRepoEnabled(result.dataDir, !!parsed.enable)
+        const enabled = isEnabled({
+          home,
+          repoId: result.repoId,
+          cwd: result.mainRoot,
+          scope: 'project',
+        })
+        return console.log(
+          renderSummary({ scope: 'project', enabled, dataDir: result.dataDir, home }),
+        )
+      }
+
       let result
       try {
-        result = wireAll({ home, repoRoot })
+        result = wireAll({ home, repoRoot, storageRoot: parsed.storage })
       } catch (e) {
-        console.error(e.message)
-        process.exit(1)
+        return console.log(`sage: ${e.message}`)
       }
-      return console.log(formatResult(result))
+      if (parsed.enable) setEnabled(home, true)
+      const displayRoot = parsed.storage || sageHome(home)
+      return console.log(
+        renderSummary({
+          scope: 'global',
+          enabled: readEnabled(home),
+          dataDir: displayRoot,
+          home,
+        }),
+      )
+    }
+    case 'where': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      const mainRoot = resolveRepoRoot(cwd)
+      const { explainRepoDataDir } = await import('../lib/roots.mjs')
+      const { formatRuleDetail } = await import('../lib/init.mjs')
+      const info = explainRepoDataDir({ home, mainRoot, repoId })
+      return console.log(
+        [
+          'sage: this repo',
+          `  scope     ${info.scope}`,
+          `  storage   ${info.dir}`,
+          `  matched   ${formatRuleDetail(info.rule, { home, mainRoot })}`,
+        ].join('\n'),
+      )
+    }
+    case 'enable':
+    case 'disable': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const mainRoot = resolveRepoRoot(cwd)
+      const { explainRepoDataDir } = await import('../lib/roots.mjs')
+      const info = explainRepoDataDir({ home, mainRoot, repoId })
+      setRepoEnabled(info.dir, cmd === 'enable')
+      const label = cmd === 'enable' ? 'enabled' : 'disabled'
+      const who = path.basename(mainRoot || cwd)
+      return console.log(`sage: ${label} for ${who} (scope: ${info.scope})`)
     }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))
