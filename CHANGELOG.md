@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## [1.0.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v0.2.1...agentic-sage-v1.0.0) (2026-07-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **roots:** the built-in storage root moves from ~/.claude/sage to ~/.claude/agentic-sage and the hook file from sage-emit.mjs to agentic-sage-emit.mjs. Existing installs are unaffected until they run `sage init` (or `init --repair`), which migrates in place; reads keep working via the legacy fallback in the meantime.
+
+### Features
+
+* **cli:** wire sage init to lib/init.mjs; add sage where, enable, disable ([0413fe8](https://github.com/muslewski/agentic-sage/commit/0413fe8d6b39a4b85e033ce56c0f4393e0e24b90))
+* **doctor:** remedy lines + repos aggregation across the registry ([c87a206](https://github.com/muslewski/agentic-sage/commit/c87a206b9187e37700b520406dfcfbd451c37465))
+* **enabled:** scope-aware gate — project installs ignore the global master ([5177891](https://github.com/muslewski/agentic-sage/commit/51778916f45a5e375e7802860c2c2229ede991da))
+* **init:** non-interactive flags, TTY wizard, and the clean 4-line summary ([c292cad](https://github.com/muslewski/agentic-sage/commit/c292cad1d3faf2e29a6bb70faed40a2998f23835))
+* **roots:** rename on-disk state to agentic-sage, with read-only legacy fallback ([284aa4e](https://github.com/muslewski/agentic-sage/commit/284aa4e5faf4a5edc9e72c5122e99f1099fb5648))
+* **roots:** storage-root resolver + harness profile table ([8b2730f](https://github.com/muslewski/agentic-sage/commit/8b2730fee160870a6763308a253051a1c4d77bdd))
+* **wiring:** project-scope install — marker, registry, project settings.json ([f202ea3](https://github.com/muslewski/agentic-sage/commit/f202ea339f55ddfc86ca9fa5d4b613025d16132e))
+
+
+### Bug Fixes
+
+* **cli:** read verbs resolve self via pid-walk, not env-only — a session no longer collides with itself ([582dcaa](https://github.com/muslewski/agentic-sage/commit/582dcaa7e5ceed922e0cc99d7e23ef01fe2902a5))
+* **git:** parse status/diff with -z so quotePath cannot mangle touched paths ([f4af785](https://github.com/muslewski/agentic-sage/commit/f4af78570b0fba54a978a53305bd60b47654b988))
+* **hooks:** bound the stdin read with a real deadline (the promised watchdog) ([6f207c6](https://github.com/muslewski/agentic-sage/commit/6f207c6ff5b0e2dce8f0b53488c95995b8bcec42))
+* **store:** per-file lock so concurrent merges lose no fields ([7b7c7a7](https://github.com/muslewski/agentic-sage/commit/7b7c7a74ebc8a512550e84bacc2fd493cb7f3aac))
+
+
+### Performance Improvements
+
+* **asking:** export safeSid for reuse by the throttle breadcrumb ([e08b9b7](https://github.com/muslewski/agentic-sage/commit/e08b9b771ce27207a07c807b7ce2f1970acc2a6c))
+* **assets:** serve avif/webp banners via &lt;picture&gt;; npm-first setup image ([ba5e4cd](https://github.com/muslewski/agentic-sage/commit/ba5e4cd0fb693312f3271e046ab642a721103722))
+* **git:** support a trunk hint in gitSignals to skip re-derivation ([dbbb2e2](https://github.com/muslewski/agentic-sage/commit/dbbb2e28f2fce3db84407bf36dd8bf3b59fcdcb0))
+* **hooks:** add PostToolUse throttle breadcrumb (stat-only gate) ([2534e95](https://github.com/muslewski/agentic-sage/commit/2534e95cca5ffa5e98dcb7a87d3ff62c92fd63d2))
+* **hooks:** check PostToolUse throttle before any git spawn; single repo resolve; cache trunk ([18dd10c](https://github.com/muslewski/agentic-sage/commit/18dd10cb04b6d775d73da339472822a155f85bfa))
+* **repo-id:** add resolveRepo() to fold root+id into one git spawn ([e6775cb](https://github.com/muslewski/agentic-sage/commit/e6775cbfdf438efe90d8661e5b813d2799e595a2))
+
 ## [0.2.1](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v0.2.0...agentic-sage-v0.2.1) (2026-06-30)
 
 
