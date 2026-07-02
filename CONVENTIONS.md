@@ -2,9 +2,9 @@
 
 <p align="center">
   <picture>
-    <source srcset="assets/sage-conventions.avif" type="image/avif">
-    <source srcset="assets/sage-conventions.webp" type="image/webp">
-    <img src="assets/sage-conventions.webp" alt="SAGE — Conventions: the controller's side of the contract. Worktree after design, consult before a PR or on conflict, the optional guard, full enable/disable control. Passive by design, fail-open, default-off, hot-path-cheap." />
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-conventions.avif" type="image/avif">
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-conventions.webp" type="image/webp">
+    <img src="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-conventions.webp" alt="SAGE — Conventions: the controller's side of the contract. Worktree after design, consult before a PR or on conflict, the optional guard, full enable/disable control. Passive by design, fail-open, default-off, hot-path-cheap." />
   </picture>
 </p>
 

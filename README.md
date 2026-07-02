@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source srcset="./assets/sage-banner.avif" type="image/avif">
-    <source srcset="./assets/sage-banner.webp" type="image/webp">
-    <img src="./assets/sage-banner.webp" alt="SAGE — the fleet judge" width="900">
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-banner.avif" type="image/avif">
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-banner.webp" type="image/webp">
+    <img src="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-banner.webp" alt="SAGE — the fleet judge" width="900">
   </picture>
 </p>
 

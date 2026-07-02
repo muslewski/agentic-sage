@@ -2,9 +2,9 @@
 
 <p align="center">
   <picture>
-    <source srcset="assets/sage-setup.avif" type="image/avif">
-    <source srcset="assets/sage-setup.webp" type="image/webp">
-    <img src="assets/sage-setup.webp" alt="SAGE — Easy Setup: three steps — Install (npm install -g agentic-sage), Wire (sage init), Enable (sage on). Three simple steps to a coordinated fleet." />
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-setup.avif" type="image/avif">
+    <source srcset="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-setup.webp" type="image/webp">
+    <img src="https://raw.githubusercontent.com/muslewski/agentic-sage/main/assets/sage-setup.webp" alt="SAGE — Easy Setup: three steps — Install (npm install -g agentic-sage), Wire (sage init), Enable (sage on). Three simple steps to a coordinated fleet." />
   </picture>
 </p>
 
