@@ -9,6 +9,7 @@ import { sessionFile, eventsFile, sageHome, sessionsDir } from '../lib/paths.mjs
 import { readSidecar } from '../lib/handoff.mjs'
 import { addGuardPath, setGuardEnabled } from '../lib/guard.mjs'
 import { lastToolFile } from '../lib/throttle.mjs'
+import { MARKER_DIR, registryPath } from '../lib/roots.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'sage-emit.mjs')
@@ -369,4 +370,123 @@ test('emitter exits 0 even when stdin never closes (never-block backstop)', asyn
     })
   })
   assert.equal(code, 0)
+})
+
+// ---- Step 3: scope-aware gate + emitter scoping (enable model v2) ----
+
+const mkMarker = (repo, cfg = {}) => {
+  const markerDir = path.join(repo, MARKER_DIR)
+  fs.mkdirSync(markerDir, { recursive: true })
+  fs.writeFileSync(path.join(markerDir, 'config.json'), JSON.stringify(cfg))
+  return markerDir
+}
+
+test('project scope: SessionStart works with global master OFF; record lands in the marker data dir', () => {
+  const home = mkTmp('sage-h-') // no global config at all = master OFF
+  const repo = mkGitRepo()
+  const markerDir = mkMarker(repo)
+
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({
+      hook_event_name: 'SessionStart',
+      session_id: 'p1',
+      cwd: repo,
+      source: 'startup',
+    }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, SAGE_SCOPE: 'project' },
+  })
+
+  const recPath = path.join(markerDir, 'sessions', 'p1.json')
+  assert.ok(fs.existsSync(recPath), 'record should exist in the marker data dir')
+  const rec = JSON.parse(fs.readFileSync(recPath, 'utf8'))
+  assert.equal(rec.session_id, 'p1')
+  assert.equal(rec.link_state, 'scoping')
+})
+
+test('--scope=project argv works identically to SAGE_SCOPE env', () => {
+  const home = mkTmp('sage-h-') // no global config at all = master OFF
+  const repo = mkGitRepo()
+  const markerDir = mkMarker(repo)
+
+  execFileSync('node', [EMIT, '--scope=project'], {
+    input: JSON.stringify({
+      hook_event_name: 'SessionStart',
+      session_id: 'p2',
+      cwd: repo,
+      source: 'startup',
+    }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+
+  const recPath = path.join(markerDir, 'sessions', 'p2.json')
+  assert.ok(fs.existsSync(recPath), 'record should exist in the marker data dir')
+})
+
+test('double-fire defer: global hook exits without writing when the repo is project-scoped (marker present)', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true }) // global master ON
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  const markerDir = mkMarker(repo)
+
+  // No SAGE_SCOPE / --scope flag ⇒ this is the GLOBAL hook.
+  const out = execFileSync('node', [EMIT], {
+    input: JSON.stringify({
+      hook_event_name: 'SessionStart',
+      session_id: 'g9',
+      cwd: repo,
+      source: 'startup',
+    }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+  assert.equal(out, '') // deferred before the fleet-brief write too
+
+  // Nothing written for this sid anywhere reachable: not the marker dir...
+  assert.equal(fs.existsSync(path.join(markerDir, 'sessions', 'g9.json')), false)
+  // ...and not the built-in default (where a non-deferred global write would land).
+  assert.equal(fs.existsSync(sessionFile(home, id, 'g9')), false)
+})
+
+test('registry bootstrap: project-scope SessionStart indexes the repo (scope + dataDir)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  const markerDir = mkMarker(repo)
+
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({
+      hook_event_name: 'SessionStart',
+      session_id: 'p3',
+      cwd: repo,
+      source: 'startup',
+    }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, SAGE_SCOPE: 'project' },
+  })
+
+  const registry = JSON.parse(fs.readFileSync(registryPath(home), 'utf8'))
+  assert.equal(registry.repos[id].scope, 'project')
+  assert.equal(registry.repos[id].dataDir, markerDir)
+})
+
+test('fast path preserved: no global config, no scope flag ⇒ nothing created beyond existing state', () => {
+  const home = mkTmp('sage-h-') // no global config seeded
+  const repo = mkGitRepo()
+  const before = fs.readdirSync(home)
+
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({
+      hook_event_name: 'SessionStart',
+      session_id: 's9',
+      cwd: repo,
+      source: 'startup',
+    }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+
+  assert.deepEqual(fs.readdirSync(home), before) // nothing created under HOME at all
 })

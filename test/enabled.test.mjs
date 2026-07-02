@@ -39,3 +39,38 @@ test('.sage-ignore in cwd ⇒ disabled', () => {
   fs.writeFileSync(path.join(cwd, '.sage-ignore'), '')
   assert.equal(isEnabled({ home, repoId: 'r', cwd, env: {} }), false)
 })
+
+// ---- scope: 'project' (enable model v2) ----
+
+test('project scope: no global config ⇒ enabled (init on a project implies opt-in)', () => {
+  const home = mkTmp('sage-h-') // no global config at all
+  assert.equal(isEnabled({ home, repoId: 'r', cwd: home, env: {}, scope: 'project' }), true)
+})
+
+test('project scope: per-repo {enabled:false} ⇒ disabled', () => {
+  const home = mkTmp('sage-h-')
+  const rc = repoConfig(home, 'r')
+  fs.mkdirSync(path.dirname(rc), { recursive: true })
+  fs.writeFileSync(rc, JSON.stringify({ enabled: false }))
+  assert.equal(isEnabled({ home, repoId: 'r', cwd: home, env: {}, scope: 'project' }), false)
+})
+
+test('project scope: SAGE_OPT_OUT=1 ⇒ disabled (opt-out always wins)', () => {
+  const home = mkTmp('sage-h-')
+  assert.equal(
+    isEnabled({ home, repoId: 'r', cwd: home, env: { SAGE_OPT_OUT: '1' }, scope: 'project' }),
+    false,
+  )
+})
+
+test('project scope: .sage-ignore in cwd ⇒ disabled', () => {
+  const home = mkTmp('sage-h-')
+  const cwd = mkTmp('sage-cwd-')
+  fs.writeFileSync(path.join(cwd, '.sage-ignore'), '')
+  assert.equal(isEnabled({ home, repoId: 'r', cwd, env: {}, scope: 'project' }), false)
+})
+
+test('no scope passed ⇒ defaults to global (default-OFF behavior unchanged)', () => {
+  const home = mkTmp('sage-h-') // no global config
+  assert.equal(isEnabled({ home, repoId: 'r', cwd: home, env: {} }), false)
+})

@@ -14,6 +14,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { resolveRepo } from '../lib/repo-id.mjs'
 import { isGloballyEnabled, isEnabled } from '../lib/enabled.mjs'
+import { explainRepoDataDir, writeRegistryEntry, readRegistry, MARKER_DIR } from '../lib/roots.mjs'
 import { readRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
 import { gitSignals, branchOf } from '../lib/git.mjs'
 import { autoDump } from '../lib/handoff.mjs'
@@ -59,30 +60,84 @@ const main = async () => {
   const cwd = payload.cwd || process.cwd()
   if (!sid || !event) return
 
+  // Which install fired this hook: the GLOBAL hook (~/.claude/settings.json,
+  // no flag) or a PROJECT hook (<repo>/.claude/settings.json, wired with
+  // --scope=project or SAGE_SCOPE=project). Cheap — argv/env only, no fs/git —
+  // so computing it ahead of the fast path below costs nothing.
+  const scope =
+    process.argv.includes('--scope=project') || process.env.SAGE_SCOPE === 'project'
+      ? 'project'
+      : 'global'
+
   // DEFAULT-OFF fast path — tier-1 check FIRST (one file read), before any git.
-  if (!isGloballyEnabled(home)) return
+  // Global scope ONLY: a project install must work with the global master OFF
+  // (init on a project implies opt-in) — see lib/enabled.mjs's scope branch.
+  if (scope === 'global' && !isGloballyEnabled(home)) return
 
   // PostToolUse fires on EVERY tool call; ~29/30 are inside the 30s window.
   // Decide that from one stat on a flat breadcrumb BEFORE any git spawn.
+  // Scope-independent — agent-home-global, cheaper than everything below.
   if (event === 'PostToolUse' && !postToolDue(home, sid, Date.now(), POST_TOOL_THROTTLE_MS)) return
 
   // HOT-PATH-CHEAP: PreToolUse fires before every tool call. With no guard armed
   // anywhere (the default), skip on a single cheap breadcrumb check — no git, no
-  // per-repo read, no chance of a block.
+  // per-repo read, no chance of a block. Scope-independent, same reason as above.
   if (event === 'PreToolUse' && !guardsActive(home)) return
 
   const repo = resolveRepo(cwd)
   if (!repo) return // not a git repo → nothing to judge
   const repoId = repo.id
 
-  // Full gate (re-confirms global + per-repo + per-session opt-out).
-  if (!isEnabled({ home, repoId, cwd })) return
+  // Double-fire defer: a repo with BOTH a global and a project hook wired must
+  // write exactly once. The global hook defers to the project hook when this
+  // repo is project-scoped: the registry already says so, or the in-repo
+  // marker exists. Fail TOWARD PROCESSING on any error — a swallowed
+  // exception must never silently make a record vanish.
+  if (scope === 'global') {
+    try {
+      const registry = readRegistry(home)
+      const registryScope = registry.repos?.[repoId]?.scope
+      const hasMarker = fs.existsSync(path.join(repo.root, MARKER_DIR, 'config.json'))
+      if (registryScope === 'project' || hasMarker) return
+    } catch {
+      /* fail toward processing — never silently skip */
+    }
+  }
+
+  // Full gate (re-confirms global + per-repo + per-session opt-out, scope-aware).
+  if (!isEnabled({ home, repoId, cwd, scope })) return
 
   const now = Date.now()
   const at = new Date(now).toISOString()
 
   switch (event) {
     case 'SessionStart': {
+      // Registry bootstrap (best-effort, SessionStart-only — never on a hot
+      // path): index a project-scoped repo so id-only lookups elsewhere
+      // (plan 007's precedence rule 2) resolve to its data dir. Runs BEFORE
+      // the record write below so THIS session's own record — not just later
+      // ones — lands in the resolved dir (the marker, when present): the
+      // record write below re-reads the (now current) registry via
+      // repoDir()/resolveRepoDataDir(). Wrapped in its own try/catch so a
+      // failure here can never cost the record write that follows — on any
+      // error the record still gets written, just to whatever repoDir()
+      // would have resolved to anyway.
+      try {
+        const registry = readRegistry(home)
+        if (!registry.repos?.[repoId]) {
+          const explained = explainRepoDataDir({ home, mainRoot: repo.root, repoId })
+          if (explained.rule === 'marker' || scope === 'project') {
+            writeRegistryEntry(home, repoId, {
+              dataDir: explained.dir,
+              scope: explained.scope,
+              mainRoot: repo.root,
+            })
+          }
+        }
+      } catch {
+        /* best-effort — never let indexing break the record write */
+      }
+
       const sig = gitSignals(cwd)
       const pid = pidForSession(home, sid)
       const prev = readRecord(home, repoId, sid)
