@@ -123,3 +123,18 @@ test('skill symlink never clobbers an existing .bak (leaves both in place)', () 
   assert.equal(fs.lstatSync(path.join(skills, 'sage-fleet')).isSymbolicLink(), false) // real dir left as-is
   assert.equal(fs.readFileSync(path.join(skills, 'sage-fleet', 'mine.md'), 'utf8'), 'real-dir')
 })
+
+// Plan 009 regression net: the global install path (install.mjs → wireAll)
+// must stay byte-for-byte unaffected by the wireProject/harness-profile
+// refactor — no project-scope artifacts should leak into a global install.
+test('plan 009 regression: global install never creates .agentic-sage or registry.json under home', () => {
+  const home = mkTmp('sage-h-')
+  runInstall(home)
+  assert.equal(fs.existsSync(path.join(home, '.agentic-sage')), false)
+  assert.equal(fs.existsSync(path.join(home, '.claude', 'sage', 'registry.json')), false)
+  // and the existing assertions still hold — a full second run stays idempotent.
+  runInstall(home)
+  const settings = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'))
+  for (const ev of EVENTS) assert.ok((settings.hooks[ev] || []).length >= 1, `missing ${ev}`)
+  assert.equal(settings.hooks.Stop.length, 1)
+})
