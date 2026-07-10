@@ -1,7 +1,14 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.1/schema.json",
   "files": {
-    "includes": ["**/bin/**", "**/lib/**", "**/hooks/**", "**/install.mjs", "**/scripts/**"]
+    "includes": [
+      "**/bin/**",
+      "**/lib/**",
+      "**/hooks/**",
+      "**/install.mjs",
+      "**/scripts/**",
+      "!**/.claude/worktrees"
+    ]
   },
   "assist": { "actions": { "source": { "organizeImports": "off" } } },
   "formatter": {
