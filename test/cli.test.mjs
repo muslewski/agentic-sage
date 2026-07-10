@@ -566,3 +566,24 @@ test('board --json --watch: rejected', () => {
   assert.notEqual(out.status, 0)
   assert.match(out.stderr + out.stdout, /--json.*--watch|--watch.*--json/)
 })
+
+test('fleet --json: envelope includes self_sid and all sessions', () => {
+  const { home, repo, repoId } = mkCliSandbox()
+  mergeRecord(home, repoId, 'fleet-s1', {
+    session_id: 'fleet-s1',
+    repo_id: repoId,
+    branch: 'main',
+    status: 'active',
+    link_state: 'scoping',
+    liveness: 'idle',
+    opened_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+  const out = runSage(['fleet', '--json'], { home, cwd: repo })
+  const doc = JSON.parse(out.stdout)
+  assert.equal(doc.schema, 1)
+  assert.equal(doc.kind, 'sage.fleet')
+  assert.ok('self_sid' in doc)
+  assert.equal(doc.sessions.length, 1)
+  assert.equal(out.status, 0)
+})

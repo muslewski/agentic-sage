@@ -177,8 +177,31 @@ const main = async () => {
     }
     case 'fleet': {
       const repoId = resolveRepoId(cwd)
-      if (!repoId) return console.log('sage: not a git repo')
+      const json = process.argv.slice(3).includes('--json')
+      if (!repoId) {
+        if (json) {
+          return console.log(JSON.stringify({
+            schema: 1,
+            kind: 'sage.fleet',
+            generated_at: new Date().toISOString(),
+            repo_id: null,
+            self_sid: null,
+            sessions: [],
+          }))
+        }
+        return console.log('sage: not a git repo')
+      }
       stampAsking(repoId, 'fleet')
+      if (json) {
+        return console.log(JSON.stringify({
+          schema: 1,
+          kind: 'sage.fleet',
+          generated_at: new Date().toISOString(),
+          repo_id: repoId,
+          self_sid: resolveSelfSid(home, repoId) || null,
+          sessions: collectSessions(home, repoId, now),
+        }))
+      }
       const selfSid = resolveSelfSid(home, repoId) || undefined
       const line = fleetLine(collectSessions(home, repoId, now), { selfSid })
       return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
