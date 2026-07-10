@@ -7,7 +7,7 @@ import { sessionsDir, globalConfig, sageHome } from '../lib/paths.mjs'
 import { readRecord } from '../lib/store.mjs'
 import { writeRegistryEntry } from '../lib/roots.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
-import { wireProject } from '../lib/wiring.mjs'
+import { wireProject, wireAll } from '../lib/wiring.mjs'
 import { fileURLToPath } from 'node:url'
 import {
   setEnabled,
@@ -223,4 +223,30 @@ test('listRepos: a repo present in BOTH the scan and the registry is not double-
   fs.writeFileSync(path.join(sessionsDir(home, id), 's1.json'), '{}')
   const matches = listRepos(home).filter((r) => r.repoId === id)
   assert.equal(matches.length, 1)
+})
+
+// ── plan 014: grok wiring doctor check ─────────────────────────────────────
+
+test('doctor: grok wiring ok when hook file + emitter present', () => {
+  const home = mkTmp('sage-c-')
+  wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const row = checks.find((c) => /grok/i.test(c.name))
+  assert.ok(row && row.ok)
+})
+
+test('doctor: grok wiring flagged when ~/.grok exists but unwired', () => {
+  const home = mkTmp('sage-c-')
+  fs.mkdirSync(path.join(home, '.grok'), { recursive: true })
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const row = checks.find((c) => /grok/i.test(c.name))
+  assert.ok(row && !row.ok)
+  assert.match(String(row.fix || row.remedy || row.detail), /--harness both/)
+})
+
+test('doctor: grok check absent/na when ~/.grok missing', () => {
+  const home = mkTmp('sage-c-')
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const row = checks.find((c) => /grok/i.test(c.name))
+  assert.ok(!row || row.ok !== false)
 })
