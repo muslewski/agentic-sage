@@ -467,6 +467,7 @@ const main = async () => {
             enabled: readEnabled(home),
             dataDir: sageHome(home),
             home,
+            harness: 'claude',
           }),
         )
       }
@@ -482,9 +483,10 @@ const main = async () => {
           return console.log(
             `sage: repo-root storage must be set up from the main checkout: ${mainRoot}`,
           )
+        const projHarness = parsed.harness === 'both' ? 'claude' : (parsed.harness || 'claude')
         let result
         try {
-          result = wireProject({ home, repoRoot, projectRoot: projectPath, storage })
+          result = wireProject({ home, repoRoot, projectRoot: projectPath, storage, harness: projHarness })
         } catch (e) {
           return console.log(`sage: ${e.message}`)
         }
@@ -498,13 +500,16 @@ const main = async () => {
           scope: 'project',
         })
         return console.log(
-          renderSummary({ scope: 'project', enabled, dataDir: result.dataDir, home }),
+          renderSummary({ scope: 'project', enabled, dataDir: result.dataDir, home, harness: projHarness }),
         )
       }
 
       let result
       try {
-        result = wireAll({ home, repoRoot, storageRoot: parsed.storage })
+        const harnesses = parsed.harness === 'both' ? ['claude', 'grok'] : [parsed.harness || 'claude']
+        for (const h of harnesses) {
+          result = wireAll({ home, repoRoot, storageRoot: parsed.storage, harness: h })
+        }
       } catch (e) {
         return console.log(`sage: ${e.message}`)
       }
@@ -516,6 +521,7 @@ const main = async () => {
           enabled: readEnabled(home),
           dataDir: displayRoot,
           home,
+          harness: parsed.harness || 'claude',
         }),
       )
     }

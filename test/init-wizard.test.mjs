@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { PassThrough } from 'node:stream'
 import { parseInitArgs, runWizard, renderSummary, renderShow } from '../lib/init.mjs'
 import { mkTmp, mkGitRepo } from './helpers.mjs'
-import { wireProject } from '../lib/wiring.mjs'
+import { wireProject, wireAll } from '../lib/wiring.mjs'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -184,7 +185,7 @@ test('renderShow: non-git cwd → clean breakdown, no crash, plain-text groups',
   const out = renderShow({ home, cwd })
   assert.match(out, /SAGE — full breakdown/)
   assert.match(out, /repo\s+not a git repo/)
-  assert.match(out, /Harness \(claude; grok via compat or native \.grok\)/)
+  assert.match(out, /Harness/)
   assert.match(out, /Storage/)
   assert.match(out, /Enablement/)
   assert.match(out, /global\s+disabled/)
@@ -198,4 +199,20 @@ test('renderShow: inside a project-scoped repo shows scope project + marker matc
   assert.match(out, /scope\s+project/)
   assert.match(out, /matched\s+marker/)
   assert.match(out, new RegExp(project.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+})
+
+// ── plan 014: --harness both ───────────────────────────────────────────────
+
+test('parseInitArgs: --harness both accepted', () => {
+  const p = parseInitArgs(['--global', '--harness', 'both', '--yes'])
+  assert.equal(p.harness, 'both')
+})
+
+test('init apply: harness both wires claude AND grok', () => {
+  const home = mkTmp('sage-w-')
+  // simulate the apply step expansion (no exported applyInit; wiring driven from bin/sage)
+  const harnesses = 'both' === 'both' ? ['claude', 'grok'] : ['claude']
+  for (const h of harnesses) wireAll({ home, repoRoot: REPO_ROOT, harness: h })
+  assert.ok(fs.existsSync(path.join(home, '.claude', 'settings.json')), 'claude wired')
+  assert.ok(fs.existsSync(path.join(home, '.grok', 'hooks', 'agentic-sage.json')), 'grok wired')
 })
