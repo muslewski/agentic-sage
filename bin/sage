@@ -124,17 +124,50 @@ const main = async () => {
   switch (cmd) {
     case 'board': {
       const repoId = resolveRepoId(cwd)
-      if (!repoId) return console.log('sage: not a git repo (cd into a repo SAGE judges)')
       const flags = process.argv.slice(3)
       const watch = flags.includes('--watch')
       const wide = flags.includes('--wide') || flags.includes('-w')
+      const json = flags.includes('--json')
+      if (json && watch) {
+        console.error('sage: --json and --watch are mutually exclusive')
+        process.exit(1)
+      }
+      if (!repoId) {
+        if (json) {
+          return console.log(JSON.stringify({
+            schema: 1,
+            kind: 'sage.board',
+            generated_at: new Date().toISOString(),
+            repo_id: null,
+            sessions: [],
+          }))
+        }
+        return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+      }
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
-      // build(frame): re-collect + render. frame == null → static (no spinner).
-      const build = (frame) => {
+      // buildSessions: collect + the exact same row/tmux enrichment the human
+      // render path performs. Used by both the render path and --json (one
+      // read path). Local to case to keep edits inside board case only.
+      const buildSessions = () => {
         const sessions = collectSessions(home, repoId, Date.now())
         if (adapter) for (const s of sessions) { const r = rowOf(adapter, ctx, s); if (r) s.row = r.row }
         const panes = tmuxPanes() // best-effort: jumpable pane per live session
         if (panes.length) for (const s of sessions) { if (s.pid) s.tmux = paneForPid(s.pid, panes) }
+        return sessions
+      }
+      if (json) {
+        const sessions = buildSessions()
+        return console.log(JSON.stringify({
+          schema: 1,
+          kind: 'sage.board',
+          generated_at: new Date().toISOString(),
+          repo_id: repoId,
+          sessions,
+        }))
+      }
+      // build(frame): re-collect + render. frame == null → static (no spinner).
+      const build = (frame) => {
+        const sessions = buildSessions()
         const text = renderBoard(sessions, { repoId, wide })
         return frame == null ? text : spinnerize(text, sessions, frame)
       }
