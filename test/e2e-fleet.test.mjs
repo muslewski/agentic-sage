@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawnSync, execFileSync } from 'node:child_process'
 import { mkGitRepo } from './helpers.mjs'
 import { mkSandboxHome, emit, readSession, eventsFor, EMITTER_PATH } from './e2e-helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
@@ -119,4 +119,25 @@ test('e2e: board shows sessions from both dialects', () => {
   const text = renderBoard(sessions, { repoId, wide: true })
   assert.match(text, /2 sessions/)
   assert.match(text, /claude-s/) // wide col shows first 8 chars of sid → "claude-s"
+})
+
+test('e2e: .claude/worktrees child resolves to the SAME repo id and shares the board', () => {
+  const { home } = mkSandboxHome()
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+
+  const wt = path.join(repo, '.claude', 'worktrees', 'executor-x')
+  fs.mkdirSync(path.dirname(wt), { recursive: true })
+  execFileSync('git', ['-C', repo, 'worktree', 'add', wt, '-b', 'executor-x-branch'], { stdio: 'ignore' })
+
+  assert.equal(resolveRepoId(wt), repoId, 'worktree maps to main repo id')
+
+  emit(home, { hook_event_name: 'SessionStart', session_id: 'advisor-main', cwd: repo })
+  emit(home, { hookEventName: 'session_start', sessionId: 'child-wt', cwd: wt })
+
+  const sessions = collectSessions(home, repoId, Date.now())
+  assert.equal(sessions.length, 2, 'both sessions on ONE board')
+  const child = sessions.find((s) => s.session_id === 'child-wt')
+  assert.equal(child.branch, 'executor-x-branch')
+  assert.ok(String(child.worktree).includes('.claude/worktrees/executor-x'))
 })
