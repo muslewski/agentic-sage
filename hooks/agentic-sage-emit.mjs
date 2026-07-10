@@ -212,7 +212,13 @@ const main = async () => {
     }
 
     case 'UserPromptSubmit':
-      mergeRecord(home, repoId, sid, { last_prompt_at: at, liveness: 'working', updated_at: at })
+      mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
+        last_prompt_at: at,
+        liveness: 'working',
+        updated_at: at,
+      })
       break
 
     case 'PostToolUse': {
@@ -221,7 +227,13 @@ const main = async () => {
       const rec = readRecord(home, repoId, sid)
       const last = rec?.last_tool_at ? Date.parse(rec.last_tool_at) : 0
       if (now - last < POST_TOOL_THROTTLE_MS) break // throttle chatter
-      mergeRecord(home, repoId, sid, { last_tool_at: at, liveness: 'working', updated_at: at })
+      mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
+        last_tool_at: at,
+        liveness: 'working',
+        updated_at: at,
+      })
       markPostTool(home, sid)
       break
     }
@@ -233,6 +245,8 @@ const main = async () => {
       const prev = readRecord(home, repoId, sid)
       const sig = gitSignals(cwd, { trunk: prev?.trunk })
       mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
         head: sig.head,
         dirty: sig.dirty,
         touched_globs: sig.touched,
@@ -259,12 +273,20 @@ const main = async () => {
         tmpDir,
         prefix,
       })
-      mergeRecord(home, repoId, sid, { handoff_path: jsonPath, handoff_at: at, updated_at: at })
+      mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
+        handoff_path: jsonPath,
+        handoff_at: at,
+        updated_at: at,
+      })
       break
     }
 
     case 'SessionEnd':
       mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
         link_state: 'closed',
         status: 'closed',
         liveness: 'closed',

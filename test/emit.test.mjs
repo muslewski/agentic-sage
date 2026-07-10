@@ -10,6 +10,7 @@ import { readSidecar } from '../lib/handoff.mjs'
 import { addGuardPath, setGuardEnabled } from '../lib/guard.mjs'
 import { lastToolFile } from '../lib/throttle.mjs'
 import { MARKER_DIR, registryPath } from '../lib/roots.mjs'
+import { readRecord } from '../lib/store.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'agentic-sage-emit.mjs')
@@ -489,4 +490,16 @@ test('fast path preserved: no global config, no scope flag ⇒ nothing created b
   })
 
   assert.deepEqual(fs.readdirSync(home), before) // nothing created under HOME at all
+})
+
+test('emitter: a non-SessionStart first event still records session_id', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+  // Stop lands FIRST (no prior SessionStart) — simulates the id-less-record bug.
+  emit({ hook_event_name: 'Stop', session_id: 'idless-1', cwd: repo }, home)
+  const rec = readRecord(home, repoId, 'idless-1')
+  assert.ok(rec, 'record created')
+  assert.equal(rec.session_id, 'idless-1', 'session_id present even without SessionStart')
 })
