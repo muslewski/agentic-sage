@@ -54,8 +54,8 @@ const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
-  board [--watch]      roster of this repo's sessions (--watch = live)
-  fleet                one-line nearest-neighbour summary
+  board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
+  fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
   merge-brief          all contested paths before you merge
