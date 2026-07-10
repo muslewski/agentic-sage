@@ -90,3 +90,18 @@ test('spinnerize leaves an empty board untouched', () => {
   const text = renderBoard([], { repoId: 'repo' })
   assert.equal(spinnerize(text, [], SPINNER_FRAMES[0]), text)
 })
+
+test('collectSessions: backfills session_id from filename when body omits it', () => {
+  const home = mkTmp()
+  const repoId = 'demo-repo-1234abcd'
+  const dir = sessionsDir(home, repoId)
+  fs.mkdirSync(dir, { recursive: true })
+  // id-less body, exactly like the real legacy records (keys: link_state,status,liveness,updated_at)
+  fs.writeFileSync(
+    path.join(dir, 'ghost-sid-1.json'),
+    JSON.stringify({ link_state: 'closed', status: 'closed', liveness: 'closed', updated_at: new Date().toISOString() }),
+  )
+  const out = collectSessions(home, repoId, Date.now())
+  assert.equal(out.length, 1)
+  assert.equal(out[0].session_id, 'ghost-sid-1', 'sid backfilled from filename')
+})

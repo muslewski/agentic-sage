@@ -25,7 +25,7 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 
 | Field | Type | Notes |
 |---|---|---|
-| `session_id` | string | harness session id |
+| `session_id` | string | harness session id; always present (backfilled from the record filename if a legacy record body omitted it). |
 | `repo_id` | string | as above |
 | `worktree` | string | cwd at SessionStart (worktree path for linked worktrees) |
 | `branch` | string\|null | git branch at last git-signal refresh |

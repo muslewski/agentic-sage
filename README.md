@@ -195,6 +195,7 @@ sage fleet [--json]     # one-line fleet summary (fold into a status tick)
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file
 sage merge-brief        # all contested paths + the regenerate-don't-merge rule
+sage prune [--days N] [--yes]  # remove closed/dead sessions older than N days (default 7)
 sage adapter init       # scaffold .agentic-sage/adapter.mjs (optional, for named work/zones)
 sage doctor             # validate config / hook / settings / linked skills / adapter
 sage where              # this repo's resolved scope + storage + which rule matched
