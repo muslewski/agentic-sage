@@ -30,10 +30,15 @@ Fill the friction table as you hit things. One week live → next round (war-roo
 |---|---|---|---|
 | 2026-07-10 | worktree children share repo id | YES (test: e2e-fleet worktree regression) | git-common-dir resolution |
 | 2026-07-10 | active_sessions.json usable | NO — always `[]`; registry treats as optional fallback | live probe |
-| | grok -p fires hooks | pending step 5 | |
+| 2026-07-10 | grok -p fires hooks | **YES** — no live-smoke run needed; settled by real board | armory executor children `019f4d2e` (plan-015-json), `019f4d34` (plan-016-live-smoke), `019f4cc6` (research child) present on `sage board` with their worktree branches + touched globs. SessionStart + PostToolUse confirmed firing under `grok -p`; source `new` |
+
+Follow-up on grok -p: executor children land as `stalled`, not `closed` — SessionEnd
+may not fire under `grok -p` (or liveness derivation ranks a pid-dead grok session
+`stalled` before `closed`). Not blocking; note for a future SessionEnd-under-print check.
 
 ## Friction log
 
 | Date | Session/harness | Friction | Severity | Idea |
 |---|---|---|---|---|
-| | | | | |
+| 2026-07-10 | claude / board | 41 records, most `dead`/`closed` from months of `/clear` — board is noisy | med | `sage prune` verb (drop closed/dead older than N days); a `board` default filter to live+recent |
+| 2026-07-10 | claude / board --json | one record has no `session_id` → a naive JSON consumer crashes on `.session_id` (renderBoard tolerates it; the machine layer does not) | med — matters for Hermes | emitter must never write a record without `session_id`; `--json` should drop/repair id-less records before emitting |
