@@ -1,0 +1,104 @@
+# SAGE machine-readable output — schema 1
+
+`sage board --json` and `sage fleet --json` print exactly one JSON document to
+stdout and exit 0, even when the repo has no sessions or the cwd is not a
+judged repo (fail-open: empty envelope). Nothing else is written to stdout.
+
+Evolution policy: schema 1 fields are stable; new fields may be ADDED without
+a version bump; removals or renames bump `schema`. Consumers must ignore
+unknown fields.
+
+## Envelope
+
+| Field | Type | Notes |
+|---|---|---|
+| `schema` | number | `1` |
+| `kind` | string | `"sage.board"` or `"sage.fleet"` |
+| `generated_at` | string | ISO-8601 UTC (with milliseconds) |
+| `repo_id` | string\|null | `<basename>-<sha256-8>` of the main repo root; `null` outside a repo |
+| `self_sid` | string\|null | fleet only — the calling session id (when `resolveSelfSid` succeeds); otherwise `null` |
+| `sessions` | array | session objects (newest `updated_at` first) |
+
+## Session object
+
+Fields written by the emitter/CLI; absent means never set for that session (no null-backfilling). Derived fields from `collectSessions` (`alive`, `liveness`, `handoff_bucket`, `handoff_age`) are always present.
+
+| Field | Type | Notes |
+|---|---|---|
+| `session_id` | string | harness session id |
+| `repo_id` | string | as above |
+| `worktree` | string | cwd at SessionStart (worktree path for linked worktrees) |
+| `branch` | string\|null | git branch at last git-signal refresh |
+| `head` | string\|null | commit sha |
+| `dirty` | boolean | uncommitted changes present |
+| `touched_globs` | string[] | paths changed vs trunk |
+| `trunk` | string\|null | detected trunk branch |
+| `pid` | number | harness process id, when resolvable |
+| `alive` | boolean | derived: pid re-probed at read time (always present) |
+| `link_state` | string | `scoping` \| `linked` \| `closed` |
+| `source` | string\|null | harness-reported session source |
+| `status` | string | `active` \| `closed` |
+| `liveness` | string | derived: `working` \| `idle` \| `stalled` \| `dead` \| `closed` (always present) |
+| `opened_at` / `updated_at` | string | ISO-8601 |
+| `last_prompt_at` / `last_tool_at` / `handoff_at` | string\|null | ISO-8601, event stamps (absent until observed) |
+| `handoff_path` | string\|null | PreCompact handoff sidecar path (absent until observed) |
+| `handoff_bucket` / `handoff_age` | string | derived at read time (always present): bucket is `none`\|`fresh`\|`aging`\|`stale`; age is `—` or e.g. `3m` |
+| `claimed_globs` | string[] | via `sage claim` (absent until claimed) |
+| `claimed_row` | string | via `sage backlog claim` (absent until claimed) |
+| `row` | string | adapter-resolved backlog row (board enrichment only; absent with no adapter or on fleet) |
+| `tmux` | string | tmux pane id (board enrichment, pid-based; absent when no match or on fleet) |
+
+## Examples
+
+    sage board --json | jq -r '.sessions[] | "\(.liveness)\t\(.branch)\t\(.session_id)"'
+    sage fleet --json | jq '.sessions | map(select(.session_id != .self_sid))'  # (note: .self_sid is top-level on fleet envelope)
+
+A minimal board envelope (seeded session, no adapter, inside a repo):
+
+```json
+{
+  "schema": 1,
+  "kind": "sage.board",
+  "generated_at": "2026-07-10T18:00:46.736Z",
+  "repo_id": "sage-repo-...",
+  "sessions": [
+    {
+      "session_id": "json-s1",
+      "repo_id": "...",
+      "worktree": "/path/to/worktree",
+      "branch": "main",
+      "head": "...",
+      "dirty": false,
+      "touched_globs": ["src/foo.ts"],
+      "trunk": "main",
+      "pid": 1234,
+      "link_state": "scoping",
+      "source": null,
+      "status": "active",
+      "opened_at": "...",
+      "updated_at": "...",
+      "last_prompt_at": "...",
+      "last_tool_at": "...",
+      "handoff_at": null,
+      "handoff_path": null,
+      "claimed_globs": ["src/**"],
+      "claimed_row": "A1",
+      "alive": true,
+      "liveness": "working",
+      "handoff_bucket": "none",
+      "handoff_age": "—",
+      "tmux": "muslewski-2:0"
+    }
+  ]
+}
+```
+
+Non-repo (fail-open) or empty:
+
+```json
+{ "schema": 1, "kind": "sage.board", "generated_at": "...", "repo_id": null, "sessions": [] }
+```
+
+Fleet adds `"self_sid": "..." | null` at the top level of the envelope.
+
+Verify keys against live output in a sandbox before relying on any field.
