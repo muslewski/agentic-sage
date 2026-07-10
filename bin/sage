@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
 import { collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import { planPrune } from '../lib/prune.mjs'
 import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
   setEnabled,
@@ -43,7 +44,7 @@ import {
 import { resolveSelfSid } from '../lib/self.mjs'
 import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
 import { isEnabled } from '../lib/enabled.mjs'
-import { globalConfig } from '../lib/paths.mjs'
+import { globalConfig, sessionFile } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
 import { backlogStatus, renderBacklog } from '../lib/backlog.mjs'
 import { paint } from '../lib/color.mjs'
@@ -60,6 +61,7 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   why-diverged <file>  which sessions touch a file + why (+ numstat)
   merge-brief          all contested paths before you merge
   repos                list all judged repos
+  prune [--days N] [--yes]   remove closed/dead sessions older than N days (default 7)
   on | off             enable/disable SAGE globally
   link <sid> [state]   manual link_state override (default: linked)
   unlink <sid>         mark a session unlinked (closed)
@@ -254,6 +256,27 @@ const main = async () => {
           .map((r) => `  ${r.repoId.replace(/-[0-9a-f]{8}$/, '')} (${r.repoId} · ${r.sessions} session(s))`)
           .join('\n'),
       )
+    }
+    case 'prune': {
+      const repoId = resolveRepoId(cwd)
+      if (!repoId) return console.log('sage: not a git repo')
+      const flags = process.argv.slice(3)
+      const dIdx = flags.indexOf('--days')
+      const days = dIdx >= 0 ? Number(flags[dIdx + 1]) || 7 : 7
+      const yes = flags.includes('--yes')
+      const sessions = collectSessions(home, repoId, Date.now())
+      const { remove } = planPrune(sessions, { days, now: Date.now() })
+      if (!remove.length) return console.log(`sage: nothing to prune (no closed/dead sessions older than ${days}d)`)
+      if (!yes) {
+        console.log(`sage: would prune ${remove.length} session(s) older than ${days}d:`)
+        for (const s of remove) console.log(`  ${s.liveness}  ${(s.session_id || '').slice(0, 8)}  ${s.branch || '-'}`)
+        return console.log('sage: re-run with --yes to delete')
+      }
+      let gone = 0
+      for (const s of remove) {
+        try { fs.rmSync(sessionFile(home, repoId, s.session_id)); gone++ } catch {}
+      }
+      return console.log(`sage: pruned ${gone} session(s)`)
     }
     case 'on':
     case 'off':
