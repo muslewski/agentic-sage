@@ -53,7 +53,7 @@ import { paint } from '../lib/color.mjs'
 const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
-const USAGE = `usage: sage <command>
+const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch]      roster of this repo's sessions (--watch = live)
   fleet                one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
@@ -322,8 +322,10 @@ const main = async () => {
     }
     case 'statusline': {
       // Fail-open: NEVER break the status bar. Resolve session+cwd from flags →
-      // stdin JSON (the Claude statusline payload) → env. Print the configured
-      // label only while a consult is fresh AND SAGE is on; otherwise nothing.
+      // stdin JSON (Claude or Grok status payload) → env (CLAUDE_SESSION_ID or
+      // GROK_SESSION_ID). Print the configured label only while a consult is fresh
+      // AND SAGE is on; otherwise nothing. Grok users: call explicitly or wire
+      // via TUI/terminal script using the env.
       try {
         const slArgs = process.argv.slice(3)
         const flag = (n) => {
@@ -341,7 +343,7 @@ const main = async () => {
             /* no / garbage stdin — fall through */
           }
         }
-        sid = sid || process.env.CLAUDE_SESSION_ID
+        sid = sid || process.env.CLAUDE_SESSION_ID || process.env.GROK_SESSION_ID
         scwd = scwd || cwd
         if (!sid) return
         const repoId = resolveRepoId(scwd)
@@ -394,7 +396,7 @@ const main = async () => {
         }
       }
 
-      if (parsed.mode === 'show') return console.log(renderShow({ home, cwd }))
+      if (parsed.mode === 'show') return console.log(renderShow({ home, cwd, harness: parsed.harness }))
 
       // Safe state-dir migration (legacy → new agent home). Init/repair-ONLY —
       // never called from a read verb (board/fleet/where/doctor) or the

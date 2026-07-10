@@ -22,9 +22,10 @@ config we use ourselves — copy it for a proven setup.
 > `~/.claude/agentic-sage/` (never clobbers; if both exist, the new dir wins and a warning
 > prints).
 
-> **Want your agent to do this?** Clone the repo, then tell your coding agent *"set up agentic-sage
+> **Want your agent to do this?** Clone the repo, then tell your coding agent (Grok or Claude) *"set up agentic-sage
 > for this repo."* It follows **[`AGENTS.md`](./AGENTS.md)** (the deterministic runbook) through the
 > same steps below. This page is the human path; AGENTS.md is the agent path — same destination.
+> Grok reads AGENTS.md directly; it also respects CLAUDE.md via compat.
 
 ---
 
@@ -51,9 +52,10 @@ this-project-only), harness, storage location, and enable-now — defaulting to 
 every step (**global**, built-in storage, **OFF**). Without a TTY (CI, agents, piped) it applies
 those same defaults with no prompts. Conservative and idempotent either way: seeds a **disabled**
 config (never overwrites an existing one), symlinks the emitter hook, merges its lifecycle hooks
-into `~/.claude/settings.json` — or `<repo>/.claude/settings.json` for a project-scope install
+into `~/.claude/settings.json` (Grok loads these for hooks by default via [compat.claude]) — or `<repo>/.claude/settings.json` for a project-scope install
 (backs it up once, skips-if-present, **aborts** on malformed JSON) — and symlinks every skill in
-`skills/*` into `~/.claude/skills`. It never auto-enables.
+`skills/*` into `~/.claude/skills` (Grok scans compat + ~/.grok/skills). It never auto-enables.
+Native Grok hook wiring example: see templates/ or docs for ~/.grok/hooks/*.json using emitter.
 
 Non-interactive flags (agents, CI, scripting) — full reference in [`AGENTS.md`](./AGENTS.md):
 
@@ -94,15 +96,17 @@ described above).
 
 The payoff — many sessions merging smoothly — lands when the **sessions themselves** coordinate.
 Paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) (one always-loaded pointer
-line) into your repo or user `CLAUDE.md` so sessions reach for the on-demand `sage-fleet` skill at
+line) into your repo or user `CLAUDE.md` (works for Grok too via compat) so sessions reach for the on-demand `sage-fleet` skill at
 the right moments (work-start, before a PR, on a conflict). The protocol stays in the skill, so a
-disabled SAGE costs ~nothing.
+disabled SAGE costs ~nothing. For Grok-native rules, use templates/GROK.snippet.md in AGENTS.md. Grok natively discovers AGENTS.md and .grok/ .
 
 Then validate the whole wiring from inside a Claude Code session:
 
 ```
 /sage-doctor
 ```
+
+From Grok: run `sage doctor` (CLI or via skill invocation); it reports the same.
 
 It runs `sage doctor` and prints the report — config, emitter hook, settings wiring, **linked
 skills**, current repo. SAGE being OFF is reported as healthy, never an error.
@@ -185,7 +189,7 @@ core needs none of it. Following the steps above reproduces it:
 | Piece | State | Why |
 |---|---|---|
 | `sage on` | **on** | judging active across all sessions |
-| `sage-fleet` pointer in `CLAUDE.md` | **on** | every session coordinates at work-start / PR / conflict |
+| `sage-fleet` pointer in `CLAUDE.md` / `AGENTS.md` | **on** | every session coordinates at work-start / PR / conflict (Grok loads AGENTS.md natively) |
 | Project adapter | **present** | named backlog rows + architectural zones |
 | Backlog coordination (`backlogRows`) | **on** | 8 sessions don't double-claim a row |
 | tmux `bind j` fleet pane | **on** | glance at the live board without leaving the editor |

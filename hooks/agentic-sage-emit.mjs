@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// SAGE emitter — fires on EVERY Claude Code session across ALL repos.
+// SAGE emitter — fires on sessions from supported AI coding agents (Claude Code,
+// Grok Build CLI, and others via compat or native hooks).
 //
 // TWO NON-NEGOTIABLE INVARIANTS:
 //   1. FAIL-OPEN  — any error is swallowed; the process always exit(0). A
@@ -7,7 +8,8 @@
 //   2. DEFAULT-OFF — with no/false global config, isEnabled() returns false and
 //      we exit before any git or fs write (the cheap no-op fast path).
 //
-// Reads the hook payload as JSON on stdin (Claude Code hook protocol) and writes
+// Reads the hook payload as JSON on stdin (supports Claude hook_event_name/session_id
+// shape and Grok hookEventName/sessionId + snake_case events + env fallbacks) and writes
 // this session's record + appends an event, partitioned by repo.
 import fs from 'node:fs'
 import os from 'node:os'
@@ -54,15 +56,46 @@ const main = async () => {
     return // malformed → nothing to do (still exit 0 below)
   }
 
+  // Support Claude-shaped payloads (hook_event_name, session_id, tool_name, tool_input)
+  // and Grok Build payloads (hookEventName, sessionId, toolName, toolInput; event names
+  // may be snake_lower like "pre_tool_use"). Also accept GROK_* envs as fallback.
+  // This lets the same emitter binary work when invoked via ~/.claude/settings.json
+  // (read by Grok under [compat.claude] default) or native ~/.grok/hooks/*.json.
   const home = os.homedir()
-  const event = payload.hook_event_name
-  const sid = payload.session_id
-  const cwd = payload.cwd || process.cwd()
+  const normEvent = payload.hook_event_name || payload.hookEventName || process.env.GROK_HOOK_EVENT
+  let event = normEvent
+  // Normalize Grok's lowercase/snake event names (from payload or GROK_HOOK_EVENT) to PascalCase used internally.
+  const eventMap = {
+    pre_tool_use: 'PreToolUse',
+    post_tool_use: 'PostToolUse',
+    post_tool_use_failure: 'PostToolUseFailure',
+    permission_denied: 'PermissionDenied',
+    session_start: 'SessionStart',
+    user_prompt_submit: 'UserPromptSubmit',
+    stop: 'Stop',
+    stop_failure: 'StopFailure',
+    session_end: 'SessionEnd',
+    pre_compact: 'PreCompact',
+    post_compact: 'PostCompact',
+    notification: 'Notification',
+    subagent_start: 'SubagentStart',
+    subagent_stop: 'SubagentStop',
+  }
+  if (event && typeof event === 'string' && eventMap[event]) event = eventMap[event]
+  const sid = payload.session_id || payload.sessionId || process.env.GROK_SESSION_ID
+  const cwd = payload.cwd || payload.workspaceRoot || process.cwd()
+  const toolName = payload.tool_name || payload.toolName
+  const toolInput = payload.tool_input || payload.toolInput
   if (!sid || !event) return
 
-  // Which install fired this hook: the GLOBAL hook (~/.claude/settings.json,
-  // no flag) or a PROJECT hook (<repo>/.claude/settings.json, wired with
-  // --scope=project or SAGE_SCOPE=project). Cheap — argv/env only, no fs/git —
+  // attach normalized for downstream switch/guard use (non-enumerable to avoid JSON noise if logged)
+  Object.defineProperty(payload, '_norm', {
+    value: { event, sid, cwd, toolName, toolInput },
+    enumerable: false,
+  })
+
+  // Which install fired this hook: the GLOBAL hook (~/.claude/settings.json or
+  // ~/.grok/hooks/ via compat), or a PROJECT hook. Cheap — argv/env only, no fs/git —
   // so computing it ahead of the fast path below costs nothing.
   const scope =
     process.argv.includes('--scope=project') || process.env.SAGE_SCOPE === 'project'
@@ -240,7 +273,7 @@ const main = async () => {
       appendEvent(home, repoId, {
         event: 'close',
         session_id: sid,
-        reason: payload.reason || null,
+        reason: payload.reason || payload.stopReason || null,
         at,
       })
       break
@@ -252,7 +285,10 @@ const main = async () => {
       // hot path; only a cheap event on an actual block.
       const guard = readGuard(home, repoId)
       if (!guard.enabled || !guard.paths.length) break
-      const target = targetPath(payload.tool_name, payload.tool_input)
+      // Use normalized (supports Grok toolName e.g. search_replace) + fallback to raw.
+      const tName = payload._norm?.toolName || payload.tool_name || payload.toolName
+      const tInput = payload._norm?.toolInput || payload.tool_input || payload.toolInput
+      const target = targetPath(tName, tInput)
       if (!target) break
       const rel = relForRepo(target, repo.root)
       const { blocked, matched } = shouldBlock(rel, guard)

@@ -26,7 +26,7 @@
 </p>
 
 **S**ession **A**wareness & **G**uidance **E**ngine: a passive, read-only **fleet judge** for
-running many parallel agent coding sessions (e.g. Claude Code). It does no work, spawns nothing,
+running many parallel agent coding sessions (Claude Code, Grok Build CLI, etc.). It does no work, spawns nothing,
 edits nothing — it watches every session, holds each one's self-declared truth (time-aware), and
 answers two questions cheaply:
 
@@ -51,8 +51,8 @@ flags in [`AGENTS.md`](./AGENTS.md). Check the resolved wiring any time with `sa
 (this repo) or `sage init --show` (full breakdown).
 
 Then paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into your repo/user
-`CLAUDE.md` and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
-config we run ourselves — in **[`SETUP.md`](./SETUP.md)**.
+`CLAUDE.md` (or use `templates/GROK.snippet.md` in `AGENTS.md` for Grok-native) and run **`/sage-doctor`** to verify. Full walkthrough — optional tiers + the exact
+config we run ourselves — in **[`SETUP.md`](./SETUP.md)**. Grok users get the same value; native hooks via ~/.grok/hooks (or rely on Claude compat which is on by default).
 
 **Prefer to let your agent do it?** Install, then tell your coding agent *"set up agentic-sage for this
 repo."* It reads **[`AGENTS.md`](./AGENTS.md)** — the deterministic setup runbook — and walks the
@@ -115,7 +115,7 @@ A repo with **no adapter is first-class.** Scaffold one with `sage adapter init`
 ## What `install.mjs` wires (so you can trust it)
 
 It merges **seven** lifecycle hooks into `~/.claude/settings.json` (back up once · skip-if-present ·
-abort on malformed JSON · never auto-enable). All fire the one emitter, all **fail-open** and
+abort on malformed JSON · never auto-enable; Grok reads this by default via compat). All fire the one emitter, all **fail-open** and
 **no-op while SAGE is OFF**:
 
 | Hook event | What SAGE does on it |
@@ -139,7 +139,7 @@ independently:
 
 |  | Global scope (default) | Project scope (`sage init --project`) |
 |---|---|---|
-| Hook wired into | `~/.claude/settings.json` | `<repo>/.claude/settings.json` |
+| Hook wired into | `~/.claude/settings.json` (Grok reads via compat by default) | `<repo>/.claude/settings.json` |
 | Storage default | `~/.claude/agentic-sage` | `<repo>/.agentic-sage` (or `--storage sibling\|agent-home`) |
 | Master switch | `sage on` / `sage off` | ignored — a project install works even with the global master OFF |
 | Per-repo switch | `sage enable` / `sage disable` | `sage enable` / `sage disable` (the *only* switch in this scope) |
@@ -210,10 +210,10 @@ when it starts, and `merge-brief` + `why-diverged` before it opens a PR or resol
 
 That protocol ships as a Claude Code skill, [`skills/sage-fleet`](./skills/sage-fleet/SKILL.md):
 
-- `install.mjs` symlinks it into `~/.claude/skills/sage-fleet` (opt out with `SAGE_SKIP_SKILL=1`).
+- `install.mjs` symlinks it into `~/.claude/skills/sage-fleet` (Grok discovers via compat + native ~/.grok/skills; opt out with `SAGE_SKIP_SKILL=1`).
 - Paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) — a single always-loaded
-  pointer line — into your repo or user `CLAUDE.md` so sessions reach for the skill at the right
-  moments. The protocol stays in the on-demand skill, so a disabled SAGE costs ~nothing.
+  pointer line — into your repo or user `CLAUDE.md` (or AGENTS.md) so sessions reach for the skill at the right
+  moments. The protocol stays in the on-demand skill, so a disabled SAGE costs ~nothing. Grok natively loads AGENTS.md/CLAUDE.md equivalents.
 
 It is **advisory**: the skill runs the verbs and surfaces collisions; it never blocks and never
 decides — that's the guard's job (opt-in) and the human's call. SAGE off ⇒ the skill is a no-op.

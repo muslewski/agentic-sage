@@ -23,7 +23,7 @@ It prints a report of exactly what it removed and what it deliberately kept.
 |---|---|
 | `sage-emit` hook groups in `~/.claude/settings.json` | only groups whose `command` contains `sage-emit`; every other hook/group is left byte-for-byte. settings.json is backed up to `settings.json.sage-uninstall.bak` first |
 | `~/.claude/hooks/sage-emit.mjs` | only if it is a **symlink whose target is inside this repo** |
-| `~/.claude/skills/sage-*` | only `sage-`-prefixed **symlinks pointing into this repo's `skills/`** |
+| `~/.claude/skills/sage-*` | only `sage-`-prefixed **symlinks pointing into this repo's `skills/`** (Grok compat scans these) |
 | the tmux `bind j` fleet-pane line in `~/.tmux.conf` | only the exact line we appended (`# SAGE fleet pane` + the `sage board` bind); `~/.tmux.conf` is backed up first |
 
 ## What it NEVER touches

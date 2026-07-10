@@ -2,7 +2,7 @@
   "name": "agentic-sage",
   "version": "0.2.1",
   "type": "module",
-  "description": "Passive fleet judge for parallel Claude Code sessions — board, territory checks, merge briefings.",
+  "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) — board, territory checks, merge briefings.",
   "bin": {
     "sage": "./bin/sage",
     "agentic-sage": "./bin/sage"
@@ -43,12 +43,15 @@
   "homepage": "https://sage.muslewski.com/",
   "keywords": [
     "claude-code",
+    "grok",
+    "grok-build",
     "agents",
     "fleet",
     "tmux",
     "git-worktree",
     "sessions",
-    "orchestration"
+    "orchestration",
+    "multi-agent"
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.5.1"

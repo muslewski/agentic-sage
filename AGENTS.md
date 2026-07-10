@@ -1,9 +1,11 @@
 # AGENTS.md — setting up SAGE (for the agent doing it)
 
-You're reading this because someone cloned **agentic-sage** and asked you (an AI coding agent) to
+You're reading this because someone cloned **agentic-sage** and asked you (an AI coding agent such as Grok Build CLI or Claude Code) to
 **set it up for their repo**. This file is the runbook. It works *before* anything is installed —
 follow it top to bottom. The human-facing version is [`SETUP.md`](./SETUP.md); the deep reference is
 [`README.md`](./README.md).
+
+Grok: you load this file natively (AGENTS.md). Claude loads CLAUDE.md which can point here or include equivalent. Use the steps below; prefer `node bin/sage ...` if `sage` not yet on PATH.
 
 ## What SAGE is (30 seconds)
 
@@ -28,15 +30,15 @@ exception, and only when the user explicitly chose it at `sage init` time (see "
 
 `sage init` wires the hook at one of two independent scopes — decide this *before* step 2:
 
-- **Global** (default, recommended) — wires `~/.claude/settings.json` once; every repo the user
+- **Global** (default, recommended) — wires `~/.claude/settings.json` once (Grok reads it for hooks/skills via default [compat.claude]=true); every repo the user
   works in is covered, and each repo opts in/out individually (`sage enable` / `sage disable`).
-  Pick this unless told otherwise.
+  Pick this unless told otherwise. For native Grok, you can also add ~/.grok/hooks/*.json manually (see templates or below).
 - **Project** (`sage init --project`) — wires only `<repo>/.claude/settings.json` and, by default,
   stores data in `<repo>/.agentic-sage/` (override with `--storage sibling|agent-home` to keep
   state out of the repo tree). **Ignores the global master entirely** — use `sage enable` /
   `sage disable` in this repo, not `sage on` / `sage off`. Pick this when the user explicitly
   wants SAGE scoped to one repo (e.g. a shared/managed machine where a global hook isn't wanted),
-  or when they lack write access to `~/.claude`.
+  or when they lack write access to `~/.claude`. Grok also honors per-project .grok/ for rules/hooks when trusted.
 
 Storage location is a **separate** choice from scope — inspect the resolved combination any time
 with `sage where` / `sage init --show`, and see [`CONVENTIONS.md`](./CONVENTIONS.md) for the full
@@ -68,9 +70,9 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
    Default is OFF either way. Make sure `bin/sage` is on `PATH`, or call `node <repo>/bin/sage`.
 4. **Wire sessions in** — paste the one-line pointer from
    [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) into the user's repo or user
-   `CLAUDE.md`. It makes sessions reach for the on-demand `sage-fleet` skill at the right moments
+   `CLAUDE.md` (Claude or Grok via compat). For Grok-native, paste from [`templates/GROK.snippet.md`](./templates/GROK.snippet.md) into repo/user `AGENTS.md` (or .grok/rules/*.md). It makes sessions reach for the on-demand `sage-fleet` skill at the right moments
    (work-start, before a PR, on a conflict). The protocol stays in the skill, so a disabled SAGE
-   costs ~nothing.
+   costs ~nothing. Grok loads AGENTS.md / CLAUDE.md natively.
 5. **Offer a project adapter (optional).** A repo with no adapter is fine. If the user wants named
    work/zones, scaffold one:
    - `sage adapter init` — stamps `.agentic-sage/adapter.mjs` from `adapters/template.mjs` (won't
@@ -80,9 +82,10 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
      `ownsZone` / `generatedGlobs` accordingly. The worked reference is
      [`adapters/acme.mjs`](./adapters/acme.mjs); the contract is [`ADAPTERS.md`](./ADAPTERS.md).
    - Don't invent logic you can't verify — leave a stub as a no-op `null`/`[]` rather than guess.
-6. **Verify** — run `/sage-doctor` (if you're a Claude Code session) or `sage doctor`. It checks the
-   config, emitter hook, settings wiring, linked skills, current repo, and **project adapter**
+6. **Verify** — run `/sage-doctor` (Claude) or inside Grok use `sage doctor` (or the skill). It checks the
+   config, emitter hook, settings wiring (Claude paths which Grok honors via compat), linked skills, current repo, and **project adapter**
    (present / none — none is healthy), ending with an `N ok · M need attention` verdict.
+   For pure Grok: `sage doctor` works; tmux `sage board` popup also works.
 7. **Report** to the user: what you wired, what stayed optional, and the one command to undo it
    (`node uninstall/uninstall.mjs`).
 
@@ -91,8 +94,17 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
 | Option | Command | What it does |
 |---|---|---|
 | tmux fleet pane | `tmux source-file ~/.tmux.conf` (install added `bind j`) | a `display-popup` running `sage board` |
-| Statusline segment | wire `templates/statusline.snippet.md` into your statusline | shows `⚖️ Asking Sage` only while a session consults SAGE |
+| Statusline segment | wire `templates/statusline.snippet.md` into your statusline | shows `⚖️ Asking Sage` only while a session consults SAGE (Grok: use explicit CLI or env $GROK_SESSION_ID) |
 | The guard (can BLOCK) | `sage guard add <path>` then `sage guard on` | `exit 2`-blocks edits to contested paths; **two flags, both default-off** |
+
+### Grok Build CLI notes (native + compat)
+- `sage init --global` wires ~/.claude/* (hooks in settings.json + skills). This is honored automatically by Grok ([compat.claude] defaults to on for hooks/skills/agents).
+- For pure native Grok hooks without touching .claude: create ~/.grok/hooks/sage-emit.json (or per-event files) containing the emitter command, modeled after Claude's hook groups. Example structure in Grok docs + emitter supports the payload shape.
+- Session id: use $GROK_SESSION_ID for `sage statusline`, `SAGE_SELF_SID` for claim if ppid/pid resolution needs help.
+- AGENTS.md (this file) + .grok/rules/ are loaded natively by Grok for pointers.
+- tmux: `bind j` popup and pane detection work (pid-based, agent-agnostic). Add `sage fleet` to any tmux status-left/right for bottom-bar fleet view.
+- Status: no Claude-style statusLine JSON in Grok TUI; invoke `sage statusline --session "$GROK_SESSION_ID" ...` from scripts or use fleet verb.
+- Skills: ~/.claude/skills linked by install are seen; also drop in ~/.grok/skills/ if wanted.
 
 ## Do NOT
 

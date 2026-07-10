@@ -75,7 +75,7 @@ record's `pid`). This is what makes pre-emptive collision detection meaningful: 
 the worktree exists, `sage territory <glob>` and the SessionStart brief can warn a *new* session
 that another already **claims** that path — before either has touched a file.
 
-> Adopt this in your harness's autopilot doc (e.g. CLAUDE.md, between the design gate and "write
+> Adopt this in your harness's autopilot doc (e.g. CLAUDE.md / AGENTS.md, between the design gate and "write
 > plan") **when you activate SAGE**. It is deliberately *not* pre-baked into an always-loaded
 > instruction file, because a step that calls a disabled tool is pure token cost every session.
 
@@ -94,7 +94,7 @@ Claim-at-go is only the first touchpoint. The full session-facing protocol — s
   the `✅`/status edit stays your normal doc change. Advisory + opt-in, like every other touchpoint.
 
 These stay **advisory** (the guard below is the only thing that can act). As with claim-at-go,
-wire the one-line pointer (`templates/CLAUDE.snippet.md`) into your CLAUDE.md only when you
+wire the one-line pointer (`templates/CLAUDE.snippet.md` or GROK equivalent) into your CLAUDE.md / AGENTS.md only when you
 activate SAGE — the protocol itself lives in the on-demand skill, not an always-loaded file.
 
 A SAGE-on session can also surface its consults in the status bar — an opt-in `⚖️ Asking Sage`

@@ -184,7 +184,7 @@ test('renderShow: non-git cwd → clean breakdown, no crash, plain-text groups',
   const out = renderShow({ home, cwd })
   assert.match(out, /SAGE — full breakdown/)
   assert.match(out, /repo\s+not a git repo/)
-  assert.match(out, /Harness \(claude\)/)
+  assert.match(out, /Harness \(claude; grok via compat or native \.grok\)/)
   assert.match(out, /Storage/)
   assert.match(out, /Enablement/)
   assert.match(out, /global\s+disabled/)
