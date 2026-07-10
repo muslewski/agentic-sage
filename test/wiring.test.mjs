@@ -255,3 +255,32 @@ test('wireAll: global-scope install with a custom storage root merges defaultRoo
   assert.equal(cfg.enabled, false)
   assert.equal(cfg.defaultRoot, storageRoot)
 })
+
+// ── grok native wiring (plan 014) ──────────────────────────────────────────
+
+test('wireAll grok: writes native hooks/agentic-sage.json with all 7 events', () => {
+  const home = mkTmp('sage-w-')
+  wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
+  const hookFile = path.join(home, '.grok', 'hooks', 'agentic-sage.json')
+  const cfg = JSON.parse(fs.readFileSync(hookFile, 'utf8'))
+  const events = Object.keys(cfg.hooks)
+  for (const ev of ['SessionStart','UserPromptSubmit','PostToolUse','Stop','PreCompact','SessionEnd','PreToolUse']) {
+    assert.ok(events.includes(ev), `missing ${ev}`)
+    const cmd = cfg.hooks[ev][0].hooks[0].command
+    assert.match(cmd, /agentic-sage-emit\.mjs/)
+  }
+  // emitter reachable at the path the command references
+  const emitterRef = cfg.hooks.SessionStart[0].hooks[0].command.replace(/^node\s+/, '')
+  assert.ok(fs.existsSync(emitterRef), 'emitter symlink exists at referenced path')
+  // config.toml untouched
+  assert.ok(!fs.existsSync(path.join(home, '.grok', 'config.toml')))
+})
+
+test('wireAll grok: idempotent — second run leaves an identical file', () => {
+  const home = mkTmp('sage-w-')
+  wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
+  const hookFile = path.join(home, '.grok', 'hooks', 'agentic-sage.json')
+  const first = fs.readFileSync(hookFile, 'utf8')
+  wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
+  assert.equal(fs.readFileSync(hookFile, 'utf8'), first)
+})
