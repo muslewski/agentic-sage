@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process'
 import { mkGitRepo } from './helpers.mjs'
 import { mkSandboxHome, emit, readSession, eventsFor, EMITTER_PATH } from './e2e-helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
+import { collectSessions, renderBoard } from '../lib/board.mjs'
 
 test('e2e: Claude SessionStart creates a record and an open event', () => {
   const { home } = mkSandboxHome()
@@ -74,4 +75,48 @@ test('e2e: emitter is fail-open — garbage input still exits 0', () => {
     timeout: 15_000,
   })
   assert.equal(r.status, 0)
+})
+
+test('e2e: Grok dialect — camelCase payload + snake event names normalize', () => {
+  const { home } = mkSandboxHome()
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+  const sid = 'e2e-grok-1'
+
+  emit(home, { hookEventName: 'session_start', sessionId: sid, workspaceRoot: repo, cwd: repo })
+  let rec = readSession(home, repoId, sid)
+  assert.ok(rec, 'snake_case session_start produced a record')
+  assert.equal(rec.status, 'active')
+
+  emit(home, { hookEventName: 'post_tool_use', sessionId: sid, cwd: repo, toolName: 'edit_file', toolInput: {} })
+  rec = readSession(home, repoId, sid)
+  assert.ok(rec.last_tool_at)
+
+  emit(home, { hookEventName: 'session_end', sessionId: sid, cwd: repo })
+  rec = readSession(home, repoId, sid)
+  assert.equal(rec.status, 'closed')
+})
+
+test('e2e: Grok dialect — GROK_* env fallbacks when stdin lacks ids', () => {
+  const { home } = mkSandboxHome()
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+  const sid = 'e2e-grok-env'
+
+  const r = emit(home, { cwd: repo }, { GROK_HOOK_EVENT: 'session_start', GROK_SESSION_ID: sid })
+  assert.equal(r.status, 0)
+  assert.ok(readSession(home, repoId, sid), 'env-only identification works')
+})
+
+test('e2e: board shows sessions from both dialects', () => {
+  const { home } = mkSandboxHome()
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+  emit(home, { hook_event_name: 'SessionStart', session_id: 'claude-s', cwd: repo })
+  emit(home, { hookEventName: 'session_start', sessionId: 'grok-s', cwd: repo })
+  const sessions = collectSessions(home, repoId, Date.now())
+  assert.equal(sessions.length, 2)
+  const text = renderBoard(sessions, { repoId, wide: true })
+  assert.match(text, /2 sessions/)
+  assert.match(text, /claude-s/) // wide col shows first 8 chars of sid → "claude-s"
 })
