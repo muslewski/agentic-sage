@@ -9,6 +9,7 @@ import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionsDir, globalConfig, sessionFile, repoDir } from '../lib/paths.mjs'
 import { readGuard } from '../lib/guard.mjs'
 import { markAsking, askingFile } from '../lib/asking.mjs'
+import { mergeRecord } from '../lib/store.mjs'
 
 const SAGE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'sage')
 const run = (args, home, cwd, extraEnv = {}) =>
@@ -17,6 +18,17 @@ const run = (args, home, cwd, extraEnv = {}) =>
     env: { ...process.env, HOME: home, ...extraEnv },
     cwd,
   })
+
+// Wrapper that reuses the existing run() logic + env/cwd handling but
+// captures status/stdout/stderr for nonzero-exit cases (e.g. --json --watch).
+const runSage = (args, { home, cwd, extraEnv = {} } = {}) => {
+  try {
+    const stdout = run(args, home, cwd, extraEnv)
+    return { stdout, stderr: '', status: 0 }
+  } catch (e) {
+    return { stdout: e.stdout || '', stderr: e.stderr || '', status: e.status ?? 1 }
+  }
+}
 
 test('board prints a seeded session branch', () => {
   const home = mkTmp('sage-h-')
@@ -506,4 +518,72 @@ test('init --project --storage sibling from a linked worktree is allowed (writes
   assert.match(out, /^✓ SAGE wired · project · DISABLED/)
   assert.equal(fs.existsSync(path.join(main, '.claude', 'settings.json')), true)
   assert.equal(fs.existsSync(path.join(wt, '.claude', 'settings.json')), false)
+})
+
+// --- Task 1: board --json tests (plan 015) ---
+
+const mkCliSandbox = () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const repoId = resolveRepoId(repo)
+  return { home, repo, repoId }
+}
+
+test('board --json: valid envelope with seeded session', () => {
+  const { home, repo, repoId } = mkCliSandbox()
+  mergeRecord(home, repoId, 'json-s1', {
+    session_id: 'json-s1',
+    repo_id: repoId,
+    branch: 'main',
+    status: 'active',
+    link_state: 'scoping',
+    liveness: 'idle',
+    opened_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+  const out = runSage(['board', '--json'], { home, cwd: repo })
+  const doc = JSON.parse(out.stdout)
+  assert.equal(doc.schema, 1)
+  assert.equal(doc.kind, 'sage.board')
+  assert.equal(doc.repo_id, repoId)
+  assert.ok(Array.isArray(doc.sessions))
+  assert.equal(doc.sessions[0].session_id, 'json-s1')
+  assert.ok(doc.sessions[0].alive !== undefined, 'derived fields included')
+  assert.equal(out.status, 0)
+})
+
+test('board --json: empty state → valid empty envelope, exit 0', () => {
+  const { home, repo } = mkCliSandbox()
+  const out = runSage(['board', '--json'], { home, cwd: repo })
+  const doc = JSON.parse(out.stdout)
+  assert.deepEqual(doc.sessions, [])
+  assert.equal(out.status, 0)
+})
+
+test('board --json --watch: rejected', () => {
+  const { home, repo } = mkCliSandbox()
+  const out = runSage(['board', '--json', '--watch'], { home, cwd: repo })
+  assert.notEqual(out.status, 0)
+  assert.match(out.stderr + out.stdout, /--json.*--watch|--watch.*--json/)
+})
+
+test('fleet --json: envelope includes self_sid and all sessions', () => {
+  const { home, repo, repoId } = mkCliSandbox()
+  mergeRecord(home, repoId, 'fleet-s1', {
+    session_id: 'fleet-s1',
+    repo_id: repoId,
+    branch: 'main',
+    status: 'active',
+    link_state: 'scoping',
+    liveness: 'idle',
+    opened_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+  const out = runSage(['fleet', '--json'], { home, cwd: repo })
+  const doc = JSON.parse(out.stdout)
+  assert.equal(doc.schema, 1)
+  assert.equal(doc.kind, 'sage.fleet')
+  assert.ok('self_sid' in doc)
+  assert.equal(doc.sessions.length, 1)
+  assert.equal(out.status, 0)
 })

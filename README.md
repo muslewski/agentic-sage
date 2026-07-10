@@ -190,8 +190,8 @@ sage on
 ## Use
 
 ```bash
-sage board              # who's live, on what branch, how stale, what they touch
-sage fleet              # one-line fleet summary (fold into a status tick)
+sage board [--json]     # who's live, on what branch, how stale, what they touch
+sage fleet [--json]     # one-line fleet summary (fold into a status tick)
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file
 sage merge-brief        # all contested paths + the regenerate-don't-merge rule
@@ -200,6 +200,8 @@ sage doctor             # validate config / hook / settings / linked skills / ad
 sage where              # this repo's resolved scope + storage + which rule matched
 sage off                # freeze judging (global master — see "Scope vs storage" above)
 ```
+
+Machine-readable output (`board --json`, `fleet --json`) follows the schema-1 envelope documented in `SCHEMA.md`.
 
 ## Sessions as participants — the flywheel
 
