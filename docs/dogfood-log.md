@@ -40,5 +40,5 @@ may not fire under `grok -p` (or liveness derivation ranks a pid-dead grok sessi
 
 | Date | Session/harness | Friction | Severity | Idea |
 |---|---|---|---|---|
-| 2026-07-10 | claude / board | 41 records, most `dead`/`closed` from months of `/clear` — board is noisy | med | `sage prune` verb (drop closed/dead older than N days); a `board` default filter to live+recent |
-| 2026-07-10 | claude / board --json | one record has no `session_id` → a naive JSON consumer crashes on `.session_id` (renderBoard tolerates it; the machine layer does not) | med — matters for Hermes | emitter must never write a record without `session_id`; `--json` should drop/repair id-less records before emitting |
+| 2026-07-10 | claude / board | 41 records, most `dead`/`closed` from months of `/clear` — board is noisy | med | FIXED (plan 017, `6e95edb`): `sage prune [--days N] [--yes]`. Dry-run reports 31 prunable on the real board |
+| 2026-07-10 | claude / board --json | one record has no `session_id` → a naive JSON consumer crashes on `.session_id` (renderBoard tolerates it; the machine layer does not) | med — matters for Hermes | FIXED (plan 017, `6e95edb`): emitter stamps session_id on every event; collectSessions backfills from filename. Live id-less count 3→0 |
