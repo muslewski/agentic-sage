@@ -66,6 +66,8 @@ sage init --repair      # re-assert wiring + perform the safe legacy-state-dir r
 sage init --show        # full breakdown: scope, storage, rule matched, enablement
 ```
 
+Dogfooding this repo itself? Follow the go-live runbook in `docs/dogfood-log.md`.
+
 ### 3. Enable
 
 ```bash
