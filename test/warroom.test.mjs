@@ -40,6 +40,15 @@ test('renderPanels shows totals + is exactly 4 lines', () => {
   assert.match(p, /1 working|1 hot/)
 })
 
+test('renderPanels: every line is the same display width (borders align)', () => {
+  // regression: the box() body row was 1 col short of top/bottom → right borders
+  // walked left. All four lines must be identical width, with a growing spark.
+  for (const heat of [[], [1, 2, 3], Array.from({ length: 30 }, (_, i) => i)]) {
+    const widths = renderPanels(fleet.totals, heat).split('\n').map((l) => [...l].length)
+    assert.equal(new Set(widths).size, 1, `unequal panel widths: ${widths}`)
+  }
+})
+
 test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
   assert.match(sessionRow(fleet.repos[0].sessions[0], {}), /^\s*◆ /u)
   assert.match(sessionRow(fleet.repos[0].sessions[0], {}), /✎/u)

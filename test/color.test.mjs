@@ -48,6 +48,15 @@ test('an active-row spinner frame is painted gold', () => {
   })
 })
 
+test('war-room chrome is skinned: ⚔ gold, borders dim, titles cream, spark gold', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    assert.match(paint('⚔  SAGE WAR ROOM'), /\x1b\[33m⚔\x1b\[0m/) // gold brand glyph
+    assert.match(paint('╭─ FLEET ──────╮'), /\x1b\[90m╭─\x1b\[0m/) // dim border run
+    assert.match(paint('╭─ FLEET ──────╮'), /\x1b\[37mFLEET\x1b\[0m/) // cream panel title
+    assert.match(paint('│ ▂▃▅▇█  2 hot │'), /\x1b\[33m▂▃▅▇█\x1b\[0m/) // gold heat sparkline
+  })
+})
+
 test('multiline text is colorized per line', () => {
   withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
     const out = paint('SAGE doctor\n  ✓ sage home — ok\n  ✗ broken — bad')
