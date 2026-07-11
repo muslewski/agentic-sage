@@ -65,6 +65,12 @@ test('war-room repo band: ▌ bar gold, name cream, hot rollup gold', () => {
   })
 })
 
+test('war-room selection cursor ❯ is painted gold', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    assert.match(paint('❯ ● main  working'), /\x1b\[33m❯\x1b\[0m/) // gold cursor
+  })
+})
+
 test('multiline text is colorized per line', () => {
   withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
     const out = paint('SAGE doctor\n  ✓ sage home — ok\n  ✗ broken — bad')
