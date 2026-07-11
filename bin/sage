@@ -223,7 +223,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   process.stdin.resume()
   process.stdin.on('data', (buf) => {
     const k = buf.toString('utf8')
-    if (k === 'q' || k === '\x03') return stop() // q or Ctrl-C
+    if (k === '\x03') return stop() // Ctrl-C always quits, even mid-filter
     if (mode === 'filter') {
       if (k === '\x1b') {
         query = ''
@@ -247,6 +247,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       }
       return
     }
+    if (k === 'q') return stop() // q quits in nav mode only (a filter char otherwise)
     if (k === '\r' || k === '\n') return enter()
     if (k === 'c') return cdPrint()
     if (k === 'a') {
