@@ -6,7 +6,9 @@ import {
   sessionRow,
   renderRepoSection,
   bodyLines,
+  bodyModel,
   viewport,
+  stickyViewport,
   footer,
   renderWarRoom,
   spinnerizeWar,
@@ -99,6 +101,46 @@ test('bodyLines: one header per repo + one row per session', () => {
   assert.ok(lines.some((l) => /alpha · 2 session/.test(l)))
   assert.ok(lines.some((l) => /beta · 1 session/.test(l)))
   assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 3) // 3 session rows
+})
+
+const scrollFleet = {
+  repos: [
+    {
+      label: 'alpha',
+      working: 0,
+      sessions: [
+        { branch: 'a1', liveness: 'idle', touched_globs: [] },
+        { branch: 'a2', liveness: 'idle', touched_globs: [] },
+        { branch: 'a3', liveness: 'idle', touched_globs: [] },
+      ],
+    },
+    { label: 'beta', working: 0, sessions: [{ branch: 'b1', liveness: 'idle', touched_globs: [] }] },
+  ],
+}
+
+test('bodyModel: headers tagged; every row attributed to its band', () => {
+  const model = bodyModel(scrollFleet, {})
+  assert.equal(model[0].isHeader, true) // alpha band
+  assert.match(model[0].header, /^▌ alpha/u)
+  assert.equal(model[1].isHeader, false) // a1 row
+  assert.equal(model[1].header, model[0].text) // governed by the alpha band
+  assert.equal(model[4].isHeader, true) // beta band
+})
+
+test('stickyViewport: pins the governing band once its header scrolls off', () => {
+  // model: [Ahdr, a1, a2, a3, Bhdr, b1]
+  const model = bodyModel(scrollFleet, {})
+  // top of view is the real alpha header → nothing stuck
+  const v0 = stickyViewport(model, { scroll: 0, height: 3 })
+  assert.match(v0.lines[0], /^▌ alpha/u)
+  assert.equal(v0.stuck, null)
+  // scrolled into alpha's rows (window [a2, a3, Bhdr]) → alpha band pinned on top
+  const v2 = stickyViewport(model, { scroll: 2, height: 3 })
+  assert.match(v2.lines[0], /^▌ alpha/u) // stuck band
+  assert.match(v2.lines[1], /a3/) // real row under it
+  assert.match(v2.lines[2], /▌ beta/u) // next band still visible
+  assert.equal(v2.lines.length, 3) // height preserved (overlay, no growth)
+  assert.match(v2.stuck, /^▌ alpha/u)
 })
 
 test('viewport clamps + slices to height', () => {
