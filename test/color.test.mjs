@@ -57,6 +57,14 @@ test('war-room chrome is skinned: ⚔ gold, borders dim, titles cream, spark gol
   })
 })
 
+test('war-room repo band: ▌ bar gold, name cream, hot rollup gold', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    assert.match(paint('▌ llm-armory · 22 sessions'), /\x1b\[33m▌\x1b\[0m/) // gold accent bar
+    assert.match(paint('▌ llm-armory · 22 sessions'), /\x1b\[37mllm-armory\x1b\[0m/) // cream name
+    assert.match(paint('▌ syndcast · 3 sessions   · 2 hot'), /\x1b\[33mhot\x1b\[0m/) // gold rollup
+  })
+})
+
 test('multiline text is colorized per line', () => {
   withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
     const out = paint('SAGE doctor\n  ✓ sage home — ok\n  ✗ broken — bad')
