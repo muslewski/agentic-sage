@@ -127,6 +127,13 @@ test('bodyModel: headers tagged; every row attributed to its band', () => {
   assert.equal(model[4].isHeader, true) // beta band
 })
 
+test('bodyModel: row entries carry their session handle; headers carry null', () => {
+  const fleet = { repos: [{ label: 'alpha', working: 0, sessions: [{ branch: 'a1', liveness: 'idle', touched_globs: [], pid: 123 }] }] }
+  const model = bodyModel(fleet, {})
+  assert.equal(model[0].session, null) // band
+  assert.equal(model[1].session, fleet.repos[0].sessions[0]) // row → its session (pid 123)
+})
+
 test('stickyViewport: pins the governing band once its header scrolls off', () => {
   // model: [Ahdr, a1, a2, a3, Bhdr, b1]
   const model = bodyModel(scrollFleet, {})
