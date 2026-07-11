@@ -31,7 +31,7 @@ import {
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
-import { renderWarRoom, spinnerizeWar } from '../lib/warroom.mjs'
+import { renderWarRoom, spinnerizeWar, PANEL_W } from '../lib/warroom.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -136,20 +136,27 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       heatValues: heat,
       scroll,
       rows: W.rows || 24,
+      cols: W.columns || PANEL_W,
       wide,
       clock,
     })
-    W.write('\x1b[H\x1b[2J' + paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length])) + '\n')
+    const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
+    // Flicker-free repaint: cursor home, overwrite each line clearing to its EOL,
+    // then erase anything below — no per-frame full-screen clear (\x1b[2J) flash.
+    const body = painted
+      .split('\n')
+      .map((l) => `${l}\x1b[K`)
+      .join('\n')
+    W.write(`\x1b[H${body}\x1b[J`)
     frame++
   }
-  W.write('\x1b[?1049h\x1b[?25l') // enter alt-screen, hide cursor
+  W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
   refresh()
   draw()
   const paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
-  const dataTimer = setInterval(() => {
-    refresh()
-    draw()
-  }, 1000)
+  // Re-collect the fleet on a slow clock; the paint timer picks it up (no draw
+  // here → no double-write at the 1s boundary).
+  const dataTimer = setInterval(refresh, 1000)
   const stop = () => {
     clearInterval(paintTimer)
     clearInterval(dataTimer)
