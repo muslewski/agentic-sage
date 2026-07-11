@@ -1,6 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { fleetLine } from '../lib/fleet.mjs'
+import { mkTmp } from './helpers.mjs'
+import { sessionsDir } from '../lib/paths.mjs'
+import { collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
 
 const S = (over) => ({ liveness: 'idle', touched_globs: [], ...over })
 
@@ -23,4 +28,58 @@ test('fleetLine: nearest = newest updated_at; excludes self/closed/dead', () => 
 test('fleetLine: no touched paths → em-dash', () => {
   const sessions = [S({ session_id: 'a', branch: 'feat-a', updated_at: '2026-06-28T11:00:00Z' })]
   assert.equal(fleetLine(sessions, {}), '1 live · nearest feat-a touches —')
+})
+
+const NOW = Date.parse('2026-07-11T12:00:00.000Z')
+const ago = (ms) => new Date(NOW - ms).toISOString()
+const H = 3600000
+const seedF = (home, repoId, sid, rec) => {
+  const dir = sessionsDir(home, repoId)
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, `${sid}.json`), JSON.stringify({ session_id: sid, ...rec }))
+}
+
+test('collectFleet aggregates sessions + totals across repos', () => {
+  const home = mkTmp('sage-cf-')
+  // repo A: one working, one idle
+  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'alpha-aaaa1111', 'i', { branch: 'feat', updated_at: ago(2 * H) })
+  // repo B: one dead (pid gone)
+  seedF(home, 'beta-bbbb2222', 'd', { branch: 'x', pid: 2147483646, updated_at: ago(3 * H) })
+  const f = collectFleet(home, NOW)
+  assert.equal(f.totals.repos, 2)
+  assert.equal(f.totals.sessions, 3)
+  assert.equal(f.totals.live, 2) // working + idle (dead is not live)
+  assert.equal(f.totals.working, 1)
+  const alpha = f.repos.find((r) => r.repoId === 'alpha-aaaa1111')
+  assert.equal(alpha.label, 'alpha') // trailing -hash stripped
+  assert.equal(alpha.live, 2)
+})
+
+test('collectFleet: empty fleet → zero totals, no throw', () => {
+  const f = collectFleet(mkTmp('sage-cf-'), NOW)
+  assert.deepEqual(f.repos, [])
+  assert.equal(f.totals.sessions, 0)
+})
+
+test('filterFleet drops dead sessions + empty repos unless showAll', () => {
+  const home = mkTmp('sage-ff-')
+  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'beta-bbbb2222', 'd', { branch: 'x', pid: 2147483646, updated_at: ago(3 * H) })
+  const f = collectFleet(home, NOW)
+  const hidden = filterFleet(f, { showAll: false })
+  assert.deepEqual(hidden.repos.map((r) => r.repoId), ['alpha-aaaa1111']) // beta (dead-only) gone
+  assert.equal(hidden.totals.sessions, 2) // totals preserved
+  const all = filterFleet(f, { showAll: true })
+  assert.equal(all.repos.length, 2)
+})
+
+test('sortFleet orders repos by recency, sessions by liveness', () => {
+  const home = mkTmp('sage-sf-')
+  seedF(home, 'old-aaaa1111', 'a', { branch: 'a', updated_at: ago(10 * H) })
+  seedF(home, 'new-bbbb2222', 'b', { branch: 'b', updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'new-bbbb2222', 'c', { branch: 'c', updated_at: ago(30 * 60000) }) // idle, newer
+  const f = sortFleet(collectFleet(home, NOW))
+  assert.equal(f.repos[0].repoId, 'new-bbbb2222') // most-recent activity first
+  assert.equal(f.repos[0].sessions[0].liveness, 'working') // working ranks above idle
 })
