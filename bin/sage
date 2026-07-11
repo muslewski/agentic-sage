@@ -58,7 +58,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
-  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit (all sessions)
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ↵ enter a session · / filter
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
