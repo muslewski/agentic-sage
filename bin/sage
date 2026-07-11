@@ -31,7 +31,7 @@ import {
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
-import { renderWarRoom } from '../lib/warroom.mjs'
+import { renderWarRoom, spinnerizeWar } from '../lib/warroom.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -104,6 +104,87 @@ const runWatch = (build) => {
     process.exit(0)
   }
   process.on('SIGINT', stop)
+}
+
+// Live war-room: alt-screen + raw-mode keys + a scrollable body. Two clocks —
+// paint fast (spinner), re-collect the fleet slowly (fs). Scroll offset + the
+// showAll toggle live here; all rendering is delegated to renderWarRoom.
+const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
+  const W = process.stdout
+  let frame = 0
+  let scroll = 0
+  let showAll = showAll0
+  const heat = []
+  let view = { repos: [], totals: {} }
+  const bodyHeight = () => Math.max(1, (W.rows || 24) - 6) // 6 = WAR_CHROME
+  const bodyLen = () => view.repos.reduce((n, r) => n + 1 + r.sessions.length, 0)
+  const maxScroll = () => Math.max(0, bodyLen() - bodyHeight())
+  const clamp = () => {
+    scroll = Math.max(0, Math.min(scroll, maxScroll()))
+  }
+  const refresh = () => {
+    const fleet = collectFleet(home, Date.now())
+    view = sortFleet(filterFleet(fleet, { showAll }))
+    heat.push(fleet.totals.working)
+    if (heat.length > 30) heat.shift()
+    clamp()
+  }
+  const draw = () => {
+    const clock = new Date().toTimeString().slice(0, 8)
+    const text = renderWarRoom(view, {
+      showAll,
+      heatValues: heat,
+      scroll,
+      rows: W.rows || 24,
+      wide,
+      clock,
+    })
+    W.write('\x1b[H\x1b[2J' + paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length])) + '\n')
+    frame++
+  }
+  W.write('\x1b[?1049h\x1b[?25l') // enter alt-screen, hide cursor
+  refresh()
+  draw()
+  const paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
+  const dataTimer = setInterval(() => {
+    refresh()
+    draw()
+  }, 1000)
+  const stop = () => {
+    clearInterval(paintTimer)
+    clearInterval(dataTimer)
+    if (process.stdin.isTTY) process.stdin.setRawMode(false)
+    process.stdin.pause()
+    W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt-screen
+    process.exit(0)
+  }
+  process.on('SIGINT', stop)
+  process.on('SIGWINCH', () => {
+    clamp()
+    draw()
+  })
+  if (process.stdin.isTTY) process.stdin.setRawMode(true)
+  process.stdin.resume()
+  process.stdin.on('data', (buf) => {
+    const k = buf.toString('utf8')
+    if (k === 'q' || k === '\x03') return stop() // q or Ctrl-C
+    if (k === 'a') {
+      showAll = !showAll
+      refresh()
+      return draw()
+    }
+    if (k === 'r') {
+      refresh()
+      return draw()
+    }
+    if (k === '\x1b[A') scroll -= 1 // up
+    else if (k === '\x1b[B') scroll += 1 // down
+    else if (k === '\x1b[5~') scroll -= bodyHeight() // pgup
+    else if (k === '\x1b[6~') scroll += bodyHeight() // pgdn
+    else return
+    clamp()
+    draw()
+  })
 }
 
 const main = async () => {
@@ -276,8 +357,10 @@ const main = async () => {
           }),
         )
       }
+      // TTY → live cockpit; piped/non-TTY → one static frame. `--all` seeds the
+      // live loop's showAll (toggleable at runtime with `a`).
+      if (process.stdout.isTTY) return runWarWatch(home, { wide, showAll })
       const view = sortFleet(filterFleet(fleet, { showAll }))
-      // Non-TTY (piped) → one static frame. TTY live loop lands in Task 4.
       const clock = new Date().toTimeString().slice(0, 8)
       return console.log(renderWarRoom(view, { showAll, heatValues: [], scroll: 0, rows: Number.POSITIVE_INFINITY, wide, clock }))
     }
