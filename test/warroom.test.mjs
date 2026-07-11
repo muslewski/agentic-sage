@@ -9,6 +9,8 @@ import {
   footer,
   renderWarRoom,
   spinnerizeWar,
+  fit,
+  fitZone,
   WAR_CHROME,
 } from '../lib/warroom.mjs'
 
@@ -47,6 +49,28 @@ test('renderPanels: every line is the same display width (borders align)', () =>
     const widths = renderPanels(fleet.totals, heat).split('\n').map((l) => [...l].length)
     assert.equal(new Set(widths).size, 1, `unequal panel widths: ${widths}`)
   }
+})
+
+test('fit: pads short to exact width, middle-ellipsis keeps head+tail on long', () => {
+  assert.equal(fit('main', 8), 'main    ') // short → padded to n
+  assert.equal([...fit('docs/fusion-advisor-design', 20)].length, 20) // long → exactly n
+  assert.match(fit('docs/fusion-advisor-design', 20), /^docs\/.*….*design$/u) // both ends survive
+})
+
+test('fitZone: clips the path but keeps the +N overflow count adjacent', () => {
+  const z = fitZone('docs/superpowers/plans/ +1', 16)
+  assert.equal([...z].length, 16) // rigid width
+  assert.match(z, /….*\+1$/u) // path clipped, +1 preserved at the tail
+})
+
+test('sessionRow: long names clip to a fixed grid so status columns align', () => {
+  // regression: padR padded but never truncated → long branch ids shoved every
+  // later column rightward. Now every row's liveness word lands at the same col.
+  const long = sessionRow({ branch: 'docs/fusion-advisor-design', liveness: 'idle', dirty: true, touched_globs: [] }, {})
+  const short = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, {})
+  assert.equal(long.indexOf('idle'), short.indexOf('idle')) // grid aligned
+  assert.match(long, /…/u) // long name was clipped
+  assert.match(long, /✎ +idle/u) // middle-ellipsis kept the tail ✎ marker
 })
 
 test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
