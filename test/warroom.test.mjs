@@ -195,3 +195,14 @@ test('renderWarRoom with selected shows one ❯; selected:null shows none', () =
   const noSel = renderWarRoom(fleet, { rows: Infinity, clock: '12:00:00' })
   assert.equal(noSel.split('\n').filter((l) => l.startsWith('❯')).length, 0)
 })
+
+test('footer: nav shows filter + working keys; filter mode shows the query', () => {
+  const nav = footer(false, 0, 0, {})
+  assert.match(nav, /\/ filter/)
+  assert.match(nav, /w working/)
+  const on = footer(false, 0, 0, { workingOnly: true })
+  assert.match(on, /working✓/)
+  const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
+  assert.match(filt, /filter: arm/)
+  assert.match(filt, /esc/)
+})

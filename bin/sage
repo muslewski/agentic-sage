@@ -32,7 +32,7 @@ import {
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
 import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
-import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible } from '../lib/warnav.mjs'
+import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -118,6 +118,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let scroll = 0
   let selOrd = 0
   let showAll = showAll0
+  let mode = 'nav'
+  let query = ''
+  let workingOnly = false
   const heat = []
   let view = { repos: [], totals: {} }
   let model = []
@@ -132,7 +135,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   }
   const refresh = () => {
     const fleet = collectFleet(home, Date.now())
-    view = sortFleet(filterFleet(fleet, { showAll }))
+    const matched = matchFleet(filterFleet(fleet, { showAll }), { query, workingOnly })
+    view = sortFleet(matched)
     model = bodyModel(view, { wide })
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
@@ -150,6 +154,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       wide,
       clock,
       selected: selIdx(),
+      mode,
+      query,
+      workingOnly,
     })
     const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
     const body = painted
@@ -217,6 +224,29 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   process.stdin.on('data', (buf) => {
     const k = buf.toString('utf8')
     if (k === 'q' || k === '\x03') return stop() // q or Ctrl-C
+    if (mode === 'filter') {
+      if (k === '\x1b') {
+        query = ''
+        mode = 'nav'
+        refresh()
+        return draw()
+      }
+      if (k === '\r' || k === '\n') {
+        mode = 'nav'
+        return draw()
+      }
+      if (k === '\x7f' || k === '\b') {
+        query = query.slice(0, -1)
+        refresh()
+        return draw()
+      }
+      if (k.length === 1 && k >= ' ') {
+        query += k
+        refresh()
+        return draw()
+      }
+      return
+    }
     if (k === '\r' || k === '\n') return enter()
     if (k === 'c') return cdPrint()
     if (k === 'a') {
@@ -225,6 +255,15 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       return draw()
     }
     if (k === 'r') {
+      refresh()
+      return draw()
+    }
+    if (k === '/') {
+      mode = 'filter'
+      return draw()
+    }
+    if (k === 'w') {
+      workingOnly = !workingOnly
       refresh()
       return draw()
     }
