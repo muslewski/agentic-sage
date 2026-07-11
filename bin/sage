@@ -31,7 +31,8 @@ import {
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
-import { renderWarRoom, spinnerizeWar, PANEL_W } from '../lib/warroom.mjs'
+import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
+import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -57,7 +58,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
-  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit (all sessions)
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ↵ enter a session · / filter
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
@@ -106,28 +107,41 @@ const runWatch = (build) => {
   process.on('SIGINT', stop)
 }
 
-// Live war-room: alt-screen + raw-mode keys + a scrollable body. Two clocks —
-// paint fast (spinner), re-collect the fleet slowly (fs). Scroll offset + the
-// showAll toggle live here; all rendering is delegated to renderWarRoom.
+// Live war-room: alt-screen + raw-mode keys + a selectable, scrollable body.
+// Two clocks — paint fast (spinner), re-collect the fleet slowly (fs). Selection
+// ordinal + scroll + showAll live here; rendering is delegated to renderWarRoom.
+// Enter jumps to the selected session's live tmux pane (agent-agnostic) or, on a
+// miss, tears down and prints `cd <worktree>` for a manual resume.
 const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   const W = process.stdout
   let frame = 0
   let scroll = 0
+  let selOrd = 0
   let showAll = showAll0
+  let mode = 'nav'
+  let query = ''
+  let workingOnly = false
   const heat = []
   let view = { repos: [], totals: {} }
-  const bodyHeight = () => Math.max(1, (W.rows || 24) - 6) // 6 = WAR_CHROME
-  const bodyLen = () => view.repos.reduce((n, r) => n + 1 + r.sessions.length, 0)
-  const maxScroll = () => Math.max(0, bodyLen() - bodyHeight())
-  const clamp = () => {
-    scroll = Math.max(0, Math.min(scroll, maxScroll()))
+  let model = []
+  let paintTimer
+  let dataTimer
+  const bodyHeight = () => Math.max(1, (W.rows || 24) - WAR_CHROME)
+  const selCount = () => selectableIndices(model).length
+  const selIdx = () => selectedModelIndex(model, selOrd)
+  const syncScroll = () => {
+    const idx = selIdx()
+    scroll = idx == null ? 0 : ensureVisible(idx, scroll, bodyHeight(), model.length)
   }
   const refresh = () => {
     const fleet = collectFleet(home, Date.now())
-    view = sortFleet(filterFleet(fleet, { showAll }))
+    const matched = matchFleet(filterFleet(fleet, { showAll }), { query, workingOnly })
+    view = sortFleet(matched)
+    model = bodyModel(view, { wide })
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
-    clamp()
+    selOrd = moveSelection(selCount(), selOrd, 0) // clamp to the new fleet size
+    syncScroll()
   }
   const draw = () => {
     const clock = new Date().toTimeString().slice(0, 8)
@@ -139,10 +153,12 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       cols: W.columns || PANEL_W,
       wide,
       clock,
+      selected: selIdx(),
+      mode,
+      query,
+      workingOnly,
     })
     const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
-    // Flicker-free repaint: cursor home, overwrite each line clearing to its EOL,
-    // then erase anything below — no per-frame full-screen clear (\x1b[2J) flash.
     const body = painted
       .split('\n')
       .map((l) => `${l}\x1b[K`)
@@ -150,31 +166,90 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     W.write(`\x1b[H${body}\x1b[J`)
     frame++
   }
-  W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
-  refresh()
-  draw()
-  const paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
-  // Re-collect the fleet on a slow clock; the paint timer picks it up (no draw
-  // here → no double-write at the 1s boundary).
-  const dataTimer = setInterval(refresh, 1000)
-  const stop = () => {
+  const teardown = () => {
     clearInterval(paintTimer)
     clearInterval(dataTimer)
     if (process.stdin.isTTY) process.stdin.setRawMode(false)
     process.stdin.pause()
     W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt-screen
+  }
+  const stop = () => {
+    teardown()
     process.exit(0)
   }
+  const printLocation = (s) => {
+    console.log(`cd ${s.worktree}`)
+    console.log(`# session ${String(s.session_id || '').slice(0, 8)} (${s.branch || '—'}) — resume in your agent`)
+  }
+  const enter = () => {
+    const idx = selIdx()
+    const s = idx == null ? null : model[idx]?.session
+    if (!s) return
+    const pane = paneForPid(s.pid, tmuxPanes())
+    teardown()
+    if (pane) {
+      try {
+        const args = process.env.TMUX
+          ? ['switch-client', '-t', pane]
+          : ['attach-session', '-t', pane.split(':')[0]]
+        execFileSync('tmux', args, { stdio: 'inherit' })
+        return process.exit(0)
+      } catch {
+        // tmux miss → fall through to the cd-print
+      }
+    }
+    printLocation(s)
+    process.exit(0)
+  }
+  const cdPrint = () => {
+    const idx = selIdx()
+    const s = idx == null ? null : model[idx]?.session
+    if (!s) return
+    teardown()
+    printLocation(s)
+    process.exit(0)
+  }
+  W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
+  refresh()
+  draw()
+  paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
+  dataTimer = setInterval(refresh, 1000)
   process.on('SIGINT', stop)
   process.on('SIGWINCH', () => {
-    clamp()
+    syncScroll()
     draw()
   })
   if (process.stdin.isTTY) process.stdin.setRawMode(true)
   process.stdin.resume()
   process.stdin.on('data', (buf) => {
     const k = buf.toString('utf8')
-    if (k === 'q' || k === '\x03') return stop() // q or Ctrl-C
+    if (k === '\x03') return stop() // Ctrl-C always quits, even mid-filter
+    if (mode === 'filter') {
+      if (k === '\x1b') {
+        query = ''
+        mode = 'nav'
+        refresh()
+        return draw()
+      }
+      if (k === '\r' || k === '\n') {
+        mode = 'nav'
+        return draw()
+      }
+      if (k === '\x7f' || k === '\b') {
+        query = query.slice(0, -1)
+        refresh()
+        return draw()
+      }
+      if (k.length === 1 && k >= ' ') {
+        query += k
+        refresh()
+        return draw()
+      }
+      return
+    }
+    if (k === 'q') return stop() // q quits in nav mode only (a filter char otherwise)
+    if (k === '\r' || k === '\n') return enter()
+    if (k === 'c') return cdPrint()
     if (k === 'a') {
       showAll = !showAll
       refresh()
@@ -184,12 +259,23 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       refresh()
       return draw()
     }
-    if (k === '\x1b[A') scroll -= 1 // up
-    else if (k === '\x1b[B') scroll += 1 // down
-    else if (k === '\x1b[5~') scroll -= bodyHeight() // pgup
-    else if (k === '\x1b[6~') scroll += bodyHeight() // pgdn
+    if (k === '/') {
+      mode = 'filter'
+      return draw()
+    }
+    if (k === 'w') {
+      workingOnly = !workingOnly
+      refresh()
+      return draw()
+    }
+    let d = 0
+    if (k === '\x1b[A' || k === 'k') d = -1 // up
+    else if (k === '\x1b[B' || k === 'j') d = 1 // down
+    else if (k === '\x1b[5~') d = -bodyHeight() // pgup
+    else if (k === '\x1b[6~') d = bodyHeight() // pgdn
     else return
-    clamp()
+    selOrd = moveSelection(selCount(), selOrd, d)
+    syncScroll()
     draw()
   })
 }

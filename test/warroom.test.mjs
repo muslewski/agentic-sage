@@ -9,6 +9,7 @@ import {
   bodyModel,
   viewport,
   stickyViewport,
+  markSelected,
   footer,
   renderWarRoom,
   spinnerizeWar,
@@ -127,19 +128,25 @@ test('bodyModel: headers tagged; every row attributed to its band', () => {
   assert.equal(model[4].isHeader, true) // beta band
 })
 
+test('bodyModel: row entries carry their session handle; headers carry null', () => {
+  const fleet = { repos: [{ label: 'alpha', working: 0, sessions: [{ branch: 'a1', liveness: 'idle', touched_globs: [], pid: 123 }] }] }
+  const model = bodyModel(fleet, {})
+  assert.equal(model[0].session, null) // band
+  assert.equal(model[1].session, fleet.repos[0].sessions[0]) // row → its session (pid 123)
+})
+
 test('stickyViewport: pins the governing band once its header scrolls off', () => {
   // model: [Ahdr, a1, a2, a3, Bhdr, b1]
   const model = bodyModel(scrollFleet, {})
-  // top of view is the real alpha header → nothing stuck
   const v0 = stickyViewport(model, { scroll: 0, height: 3 })
-  assert.match(v0.lines[0], /^▌ alpha/u)
+  assert.match(v0.rows[0].text, /^▌ alpha/u)
   assert.equal(v0.stuck, null)
-  // scrolled into alpha's rows (window [a2, a3, Bhdr]) → alpha band pinned on top
   const v2 = stickyViewport(model, { scroll: 2, height: 3 })
-  assert.match(v2.lines[0], /^▌ alpha/u) // stuck band
-  assert.match(v2.lines[1], /a3/) // real row under it
-  assert.match(v2.lines[2], /▌ beta/u) // next band still visible
-  assert.equal(v2.lines.length, 3) // height preserved (overlay, no growth)
+  assert.match(v2.rows[0].text, /^▌ alpha/u) // stuck band
+  assert.equal(v2.rows[0].modelIndex, null) // synthetic pin
+  assert.match(v2.rows[1].text, /a3/)
+  assert.match(v2.rows[2].text, /▌ beta/u)
+  assert.equal(v2.rows.length, 3)
   assert.match(v2.stuck, /^▌ alpha/u)
 })
 
@@ -165,4 +172,37 @@ test('renderWarRoom composes; non-body lines == WAR_CHROME; footer present', () 
 test('spinnerizeWar swaps ◆ for the frame glyph', () => {
   assert.equal(spinnerizeWar('  ◆ main working', '⠹'), '  ⠹ main working')
   assert.ok(!spinnerizeWar('  ◆ a\n  ◆ b', '⠹').includes('◆'))
+})
+
+test('markSelected: swaps the two leading spaces for the ❯ cursor', () => {
+  assert.equal(markSelected('  ● main  idle'), '❯ ● main  idle')
+  assert.equal(markSelected('▌ alpha'), '▌ alpha') // headers untouched (no leading "  ")
+})
+
+test('stickyViewport marks exactly the selected model row', () => {
+  const model = bodyModel(scrollFleet, {}) // [Ahdr, a1, a2, a3, Bhdr, b1]
+  const vp = stickyViewport(model, { scroll: 0, height: 6, selected: 2 }) // a2
+  const cursored = vp.rows.filter((r) => r.text.startsWith('❯'))
+  assert.equal(cursored.length, 1)
+  assert.equal(cursored[0].modelIndex, 2)
+  const none = stickyViewport(model, { scroll: 0, height: 6, selected: null })
+  assert.equal(none.rows.filter((r) => r.text.startsWith('❯')).length, 0)
+})
+
+test('renderWarRoom with selected shows one ❯; selected:null shows none', () => {
+  const withSel = renderWarRoom(fleet, { rows: Infinity, clock: '12:00:00', selected: 1 })
+  assert.equal(withSel.split('\n').filter((l) => l.startsWith('❯')).length, 1)
+  const noSel = renderWarRoom(fleet, { rows: Infinity, clock: '12:00:00' })
+  assert.equal(noSel.split('\n').filter((l) => l.startsWith('❯')).length, 0)
+})
+
+test('footer: nav shows filter + working keys; filter mode shows the query', () => {
+  const nav = footer(false, 0, 0, {})
+  assert.match(nav, /\/ filter/)
+  assert.match(nav, /w working/)
+  const on = footer(false, 0, 0, { workingOnly: true })
+  assert.match(on, /working✓/)
+  const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
+  assert.match(filt, /filter: arm/)
+  assert.match(filt, /esc/)
 })
