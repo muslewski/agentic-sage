@@ -30,7 +30,8 @@ import {
   renderMergeBrief,
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
-import { fleetLine } from '../lib/fleet.mjs'
+import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
+import { renderWarRoom } from '../lib/warroom.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -56,6 +57,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit (all sessions)
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
@@ -144,7 +146,7 @@ const main = async () => {
             sessions: [],
           }))
         }
-        return console.log('sage: not a git repo (cd into a repo SAGE judges)')
+        return console.log("sage: not a git repo — try 'sage war' for the fleet view")
       }
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       // buildSessions: collect + the exact same row/tmux enrichment the human
@@ -256,6 +258,28 @@ const main = async () => {
           .map((r) => `  ${r.repoId.replace(/-[0-9a-f]{8}$/, '')} (${r.repoId} · ${r.sessions} session(s))`)
           .join('\n'),
       )
+    }
+    case 'war': {
+      const flags = process.argv.slice(3)
+      const json = flags.includes('--json')
+      const showAll = flags.includes('--all')
+      const wide = flags.includes('--wide') || flags.includes('-w')
+      const fleet = collectFleet(home, now)
+      if (json) {
+        return console.log(
+          JSON.stringify({
+            schema: 1,
+            kind: 'sage.war',
+            generated_at: new Date().toISOString(),
+            repos: fleet.repos.map((r) => ({ repo_id: r.repoId, sessions: r.sessions })),
+            totals: fleet.totals,
+          }),
+        )
+      }
+      const view = sortFleet(filterFleet(fleet, { showAll }))
+      // Non-TTY (piped) → one static frame. TTY live loop lands in Task 4.
+      const clock = new Date().toTimeString().slice(0, 8)
+      return console.log(renderWarRoom(view, { showAll, heatValues: [], scroll: 0, rows: Number.POSITIVE_INFINITY, wide, clock }))
     }
     case 'prune': {
       const repoId = resolveRepoId(cwd)
