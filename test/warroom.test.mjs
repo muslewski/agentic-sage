@@ -4,6 +4,7 @@ import {
   sparkline,
   renderPanels,
   sessionRow,
+  renderRepoSection,
   bodyLines,
   viewport,
   footer,
@@ -77,6 +78,20 @@ test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
   assert.match(sessionRow(fleet.repos[0].sessions[0], {}), /^\s*◆ /u)
   assert.match(sessionRow(fleet.repos[0].sessions[0], {}), /✎/u)
   assert.match(sessionRow(fleet.repos[0].sessions[1], {}), /^\s*● /u)
+})
+
+test('renderRepoSection: accent-bar band; hot rollup only when working > 0', () => {
+  const hot = renderRepoSection(
+    { label: 'syndcast', working: 2, sessions: [{ branch: 'main', liveness: 'working', touched_globs: [] }] },
+    {},
+  )
+  assert.match(hot[0], /^▌ syndcast · 1 session/u) // margin bar + name
+  assert.match(hot[0], /· 2 hot$/u) // rollup on the right
+  const cold = renderRepoSection(
+    { label: 'alpha', working: 0, sessions: [{ branch: 'x', liveness: 'idle', touched_globs: [] }] },
+    {},
+  )
+  assert.equal(cold[0], '▌ alpha · 1 session') // calm repo stays quiet — no rollup
 })
 
 test('bodyLines: one header per repo + one row per session', () => {
