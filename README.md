@@ -191,6 +191,7 @@ sage on
 
 ```bash
 sage board [--json]     # who's live, on what branch, how stale, what they touch
+sage war [--json]       # live full-screen cockpit of every session across every repo
 sage fleet [--json]     # one-line fleet summary (fold into a status tick)
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file

@@ -101,4 +101,21 @@ Non-repo (fail-open) or empty:
 
 Fleet adds `"self_sid": "..." | null` at the top level of the envelope.
 
+### `sage.war` (from `sage war --json`)
+
+Cross-repo roll-up — the seed of the Hermes machine layer.
+
+```json
+{
+  "schema": 1,
+  "kind": "sage.war",
+  "generated_at": "<iso8601>",
+  "repos": [{ "repo_id": "<id>", "sessions": [ /* board session rows */ ] }],
+  "totals": { "repos": 0, "sessions": 0, "live": 0, "working": 0, "contested": 0 }
+}
+```
+
+`totals` covers the whole fleet (pre-filter). `sessions` uses the same row shape
+as `sage.board`; `session_id` is always present.
+
 Verify keys against live output in a sandbox before relying on any field.
