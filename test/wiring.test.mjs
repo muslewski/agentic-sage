@@ -284,3 +284,27 @@ test('wireAll grok: idempotent — second run leaves an identical file', () => {
   wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
   assert.equal(fs.readFileSync(hookFile, 'utf8'), first)
 })
+
+test('wireAll: re-init under a DIFFERENT node path replaces our hook — no double-fire', () => {
+  const home = mkTmp('sage-w-')
+  const claude = path.join(home, '.claude')
+  fs.mkdirSync(claude, { recursive: true })
+  const settingsPath = path.join(claude, 'settings.json')
+  // A prior install wired our CURRENT-named link but under an OLD node path
+  // (e.g. before an nvm switch). The full-command check would miss it.
+  const newLink = path.join(home, '.claude', 'hooks', 'agentic-sage-emit.mjs')
+  const oldNodeCommand = `${JSON.stringify('/opt/old/bin/node')} ${JSON.stringify(newLink)}`
+  const settings = { hooks: {} }
+  for (const ev of EVENTS) settings.hooks[ev] = [{ hooks: [{ type: 'command', command: oldNodeCommand }] }]
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+
+  wireAll({ home, repoRoot: REPO_ROOT })
+
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+  for (const ev of EVENTS) {
+    const cmds = after.hooks[ev].flatMap((g) => g.hooks.map((h) => h.command))
+    assert.equal(cmds.length, 1, `expected one hook for ${ev}, got ${cmds.length}`)
+    assert.ok(cmds[0].includes('agentic-sage-emit.mjs'))
+    assert.ok(!cmds.includes(oldNodeCommand), 'old-node-path hook must be gone')
+  }
+})
