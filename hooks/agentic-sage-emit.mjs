@@ -20,10 +20,11 @@ import { explainRepoDataDir, writeRegistryEntry, readRegistry, MARKER_DIR } from
 import { readRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
 import { gitSignals, branchOf } from '../lib/git.mjs'
 import { autoDump } from '../lib/handoff.mjs'
-import { pidForSession } from '../lib/registry.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
+import { tmuxPanes, paneForPid, commOf, cmdlineOf, windowNameForPane } from '../lib/tmux.mjs'
+import { classifyParent } from '../lib/provenance.mjs'
 import { postToolDue, markPostTool } from '../lib/throttle.mjs'
 import {
   guardsActive,
@@ -172,7 +173,23 @@ const main = async () => {
       }
 
       const sig = gitSignals(cwd)
-      const pid = pidForSession(home, sid)
+      // The hook is spawned directly BY the agent → process.ppid IS the agent's
+      // pid: reliable, harness-agnostic, and free (no registry reversal).
+      const pid = process.ppid
+      const panes = tmuxPanes()
+      const prov = classifyParent({ pid, env: process.env, panes })
+      const pane = paneForPid(pid, panes)
+      const window_name = pane ? windowNameForPane(pane) : ''
+      const comm = commOf(pid)
+      const cmd = cmdlineOf(pid)
+      const agent_kind =
+        /grok/i.test(comm) || /grok/i.test(cmd)
+          ? 'grok'
+          : /claude/i.test(comm) || /claude/i.test(cmd)
+            ? 'claude'
+            : payload.source
+              ? 'claude'
+              : 'unknown'
       const prev = readRecord(home, repoId, sid)
       mergeRecord(home, repoId, sid, {
         session_id: sid,
@@ -183,8 +200,13 @@ const main = async () => {
         dirty: sig.dirty,
         touched_globs: sig.touched,
         trunk: sig.trunk,
-        pid: pid || undefined,
-        alive: pid ? isAlive(pid) : true,
+        pid,
+        alive: isAlive(pid),
+        managed_by: prov.managed_by,
+        parent_sid: prov.parent_sid || undefined,
+        agent_kind,
+        tmux: pane || undefined,
+        window_name: window_name || undefined,
         link_state: 'scoping',
         source: payload.source || null,
         status: 'active',
@@ -268,7 +290,7 @@ const main = async () => {
       const { jsonPath } = autoDump({
         cwd,
         sessionId: sid,
-        pid: pidForSession(home, sid),
+        pid: process.ppid,
         now,
         tmpDir,
         prefix,
