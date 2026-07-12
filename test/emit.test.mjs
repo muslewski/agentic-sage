@@ -151,7 +151,7 @@ test('SessionStart brief: prints a one-liner when another session exists', () =>
   writeGlobalConfig(home, { enabled: true })
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
-  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z', pid: process.pid })
   const out = emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
   assert.match(out, /sage: \d+ live · nearest feat-other touches src\/x\.ts/)
 })
@@ -164,12 +164,12 @@ test('SessionStart brief: silent when solo, when disabled, and on non-SessionSta
   // solo → no other session → no brief
   assert.equal(emit({ hook_event_name: 'SessionStart', session_id: 'solo', cwd: repo }, home).trim(), '')
   // a Stop with another session present → still no brief (SessionStart-only)
-  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  seedOther(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/x.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z', pid: process.pid })
   assert.equal(emit({ hook_event_name: 'Stop', session_id: 'solo', cwd: repo }, home).trim(), '')
   // disabled → no brief even on SessionStart with another session present
   const home2 = mkTmp('sage-h-') // no config seeded = disabled
   const repo2 = mkGitRepo()
-  seedOther(home2, resolveRepoId(repo2), { session_id: 'other', branch: 'feat-o', touched_globs: ['a.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z' })
+  seedOther(home2, resolveRepoId(repo2), { session_id: 'other', branch: 'feat-o', touched_globs: ['a.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z', pid: process.pid })
   assert.equal(emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo2 }, home2).trim(), '')
 })
 

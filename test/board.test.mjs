@@ -105,3 +105,12 @@ test('collectSessions: backfills session_id from filename when body omits it', (
   assert.equal(out.length, 1)
   assert.equal(out[0].session_id, 'ghost-sid-1', 'sid backfilled from filename')
 })
+
+test('pid-less non-closed record → dead (honest liveness)', () => {
+  const home = mkTmp('sage-b-')
+  const id = 'repo-cccc3333'
+  // no pid, recent tool activity — the old default read this alive/working
+  seed(home, id, 'ghost', { branch: 'main', updated_at: ago(1000), last_tool_at: ago(1000) })
+  const out = collectSessions(home, id, NOW)
+  assert.equal(out[0].liveness, 'dead')
+})

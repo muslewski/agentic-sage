@@ -42,8 +42,8 @@ const seedF = (home, repoId, sid, rec) => {
 test('collectFleet aggregates sessions + totals across repos', () => {
   const home = mkTmp('sage-cf-')
   // repo A: one working, one idle
-  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', updated_at: ago(1 * H), last_tool_at: ago(1000) })
-  seedF(home, 'alpha-aaaa1111', 'i', { branch: 'feat', updated_at: ago(2 * H) })
+  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', pid: process.pid, updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'alpha-aaaa1111', 'i', { branch: 'feat', pid: process.pid, updated_at: ago(2 * H) })
   // repo B: one dead (pid gone)
   seedF(home, 'beta-bbbb2222', 'd', { branch: 'x', pid: 2147483646, updated_at: ago(3 * H) })
   const f = collectFleet(home, NOW)
@@ -64,7 +64,7 @@ test('collectFleet: empty fleet → zero totals, no throw', () => {
 
 test('filterFleet drops dead sessions + empty repos unless showAll', () => {
   const home = mkTmp('sage-ff-')
-  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'alpha-aaaa1111', 'w', { branch: 'main', pid: process.pid, updated_at: ago(1 * H), last_tool_at: ago(1000) })
   seedF(home, 'beta-bbbb2222', 'd', { branch: 'x', pid: 2147483646, updated_at: ago(3 * H) })
   const f = collectFleet(home, NOW)
   const hidden = filterFleet(f, { showAll: false })
@@ -77,7 +77,7 @@ test('filterFleet drops dead sessions + empty repos unless showAll', () => {
 test('sortFleet orders repos by recency, sessions by liveness', () => {
   const home = mkTmp('sage-sf-')
   seedF(home, 'old-aaaa1111', 'a', { branch: 'a', updated_at: ago(10 * H) })
-  seedF(home, 'new-bbbb2222', 'b', { branch: 'b', updated_at: ago(1 * H), last_tool_at: ago(1000) })
+  seedF(home, 'new-bbbb2222', 'b', { branch: 'b', pid: process.pid, updated_at: ago(1 * H), last_tool_at: ago(1000) })
   seedF(home, 'new-bbbb2222', 'c', { branch: 'c', updated_at: ago(30 * 60000) }) // idle, newer
   const f = sortFleet(collectFleet(home, NOW))
   assert.equal(f.repos[0].repoId, 'new-bbbb2222') // most-recent activity first
