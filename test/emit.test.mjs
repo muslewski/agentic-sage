@@ -503,3 +503,14 @@ test('emitter: a non-SessionStart first event still records session_id', () => {
   assert.ok(rec, 'record created')
   assert.equal(rec.session_id, 'idless-1', 'session_id present even without SessionStart')
 })
+
+test('SessionStart captures pid_start (recycle guard)', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  if (process.platform === 'linux') assert.match(rec.pid_start, /^\d+$/)
+  else assert.ok(!('pid_start' in rec) || /^\d+$/.test(rec.pid_start))
+})

@@ -20,3 +20,16 @@ test('deriveLiveness enum mapping (keys on alive/closed/lastToolAt recency)', ()
   assert.equal(deriveLiveness({ alive: true }), 'idle')
   assert.equal(deriveLiveness({}), 'idle')
 })
+
+test('isAlive: captured start-time is recycle-proof (match alive, mismatch/gone dead)', () => {
+  const opts = (st) => ({ startTime: 'S1', startTimeOf: () => st })
+  assert.equal(isAlive(1234, opts('S1')), true)  // same process still there
+  assert.equal(isAlive(1234, opts('S2')), false) // pid recycled → new starttime
+  assert.equal(isAlive(1234, opts('')), false)   // pid gone → unreadable stat
+})
+
+test('isAlive: empty captured start-time opts out → falls back to probe', () => {
+  // '' is falsy, so the start-time branch is skipped and the real pid is probed.
+  assert.equal(isAlive(process.pid, { startTime: '', startTimeOf: () => 'x' }), true)
+  assert.equal(isAlive(2147483646, { startTime: '', startTimeOf: () => 'x' }), false)
+})

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
 import { handoffBucket, collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import { startTimeOf } from '../lib/tmux.mjs'
 import { SPINNER_FRAMES } from '../lib/spinner.mjs'
 
 const seed = (home, repoId, sid, rec) => {
@@ -113,4 +114,23 @@ test('pid-less non-closed record → dead (honest liveness)', () => {
   seed(home, id, 'ghost', { branch: 'main', updated_at: ago(1000), last_tool_at: ago(1000) })
   const out = collectSessions(home, id, NOW)
   assert.equal(out[0].liveness, 'dead')
+})
+
+test('collectSessions: pid_start match → alive, mismatch → dead (recycle-proof)', () => {
+  const home = mkTmp('sage-b-')
+  const id = 'repo-dddd4444'
+  const realStart = startTimeOf(process.pid) // '' on a non-/proc platform
+  // matching start-time + recent activity → not dead (Linux: working;
+  // non-/proc: realStart '' opts out → plain probe → alive)
+  seed(home, id, 'match', {
+    branch: 'a', pid: process.pid, pid_start: realStart,
+    last_tool_at: ago(1000), updated_at: ago(1000),
+  })
+  // a WRONG start-time means the pid was recycled → dead, even though pid is live
+  seed(home, id, 'recycled', {
+    branch: 'b', pid: process.pid, pid_start: '1', updated_at: ago(2000),
+  })
+  const out = collectSessions(home, id, NOW)
+  assert.notEqual(out.find((s) => s.session_id === 'match').liveness, 'dead')
+  assert.equal(out.find((s) => s.session_id === 'recycled').liveness, 'dead')
 })

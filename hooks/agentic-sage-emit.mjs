@@ -23,7 +23,14 @@ import { autoDump } from '../lib/handoff.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
-import { tmuxPanes, paneForPid, commOf, cmdlineOf, windowNameForPane } from '../lib/tmux.mjs'
+import {
+  tmuxPanes,
+  paneForPid,
+  commOf,
+  cmdlineOf,
+  windowNameForPane,
+  startTimeOf,
+} from '../lib/tmux.mjs'
 import { classifyParent } from '../lib/provenance.mjs'
 import { postToolDue, markPostTool } from '../lib/throttle.mjs'
 import {
@@ -176,6 +183,7 @@ const main = async () => {
       // The hook is spawned directly BY the agent → process.ppid IS the agent's
       // pid: reliable, harness-agnostic, and free (no registry reversal).
       const pid = process.ppid
+      const pidStart = startTimeOf(pid)
       const panes = tmuxPanes()
       const prov = classifyParent({ pid, env: process.env, panes })
       const pane = paneForPid(pid, panes)
@@ -201,6 +209,7 @@ const main = async () => {
         touched_globs: sig.touched,
         trunk: sig.trunk,
         pid,
+        pid_start: pidStart || undefined,
         alive: isAlive(pid),
         managed_by: prov.managed_by,
         parent_sid: prov.parent_sid || undefined,
