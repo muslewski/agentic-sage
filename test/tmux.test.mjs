@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parsePanes, paneForPid, commOf, cmdlineOf, windowNameForPane } from '../lib/tmux.mjs'
+import { parsePanes, paneForPid, commOf, cmdlineOf, windowNameForPane, parseStartTime, startTimeOf } from '../lib/tmux.mjs'
 
 test('parsePanes: tab rows → objects; skips blank/short/non-numeric', () => {
   const raw = '111\tmain:0\t@1\n222\tacme:0\t@2\n\nbad-line\nxyz\tfoo:0\t@3\n'
@@ -42,4 +42,18 @@ test('cmdlineOf contains node for this process; missing pid → empty', () => {
 test('windowNameForPane: falsy pane or tmux failure → empty (never throws)', () => {
   assert.equal(windowNameForPane(''), '')
   assert.equal(windowNameForPane('nope:0', 'tmux-does-not-exist-xyz'), '')
+})
+
+test('parseStartTime: reads field 22 past a paren-laden comm; garbage → empty', () => {
+  // comm "weird )proc" contains a ')' — the slice must pass the LAST ')'.
+  // post-')' tokens: state(0) … starttime(19) == 998877
+  const stat = '1234 (weird )proc) R 1 1 1 0 -1 0 0 0 0 0 0 0 20 0 1 0 0 0 998877 55 66'
+  assert.equal(parseStartTime(stat), '998877')
+  assert.equal(parseStartTime('no parens here at all'), '')
+})
+
+test('startTimeOf: real pid → digits; missing pid → empty', () => {
+  const st = startTimeOf(process.pid)
+  assert.ok(st === '' || /^\d+$/.test(st)) // Linux: digits; non-/proc platform: ''
+  assert.equal(startTimeOf(2147483646), '')
 })
