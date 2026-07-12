@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parsePanes, paneForPid } from '../lib/tmux.mjs'
+import { parsePanes, paneForPid, commOf, cmdlineOf, windowNameForPane } from '../lib/tmux.mjs'
 
 test('parsePanes: tab rows → objects; skips blank/short/non-numeric', () => {
   const raw = '111\tmain:0\t@1\n222\tacme:0\t@2\n\nbad-line\nxyz\tfoo:0\t@3\n'
@@ -26,4 +26,20 @@ test('paneForPid: resolves an ancestor pane via the /proc walk', () => {
   const res = paneForPid(process.pid, panes)
   // Linux: resolves to 'parent:0'; non-Linux (/proc absent): null — both are valid degradations.
   assert.ok(res === 'parent:0' || res === null)
+})
+
+test('commOf returns this process comm; missing pid → empty', () => {
+  assert.match(commOf(process.pid), /node|test/i) // the test runner
+  assert.equal(commOf(2147483646), '') // no such pid
+  assert.equal(commOf(0), '')
+})
+
+test('cmdlineOf contains node for this process; missing pid → empty', () => {
+  assert.match(cmdlineOf(process.pid), /node/i)
+  assert.equal(cmdlineOf(2147483646), '')
+})
+
+test('windowNameForPane: falsy pane or tmux failure → empty (never throws)', () => {
+  assert.equal(windowNameForPane(''), '')
+  assert.equal(windowNameForPane('nope:0', 'tmux-does-not-exist-xyz'), '')
 })
