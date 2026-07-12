@@ -89,18 +89,23 @@ const adapterCtx = async (home, repoId, cwd) => {
 // Live board: alt-screen + hidden cursor, repaint every frame (re-collecting
 // sessions so liveness/ctx/age refresh live), Ctrl-C restores and exits. `build`
 // renders the board for a given spinner frame. TTY-only (the caller guards).
-const runWatch = (build) => {
+const runWatch = ({ collect, render }) => {
   const W = process.stdout
   let i = 0
+  let data = collect()
   W.write('\x1b[?1049h\x1b[?25l') // enter alt screen, hide cursor
   const draw = () => {
-    W.write('\x1b[H\x1b[2J' + paint(build(SPINNER_FRAMES[i % SPINNER_FRAMES.length])) + '\n')
+    W.write('\x1b[H\x1b[2J' + paint(render(data, SPINNER_FRAMES[i % SPINNER_FRAMES.length])) + '\n')
     i++
   }
   draw()
-  const t = setInterval(draw, SPINNER_INTERVAL_MS)
+  const paintTimer = setInterval(draw, SPINNER_INTERVAL_MS) // fast: spinner only
+  const dataTimer = setInterval(() => {
+    data = collect()
+  }, 1000) // slow: re-collect the fs (was every 100 ms frame)
   const stop = () => {
-    clearInterval(t)
+    clearInterval(paintTimer)
+    clearInterval(dataTimer)
     W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt screen
     process.exit(0)
   }
@@ -343,15 +348,16 @@ const main = async () => {
           sessions,
         }))
       }
-      // build(frame): re-collect + render. frame == null → static (no spinner).
-      const build = (frame) => {
-        const sessions = buildSessions()
+      // render(sessions, frame): frame == null → static (no spinner). Data
+      // collection (buildSessions) is now on a separate 1 Hz clock, so --watch
+      // re-reads the fs once per second, not once per 100 ms spinner frame.
+      const render = (sessions, frame) => {
         const text = renderBoard(sessions, { repoId, wide })
         return frame == null ? text : spinnerize(text, sessions, frame)
       }
       // --watch animates, but only on a real TTY; piped/non-TTY → one static frame.
-      if (!watch || !process.stdout.isTTY) return console.log(build(null))
-      return runWatch(build)
+      if (!watch || !process.stdout.isTTY) return console.log(render(buildSessions(), null))
+      return runWatch({ collect: buildSessions, render })
     }
     case 'fleet': {
       const repoId = resolveRepoId(cwd)
