@@ -86,9 +86,10 @@ const adapterCtx = async (home, repoId, cwd) => {
   return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
 }
 
-// Live board: alt-screen + hidden cursor, repaint every frame (re-collecting
-// sessions so liveness/ctx/age refresh live), Ctrl-C restores and exits. `build`
-// renders the board for a given spinner frame. TTY-only (the caller guards).
+// Live board: alt-screen + hidden cursor. Two clocks — paint the spinner fast
+// (100 ms) while re-collecting sessions slowly (1 s), so liveness/ctx/age refresh
+// live without 10 Hz fs churn; Ctrl-C restores and exits. `render(data, frame)`
+// draws the board; `collect()` re-reads. TTY-only (the caller guards).
 const runWatch = ({ collect, render }) => {
   const W = process.stdout
   let i = 0
