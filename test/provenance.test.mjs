@@ -19,13 +19,25 @@ test('tree: reaches a tmux pane with no agent above → human', () => {
   assert.equal(r.via, 'tree')
 })
 
-test('tree: an agent ancestor before any pane → nested', () => {
+test('tree: own agent then a SECOND agent above → nested (spawned by an agent)', () => {
   const r = classifyParent({
     pid: 200, env: {}, panes: [{ panePid: 100, pane: 's:0' }],
+    // 200 = the session's own agent, 150 = the launcher/advisor agent above it, 100 = pane
     ppidOf: tree({ 200: 150, 150: 100, 100: 1 }),
-    isAgent: (p) => p === 150, // the launcher/advisor sits between me and the pane
+    isAgent: (p) => p === 200 || p === 150,
   })
   assert.equal(r.managed_by, 'nested')
+  assert.equal(r.via, 'tree')
+})
+
+test('tree: a shell wraps the hook; own agent then a pane → human', () => {
+  const r = classifyParent({
+    pid: 200, env: {}, panes: [{ panePid: 100, pane: 's:0' }],
+    // 200 = wrapping shell (not an agent), 180 = own agent, 100 = pane
+    ppidOf: tree({ 200: 180, 180: 100, 100: 1 }),
+    isAgent: (p) => p === 180,
+  })
+  assert.equal(r.managed_by, 'human')
   assert.equal(r.via, 'tree')
 })
 
