@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fleetLine } from '../lib/fleet.mjs'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
-import { collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
+import { collectFleet, filterFleet, sortFleet, isNested, tally } from '../lib/fleet.mjs'
 
 const S = (over) => ({ liveness: 'idle', touched_globs: [], ...over })
 
@@ -82,4 +82,32 @@ test('sortFleet orders repos by recency, sessions by liveness', () => {
   const f = sortFleet(collectFleet(home, NOW))
   assert.equal(f.repos[0].repoId, 'new-bbbb2222') // most-recent activity first
   assert.equal(f.repos[0].sessions[0].liveness, 'working') // working ranks above idle
+})
+
+test('isNested: managed_by nested → true; human/absent → false', () => {
+  assert.equal(isNested({ managed_by: 'nested' }), true)
+  assert.equal(isNested({ managed_by: 'human' }), false)
+  assert.equal(isNested({}), false)
+})
+
+test('tally counts live/working/human/nested', () => {
+  const rows = [
+    { liveness: 'working', managed_by: 'human' },
+    { liveness: 'idle', managed_by: 'human' },
+    { liveness: 'idle', managed_by: 'nested' },
+    { liveness: 'dead', managed_by: 'nested' },
+  ]
+  assert.deepEqual(tally(rows), { live: 3, working: 1, nested: 2, human: 2 })
+})
+
+test('collectFleet totals split human vs nested', () => {
+  const home = mkTmp('sage-cf-')
+  seedF(home, 'gamma-aaaa1111', 'h', { branch: 'main', pid: process.pid, updated_at: ago(1 * H), managed_by: 'human' })
+  seedF(home, 'gamma-aaaa1111', 'n', { branch: 'wt', pid: process.pid, updated_at: ago(1 * H), managed_by: 'nested' })
+  const f = collectFleet(home, NOW)
+  assert.equal(f.totals.human, 1)
+  assert.equal(f.totals.nested, 1)
+  const g = f.repos.find((r) => r.repoId === 'gamma-aaaa1111')
+  assert.equal(g.human, 1)
+  assert.equal(g.nested, 1)
 })
