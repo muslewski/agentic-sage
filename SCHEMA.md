@@ -42,6 +42,7 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 | `opened_at` / `updated_at` | string | ISO-8601 |
 | `last_prompt_at` / `last_tool_at` / `handoff_at` | string\|null | ISO-8601, event stamps (absent until observed) |
 | `handoff_path` | string\|null | PreCompact handoff sidecar path (absent until observed) |
+| `phase` | string\|undefined | richer activity state (additive; e.g. `compacting` set by emitter on PreCompact, cleared on PostCompact). Absent until observed. When `compacting`, `liveness` derives as `working` (still "hot" for collision awareness and counts). |
 | `handoff_bucket` / `handoff_age` | string | derived at read time (always present): bucket is `none`\|`fresh`\|`aging`\|`stale`; age is `—` or e.g. `3m` |
 | `claimed_globs` | string[] | via `sage claim` (absent until claimed) |
 | `claimed_row` | string | via `sage backlog claim` (absent until claimed) |
@@ -81,6 +82,7 @@ A minimal board envelope (seeded session, no adapter, inside a repo):
       "last_tool_at": "...",
       "handoff_at": null,
       "handoff_path": null,
+      "phase": "compacting",
       "claimed_globs": ["src/**"],
       "claimed_row": "A1",
       "alive": true,
@@ -111,11 +113,12 @@ Cross-repo roll-up — the seed of the Hermes machine layer.
   "kind": "sage.war",
   "generated_at": "<iso8601>",
   "repos": [{ "repo_id": "<id>", "sessions": [ /* board session rows */ ] }],
-  "totals": { "repos": 0, "sessions": 0, "live": 0, "working": 0, "contested": 0 }
+  "totals": { "repos": 0, "sessions": 0, "live": 0, "working": 0, "contested": 0, "compacting": 0 }
 }
 ```
 
 `totals` covers the whole fleet (pre-filter). `sessions` uses the same row shape
-as `sage.board`; `session_id` is always present.
+as `sage.board` (now including optional `phase`); `session_id` is always present.
+`compacting` (in totals and per-repo) is the count of sessions with `phase==='compacting'`.
 
 Verify keys against live output in a sandbox before relying on any field.

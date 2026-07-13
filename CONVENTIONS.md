@@ -176,3 +176,27 @@ What you **type** stays short; what's **on disk** carries the full package name 
 
 No forced migration: an existing `~/.claude/sage/` install keeps working after `npm update` with
 no re-init required.
+
+## Cross-project interop: session state with status-herald
+
+Fleet consumers (war room, board) and UI surfaces (herald curtains, cards, bars) observe the same
+agent lifecycle events but answer different questions. They are **adjacent tools**, not a tightly
+coupled system. Expect (and design for) divergence on subs, post-Stop state, and fine-grained
+presentation.
+
+See the full (lightweight, observational) convention:
+
+- Primary: `docs/interop-status-herald.md` (in this repo)
+- Mirror pointer: in sibling `status-herald/docs/interop-status-herald.md`
+- Full deliberation + adversarial review + fused strategy: `advisor-plans/026-sage-herald-interop-strategy.md`
+
+Key points (do not edit without updating the primary doc):
+- Canonical: IDLE / WORKING / COMPACTING / DONE / NEEDS (herald STATES) mapped to sage liveness + `phase`.
+- PreCompact enters `compacting` (distinct face that remains hot for fleet judgment) in **both**; PostCompact or next reliable idle/Stop drains it. Never present compacting as DONE.
+- Sage owns coarse hotness + territory + objective handoff truth for fleet judgment. Herald owns fine turn state + timers + sub counts + per-pane visual honesty for UI.
+- War room STATUS shows "compacting" (with ctx%) + ◆ lead for hot rows (including compacting); panels roll compacting into "working/hot" counts. Herald cards give it a distinct non-DONE presentation.
+- Independence is first-class: both systems are fully functional alone. The contract is observational only.
+- No new runtime coupling or bridges are implemented at this time. `--json` and durable records are already available for explicit consumption when needed.
+- Test rule: identical normalized hook sequences on the compact path must produce aligned "is compacting / is hot" decisions in both. Divergence on other details (subs, exact post-Stop) is documented and acceptable.
+
+The 026 plan records the full multi-perspective (Sage-strategist / Herald-UX / adversarial red-team / fusion-synthesis) process and the resulting independence-first direction.

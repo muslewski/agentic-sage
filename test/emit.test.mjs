@@ -109,6 +109,7 @@ test('PreCompact auto-dumps md+json and stamps the record', () => {
   const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
   assert.ok(rec.handoff_path)
   assert.ok(rec.handoff_at)
+  assert.equal(rec.phase, 'compacting')
   const events = fs.readFileSync(eventsFile(home, id), 'utf8').split('\n').filter(Boolean)
   assert.ok(events.map((l) => JSON.parse(l).event).includes('precompact'))
 })
@@ -139,6 +140,37 @@ test('PreCompact sidecar prefix is the repo basename (portable, no project liter
   assert.equal(jsons.length, 1)
   assert.ok(jsons[0].startsWith('zzz-portable-handoff-'), `prefix was: ${jsons[0]}`)
   assert.ok(!jsons[0].includes('acme'))
+})
+
+test('PostCompact clears phase (and stamps activity); collect derives liveness working while compacting', async () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  const { collectSessions } = await import('../lib/board.mjs')
+  // Pre sets phase + handoff
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+  let rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.equal(rec.phase, 'compacting')
+  // simulate collect: phase present, liveness 'working' via derive
+  let sessions = collectSessions(home, id, Date.now())
+  assert.equal(sessions[0].phase, 'compacting')
+  assert.equal(sessions[0].liveness, 'working')
+  // Post clears
+  execFileSync('node', [EMIT], {
+    input: JSON.stringify({ hook_event_name: 'PostCompact', session_id: 's1', cwd: repo }),
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home },
+  })
+  rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 's1'), 'utf8'))
+  assert.equal(rec.phase, undefined) // cleared, key absent
+  sessions = collectSessions(home, id, Date.now())
+  assert.equal(sessions[0].phase, undefined)
+  assert.ok(rec.last_tool_at)
 })
 
 const seedOther = (home, id, rec) => {

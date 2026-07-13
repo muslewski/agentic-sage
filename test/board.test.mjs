@@ -87,6 +87,18 @@ test('spinnerize swaps the ● of working rows only; header + idle untouched', (
   assert.ok(out[3].startsWith('● feat/b')) // idle row keeps its static ●
 })
 
+test('spinnerize also animates compacting rows (treated as busy)', () => {
+  const sessions = [
+    { branch: 'feat/c', liveness: 'working', phase: 'compacting', touched_globs: ['src/c.ts'] },
+    { branch: 'feat/d', liveness: 'idle', touched_globs: ['src/d.ts'] },
+  ]
+  const text = renderBoard(sessions, { repoId: 'repo' })
+  const frame = SPINNER_FRAMES[0]
+  const out = spinnerize(text, sessions, frame).split('\n')
+  assert.ok(out[2].startsWith(`${frame} feat/c`)) // compacting spins (busy)
+  assert.ok(out[3].startsWith('● feat/d'))
+})
+
 test('spinnerize leaves an empty board untouched', () => {
   const text = renderBoard([], { repoId: 'repo' })
   assert.equal(spinnerize(text, [], SPINNER_FRAMES[0]), text)

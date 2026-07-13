@@ -19,6 +19,10 @@ test('deriveLiveness enum mapping (keys on alive/closed/lastToolAt recency)', ()
   assert.equal(deriveLiveness({ alive: true, lastToolAt: new Date(now).toISOString(), now }), 'working')
   assert.equal(deriveLiveness({ alive: true }), 'idle')
   assert.equal(deriveLiveness({}), 'idle')
+  // phase overrides for richer states; compacting is hot (working) for collision
+  assert.equal(deriveLiveness({ alive: true, phase: 'compacting' }), 'working')
+  assert.equal(deriveLiveness({ alive: true, lastToolAt: now - 700000, phase: 'compacting', now }), 'working')
+  assert.equal(deriveLiveness({ closed: true, phase: 'compacting' }), 'closed')
 })
 
 test('isAlive: captured start-time is recycle-proof (match alive, mismatch/gone dead)', () => {

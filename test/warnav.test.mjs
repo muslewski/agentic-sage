@@ -51,10 +51,10 @@ test('ensureVisible: reserves the top row for the sticky band', () => {
 
 test('matchFleet: query narrows on repo+branch; totals preserved; empty repos drop', () => {
   const fleet = {
-    totals: { repos: 2, sessions: 3, live: 3, working: 1, contested: 0 },
+    totals: { repos: 2, sessions: 3, live: 3, working: 1, contested: 0, compacting: 0 },
     repos: [
-      { label: 'alpha', working: 1, sessions: [{ branch: 'main', liveness: 'working' }, { branch: 'feat/x', liveness: 'idle' }] },
-      { label: 'beta', working: 0, sessions: [{ branch: 'main', liveness: 'idle' }] },
+      { label: 'alpha', working: 1, compacting: 0, sessions: [{ branch: 'main', liveness: 'working' }, { branch: 'feat/x', liveness: 'idle' }] },
+      { label: 'beta', working: 0, compacting: 0, sessions: [{ branch: 'main', liveness: 'idle' }] },
     ],
   }
   assert.equal(matchFleet(fleet, { query: 'feat' }).repos.length, 1) // only alpha has feat/x

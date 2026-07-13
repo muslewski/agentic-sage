@@ -59,6 +59,7 @@ test('e2e: Claude lifecycle — prompt, tool, stop, precompact, end', () => {
   assert.equal(pc.status, 0)
   rec = readSession(home, repoId, sid)
   assert.ok(rec.handoff_at, 'PreCompact stamps handoff_at')
+  assert.equal(rec.phase, 'compacting', 'PreCompact sets phase for richer activity')
 
   emit(home, { ...base, hook_event_name: 'SessionEnd' })
   rec = readSession(home, repoId, sid)

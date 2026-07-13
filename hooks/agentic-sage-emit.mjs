@@ -293,6 +293,8 @@ const main = async () => {
       // Compaction is about to wipe the thread → auto-publish objective truth
       // so the human need not remember /handoff. A hook has no conversation
       // access, so the dump is git/registry signals only (no narrative).
+      // Also mark `phase: 'compacting'` so fleet consumers (board/war/herald)
+      // see the special busy state; deriveLiveness maps it to 'working' (hot).
       appendEvent(home, repoId, { event: 'precompact', session_id: sid, at })
       const prefix = path.basename(repo.root)
       const tmpDir = process.env.SAGE_TMPDIR || os.tmpdir()
@@ -309,6 +311,22 @@ const main = async () => {
         repo_id: repoId,
         handoff_path: jsonPath,
         handoff_at: at,
+        phase: 'compacting',
+        updated_at: at,
+      })
+      break
+    }
+
+    case 'PostCompact': {
+      // Compaction finished (context rewritten). Clear the transient phase so
+      // the session returns to normal deriveLiveness flow. Updated_at keeps it
+      // "fresh" in fleet sort; treat the post-compact as activity.
+      appendEvent(home, repoId, { event: 'postcompact', session_id: sid, at })
+      mergeRecord(home, repoId, sid, {
+        session_id: sid,
+        repo_id: repoId,
+        phase: undefined, // cleared (JSON.stringify omits undefined keys)
+        last_tool_at: at,
         updated_at: at,
       })
       break

@@ -10,7 +10,7 @@ import { mkTmp, mkGitRepo, git } from './helpers.mjs'
 
 // The real repo root — skills/ and hooks/ must exist for symlink tests.
 const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'SessionEnd', 'PreToolUse']
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'PostCompact', 'SessionEnd', 'PreToolUse']
 
 test('wireAll: returns expected result shape', () => {
   const home = mkTmp('sage-w-')
@@ -24,7 +24,7 @@ test('wireAll: returns expected result shape', () => {
   assert.ok(r.sageBin.endsWith('bin/sage'))
 })
 
-test('wireAll: seeds default-OFF config and wires all 7 hook events', () => {
+test('wireAll: seeds default-OFF config and wires all hook events (incl. PostCompact)', () => {
   const home = mkTmp('sage-w-')
   wireAll({ home, repoRoot: REPO_ROOT })
   const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8'))
@@ -144,7 +144,7 @@ test('wireAll: rewire never touches a FOREIGN hook that merely mentions the sage
 
 // ── wireProject: project-scope install (plan 009) ──────────────────────────
 
-test('wireProject: wires all 7 events into <project>/.claude/settings.json with --scope=project, and never touches <home>/.claude/settings.json', () => {
+test('wireProject: wires all hook events (incl. PostCompact) into <project>/.claude/settings.json with --scope=project, and never touches <home>/.claude/settings.json', () => {
   const home = mkTmp('sage-w-')
   const project = mkGitRepo()
   wireProject({ home, repoRoot: REPO_ROOT, projectRoot: project })
@@ -258,7 +258,7 @@ test('wireAll: global-scope install with a custom storage root merges defaultRoo
 
 // ── grok native wiring (plan 014) ──────────────────────────────────────────
 
-test('wireAll grok: writes native hooks/agentic-sage.json with all 7 events', () => {
+test('wireAll grok: writes native hooks/agentic-sage.json with all hook events (incl. PostCompact)', () => {
   const home = mkTmp('sage-w-')
   wireAll({ home, repoRoot: REPO_ROOT, harness: 'grok' })
   const hookFile = path.join(home, '.grok', 'hooks', 'agentic-sage.json')

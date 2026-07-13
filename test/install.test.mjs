@@ -7,12 +7,12 @@ import { execFileSync } from 'node:child_process'
 import { mkTmp } from './helpers.mjs'
 
 const INSTALL = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'install.mjs')
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'SessionEnd', 'PreToolUse']
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'PostCompact', 'SessionEnd', 'PreToolUse']
 
 const runInstall = (home) =>
   execFileSync('node', [INSTALL], { encoding: 'utf8', env: { ...process.env, HOME: home } })
 
-test('seeds default-OFF config, symlinks the hook, wires all 7 events', () => {
+test('seeds default-OFF config, symlinks the hook, wires all hook events (incl. PostCompact)', () => {
   const home = mkTmp('sage-h-')
   const out = runInstall(home)
   const cfg = JSON.parse(fs.readFileSync(path.join(home, '.claude', 'agentic-sage', 'config.json'), 'utf8'))

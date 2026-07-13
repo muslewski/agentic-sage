@@ -21,7 +21,7 @@ import {
 } from '../lib/warroom.mjs'
 
 const fleet = {
-  totals: { repos: 2, sessions: 3, live: 2, working: 1, contested: 1 },
+  totals: { repos: 2, sessions: 3, live: 2, working: 1, contested: 1, compacting: 0 },
   repos: [
     {
       label: 'alpha',

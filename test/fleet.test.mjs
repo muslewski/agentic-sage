@@ -97,7 +97,7 @@ test('tally counts live/working/human/nested', () => {
     { liveness: 'idle', managed_by: 'nested' },
     { liveness: 'dead', managed_by: 'nested' },
   ]
-  assert.deepEqual(tally(rows), { live: 3, working: 1, nested: 2, human: 2 })
+  assert.deepEqual(tally(rows), { live: 3, working: 1, nested: 2, human: 2, compacting: 0 })
 })
 
 test('collectFleet totals split human vs nested', () => {
