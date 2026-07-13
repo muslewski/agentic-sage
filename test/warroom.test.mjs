@@ -15,6 +15,7 @@ import {
   spinnerizeWar,
   fit,
   fitZone,
+  clipLeft,
   WAR_CHROME,
 } from '../lib/warroom.mjs'
 
@@ -65,6 +66,21 @@ test('fitZone: clips the path but keeps the +N overflow count adjacent', () => {
   const z = fitZone('docs/superpowers/plans/ +1', 16)
   assert.equal([...z].length, 16) // rigid width
   assert.match(z, /….*\+1$/u) // path clipped, +1 preserved at the tail
+})
+
+test('clipLeft: keeps the tail, leading … when truncated; codepoint-safe', () => {
+  assert.equal(clipLeft('gallery/', 12), 'gallery/') // fits → unchanged
+  assert.equal([...clipLeft('syndcast/src/gallery/', 12)].length, 12) // exactly n cols
+  assert.equal(clipLeft('syndcast/src/gallery/', 12)[0], '…') // leads with ellipsis
+  assert.ok(clipLeft('syndcast/src/gallery/', 12).endsWith('gallery/')) // tail survives
+  assert.equal(clipLeft('', 5), '') // empty → empty
+})
+
+test('fitZone: keeps path tail (not middle) and preserves the +N suffix', () => {
+  const out = fitZone('syndcast/src/gallery/ +1', 16)
+  assert.equal([...out].length, 16) // padded/clipped to exactly n
+  assert.ok(out.includes('+1'), 'the +N overflow count survives') // suffix kept
+  assert.ok(out.includes('gallery/'), 'the deepest dir (tail) survives') // tail kept, not dropped
 })
 
 test('sessionRow: long names clip to a fixed grid so status columns align', () => {
