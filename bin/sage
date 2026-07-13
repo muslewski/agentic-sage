@@ -32,7 +32,7 @@ import {
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
 import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
-import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet } from '../lib/warnav.mjs'
+import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -127,6 +127,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let mode = 'nav'
   let query = ''
   let workingOnly = false
+  let confirm = false
+  let flash = ''
+  let bulkTargets = []
   const heat = []
   let view = { repos: [], totals: {} }
   let model = []
@@ -163,6 +166,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       mode,
       query,
       workingOnly,
+      manageLabel: flash || labelOf(model[selIdx()]?.session),
+      confirm,
+      confirmCount: bulkTargets.length,
     })
     const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
     const body = painted
@@ -215,6 +221,15 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     printLocation(s)
     process.exit(0)
   }
+  const labelOf = (s) =>
+    s
+      ? `${s.window_name ? `${s.window_name} · ` : ''}${s.branch || String(s.session_id || '').slice(0, 8) || '—'}`
+      : ''
+  const killRecord = (s) => {
+    try {
+      if (s?.repo_id && s?.session_id) fs.rmSync(sessionFile(home, s.repo_id, s.session_id))
+    } catch {}
+  }
   W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
   refresh()
   draw()
@@ -253,7 +268,55 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       }
       return
     }
+    if (mode === 'manage') {
+      flash = '' // any key clears a transient flash
+      if (k === '\x1b') {
+        mode = 'nav'
+        confirm = false
+        return draw()
+      }
+      if (confirm) {
+        if (k === 'y') {
+          for (const s of bulkTargets) killRecord(s)
+          confirm = false
+          mode = 'nav'
+          refresh()
+          return draw()
+        }
+        if (k === 'n') {
+          confirm = false
+          return draw()
+        }
+        return
+      }
+      if (k === 'k') {
+        const s = model[selIdx()]?.session
+        if (!isKillable(s)) {
+          flash = 'live — not killable'
+          return draw()
+        }
+        killRecord(s)
+        mode = 'nav'
+        refresh()
+        return draw()
+      }
+      if (k === 'X') {
+        bulkTargets = collectDead(collectFleet(home, Date.now()))
+        confirm = true
+        return draw()
+      }
+      return
+    }
     if (k === 'q') return stop() // q quits in nav mode only (a filter char otherwise)
+    if (k === 'm') {
+      if (selIdx() != null) {
+        mode = 'manage'
+        confirm = false
+        flash = ''
+        return draw()
+      }
+      return
+    }
     if (k === '\r' || k === '\n') return enter()
     if (k === 'c') return cdPrint()
     if (k === 'a') {

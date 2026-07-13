@@ -225,3 +225,20 @@ test('footer: nav shows filter + working keys; filter mode shows the query', () 
   assert.match(filt, /filter: arm/)
   assert.match(filt, /esc/)
 })
+
+test('footer: manage mode shows the action menu', () => {
+  const menu = footer(false, 0, 0, { mode: 'manage', manageLabel: 'Hermes · main' })
+  assert.match(menu, /manage ‹Hermes · main›/u)
+  assert.match(menu, /k kill/)
+  assert.match(menu, /X clear all dead/)
+  assert.match(menu, /esc back/)
+})
+
+test('footer: manage confirm shows a y/n prompt with the count', () => {
+  const conf = footer(false, 0, 0, { mode: 'manage', confirm: true, confirmCount: 31 })
+  assert.match(conf, /clear 31 dead session\(s\)\? y\/n/)
+})
+
+test('footer: nav advertises the manage key', () => {
+  assert.match(footer(false, 0, 0, {}), /m manage/)
+})
