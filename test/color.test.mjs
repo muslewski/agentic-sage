@@ -78,3 +78,14 @@ test('multiline text is colorized per line', () => {
     assert.match(out, /\x1b\[31m✗\x1b\[0m/) // red cross
   })
 })
+
+test('paint: war column-header labels are cream; a lone │ rule is dim', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const CREAM = '\x1b[37m'
+    const DIM = '\x1b[90m'
+    const line = paint('    SESSION                    │ STATUS         │ ZONE')
+    assert.ok(line.includes(`${CREAM}SESSION\x1b[0m`), 'SESSION painted cream')
+    assert.ok(line.includes(`${CREAM}STATUS\x1b[0m`), 'STATUS painted cream')
+    assert.ok(line.includes(`${DIM}│\x1b[0m`), 'rule painted dim')
+  })
+})
