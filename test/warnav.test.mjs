@@ -6,6 +6,8 @@ import {
   selectedModelIndex,
   ensureVisible,
   matchFleet,
+  isKillable,
+  collectDead,
 } from '../lib/warnav.mjs'
 
 const model = [
@@ -62,4 +64,32 @@ test('matchFleet: query narrows on repo+branch; totals preserved; empty repos dr
   assert.equal(matchFleet(fleet, { workingOnly: true }).repos[0].sessions.length, 1) // only working
   assert.deepEqual(matchFleet(fleet, {}).totals, fleet.totals) // no-op preserves everything
   assert.equal(matchFleet(fleet, { query: 'feat' }).totals, fleet.totals) // totals stay fleet-wide
+})
+
+test('isKillable: dead/closed yes; live/nullish no', () => {
+  assert.equal(isKillable({ liveness: 'dead' }), true)
+  assert.equal(isKillable({ liveness: 'closed' }), true)
+  assert.equal(isKillable({ liveness: 'working' }), false)
+  assert.equal(isKillable({ liveness: 'idle' }), false)
+  assert.equal(isKillable(null), false)
+  assert.equal(isKillable(undefined), false)
+})
+
+test('collectDead: flattens terminal sessions across repos, keeps repo_id + session_id', () => {
+  const fleet = { repos: [
+    { sessions: [
+      { liveness: 'dead', repo_id: 'r1', session_id: 's1' },
+      { liveness: 'working', repo_id: 'r1', session_id: 's2' },
+    ] },
+    { sessions: [{ liveness: 'closed', repo_id: 'r2', session_id: 's3' }] },
+  ] }
+  const dead = collectDead(fleet)
+  assert.equal(dead.length, 2)
+  assert.deepEqual(dead.map((s) => s.session_id).sort(), ['s1', 's3'])
+  assert.equal(dead.find((s) => s.session_id === 's1').repo_id, 'r1')
+})
+
+test('collectDead: empty/absent fleet is safe', () => {
+  assert.deepEqual(collectDead({}), [])
+  assert.deepEqual(collectDead({ repos: [{}] }), [])
 })
