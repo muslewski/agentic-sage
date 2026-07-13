@@ -83,6 +83,25 @@ test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
   assert.match(sessionRow(fleet.repos[0].sessions[1], {}), /^\s*● /u)
 })
 
+test('sessionRow: tmux name shown as "window_name · branch"', () => {
+  const r = sessionRow({ window_name: 'Hermes', branch: 'rtv-audio', liveness: 'idle', touched_globs: [] }, {})
+  assert.match(r, /Hermes · rtv-audio/u)
+})
+
+test('sessionRow: no tmux name → plain branch, no dangling separator', () => {
+  const r = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, {})
+  assert.match(r, /● main /u)
+  assert.doesNotMatch(r, / · main/u) // no leading "name ·" when window_name absent
+})
+
+test('sessionRow: long combined name clips (middle ellipsis) and keeps grid + ✎', () => {
+  const long = sessionRow({ window_name: 'syndcast-75', branch: 'feat/vellum-notes-ia', liveness: 'idle', dirty: true, touched_globs: [] }, {})
+  const short = sessionRow({ window_name: 'x', branch: 'main', liveness: 'idle', touched_globs: [] }, {})
+  assert.match(long, /…/u) // clipped
+  assert.match(long, /✎ +idle/u) // ✎ tail survived the clip, padded to liveness
+  assert.equal(long.indexOf('idle'), short.indexOf('idle')) // rigid grid still aligned
+})
+
 test('renderRepoSection: accent-bar band; hot rollup only when working > 0', () => {
   const hot = renderRepoSection(
     { label: 'syndcast', working: 2, sessions: [{ branch: 'main', liveness: 'working', touched_globs: [] }] },
