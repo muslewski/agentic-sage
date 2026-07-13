@@ -5,7 +5,7 @@ import path from 'node:path'
 import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { sessionsDir, globalConfig, sageHome } from '../lib/paths.mjs'
 import { readRecord } from '../lib/store.mjs'
-import { writeRegistryEntry } from '../lib/roots.mjs'
+import { writeRegistryEntry, legacySageHome, migrateStateDir } from '../lib/roots.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { wireProject, wireAll } from '../lib/wiring.mjs'
 import { fileURLToPath } from 'node:url'
@@ -29,6 +29,27 @@ test('setEnabled/readEnabled roundtrip + creates dir', () => {
   assert.deepEqual(JSON.parse(fs.readFileSync(globalConfig(home), 'utf8')), { enabled: true })
   setEnabled(home, false)
   assert.equal(readEnabled(home), false)
+})
+
+test('setEnabled on legacy-only install does not create new agentic-sage home', () => {
+  const home = mkTmp('sage-c-')
+  const legacyCfg = path.join(legacySageHome(home), 'config.json')
+  fs.mkdirSync(path.dirname(legacyCfg), { recursive: true })
+  fs.writeFileSync(legacyCfg, JSON.stringify({ enabled: false }))
+  assert.equal(fs.existsSync(sageHome(home)), false)
+  setEnabled(home, true)
+  assert.equal(fs.existsSync(sageHome(home)), false, 'must not poison migrate with empty new home')
+  assert.equal(JSON.parse(fs.readFileSync(legacyCfg, 'utf8')).enabled, true)
+  assert.equal(migrateStateDir(home), 'renamed')
+})
+
+test('listRepos includes legacy-home repos when new home is empty', () => {
+  const home = mkTmp('sage-c-')
+  const legacySidDir = path.join(legacySageHome(home), 'repos', 'legacy-repo', 'sessions')
+  fs.mkdirSync(legacySidDir, { recursive: true })
+  fs.writeFileSync(path.join(legacySidDir, 's1.json'), '{}')
+  const repos = listRepos(home)
+  assert.ok(repos.some((r) => r.repoId === 'legacy-repo' && r.sessions === 1))
 })
 
 test('linkSession/unlinkSession set link_state', () => {

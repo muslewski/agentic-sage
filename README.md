@@ -274,18 +274,20 @@ The emitter (`hooks/agentic-sage-emit.mjs` — legacy installs symlink `hooks/sa
 
 - **Fail-open.** All work is inside a `try/catch`; any error → `exit 0`. It never blocks or slows a
   hook.
-- **Default-OFF.** No global config (`~/.claude/agentic-sage/config.json`; a legacy-only
-  `~/.claude/sage/config.json` still counts and stays in use until migrated) ⇒ disabled. The
-  enable check is the first line — an instant no-op when off.
+- **Default-OFF.** Global scope: no global config (`~/.claude/agentic-sage/config.json`; a
+  legacy-only `~/.claude/sage/config.json` still counts and stays in use until migrated) ⇒
+  disabled — first-line no-op. Project scope ignores the global master and uses the per-repo
+  `config.json` instead (init seeds `{enabled:false}` unless `--enable`).
 - **Non-clobbering installer.** Backs up, skips-if-present, aborts on malformed `settings.json`.
 
 ### The guard (the one thing that can act) — built, default OFF
 
 Optionally, SAGE can **block** an edit to a contested path (`PreToolUse` → `exit 2`). It's gated by
-**two** independent flags, both default off: `sage on` **and** per-repo `sage guard on`. Three
-invariants keep it safe to ship: **fail-open** (any error → allow), **default-off** (nothing blocks
-until you arm it), **hot-path-cheap** (no guard armed anywhere ⇒ the hook short-circuits on a single
-breadcrumb check, before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md).
+**two** independent flags, both default off: judging enabled for this install (global: `sage on`;
+project: `sage enable`) **and** per-repo `sage guard on`. Three invariants keep it safe to ship:
+**fail-open** (any error → allow), **default-off** (nothing blocks until you arm it),
+**hot-path-cheap** (no guard armed anywhere ⇒ the hook short-circuits on a single breadcrumb check,
+before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md).
 
 ## Optional integrations
 

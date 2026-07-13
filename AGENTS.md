@@ -99,7 +99,7 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
 
 ### Grok Build CLI notes (native + compat)
 - `sage init --global` wires ~/.claude/* (hooks in settings.json + skills). This is honored automatically by Grok ([compat.claude] defaults to on for hooks/skills/agents).
-- For pure native Grok hooks without touching .claude: create ~/.grok/hooks/sage-emit.json (or per-event files) containing the emitter command, modeled after Claude's hook groups. Example structure in Grok docs + emitter supports the payload shape.
+- For pure native Grok hooks without touching .claude: create ~/.grok/hooks/agentic-sage.json (or run `sage init --global --harness both` / `--harness grok`, which writes it). Doctor accepts legacy `sage.json` if its emitter still resolves.
 - Session id: use $GROK_SESSION_ID for `sage statusline`, `SAGE_SELF_SID` for claim if ppid/pid resolution needs help.
 - AGENTS.md (this file) + .grok/rules/ are loaded natively by Grok for pointers.
 - tmux: `bind j` popup and pane detection work (pid-based, agent-agnostic). Add `sage fleet` to any tmux status-left/right for bottom-bar fleet view.

@@ -107,7 +107,9 @@ the same advisory consults; off by default, wired into your own statusline.
 block; both default off:
 
 ```bash
-sage on                       # 1. SAGE globally enabled (judging)
+# 1. Judging enabled for this install:
+sage on                       # global scope
+# or: sage enable             # project scope (ignores the global master)
 sage guard add src/payload.config.ts
 sage guard add 'src/lib/billing/**'
 sage guard on                 # 2. arm THIS repo's guard (now blocks)
@@ -115,17 +117,18 @@ sage guard list               # review the contested list + armed/disarmed
 sage guard off                # disarm (back to show-only)
 ```
 
-When armed, a `PreToolUse` hook blocks (`exit 2`) any `Edit`/`Write`/`MultiEdit`/`NotebookEdit`
-whose target matches a contested glob, with a one-line reason on stderr. It targets *edits* only —
-a `Bash`-driven write is out of scope.
+When armed, a `PreToolUse` hook blocks (`exit 2`) any `Edit`/`Write`/`MultiEdit`/`NotebookEdit`/
+`search_replace` whose target matches a contested glob, with a one-line reason on stderr. It targets
+*edits* only — a `Bash`-driven write is out of scope.
 
 ### Three invariants (why the guard is safe to ship on by accident)
 
 1. **FAIL-OPEN.** All guard logic is inside the emitter's `try/catch`; any error → `exit 0`
    (allow). The *only* non-zero exit is the explicit, post-gate, post-match `exit 2`. A broken
    guard never blocks an edit.
-2. **DEFAULT-OFF.** Nothing blocks unless **both** `sage on` **and** `sage guard on` (per repo). A
-   fresh install, or the normal SAGE-on-but-guard-off judging mode, never blocks.
+2. **DEFAULT-OFF.** Nothing blocks unless judging is enabled **for this install** (global: `sage on`;
+   project: `sage enable` / init `--enable`) **and** `sage guard on` (per repo). A fresh install,
+   or the normal SAGE-on-but-guard-off judging mode, never blocks.
 3. **HOT-PATH-CHEAP.** `PreToolUse` fires before every tool call. With no guard armed anywhere, the
    hook short-circuits on a single breadcrumb existence check (`~/.claude/agentic-sage/guards-active`)
    — no git spawn, no per-repo read. The cost is paid only when a guard is actually armed.
@@ -140,7 +143,7 @@ Three tiers; tier 3 (opt-out) applies identically in both install scopes and bea
   deliberately, so the two paths can never disagree — until you migrate. The emitter checks it
   first-line and no-ops when off. **A project-scope install ignores this tier entirely** — see
   the scope table above.
-- **Per-repo:** `sage enable` / `sage disable` — writes `{enabled:false}` into *this repo's own*
+- **Per-repo:** `sage enable` / `sage disable` — writes `{enabled: true|false}` into *this repo's own*
   `config.json`, wherever the storage precedence chain resolves it. Works the same in both scopes:
   in global scope it's a per-repo opt-out of the master; in project scope, since there's no
   master, it's the repo's *only* switch (`sage init --project` defaults new installs to OFF —

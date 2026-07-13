@@ -140,7 +140,8 @@ SAGE can optionally **block** an edit to a contested path. Gated by **two** flag
 
 ```bash
 sage guard add 'src/contested/**'   # per-repo, name the paths
-sage guard on                       # arm it for this repo  (also needs global `sage on`)
+sage guard on                       # arm it for this repo
+# also needs judging on: `sage on` (global) or `sage enable` (project scope)
 ```
 
 Fail-open, default-off, hot-path-cheap. Details: [`CONVENTIONS.md`](./CONVENTIONS.md).

@@ -7,8 +7,9 @@ Fill the friction table as you hit things. One week live → next round (war-roo
 
 1. Preflight, sandboxed (no real state touched):
    `npm test` → `# fail 0`, then `node scripts/verify-fleet.mjs` → all ✓.
-2. Wire both harnesses, agent-home storage:
-   `sage init --global --harness both --storage agent-home`
+2. Wire both harnesses (global default storage is already agent-home — do not pass
+   `--storage`; that flag is project-scope only):
+   `sage init --global --harness both`
 3. Enable: `sage on`
 4. Health: `sage doctor` → all ✓ (incl. the new `grok wiring` row).
 5. Settle the print-mode question empirically:

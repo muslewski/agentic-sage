@@ -4,7 +4,7 @@
 
 | Version | Supported |
 |---|---|
-| latest 0.x minor (currently 0.2.x) | Yes |
+| latest 1.x (currently 1.0.x / npm latest) | Yes |
 | older | No — upgrade first |
 
 ## Reporting a vulnerability
