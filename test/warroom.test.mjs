@@ -84,6 +84,13 @@ test('fitZone: keeps path tail (not middle) and preserves the +N suffix', () => 
   assert.ok(out.includes('gallery/'), 'the deepest dir (tail) survives') // tail kept, not dropped
 })
 
+test('fitZone: bare long path (no +N) also keeps tail via left-ellipsis', () => {
+  const out = fitZone('syndcast/src/gallery/', 12)
+  assert.equal([...out].length, 12)
+  assert.equal(out[0], '…')
+  assert.ok(out.endsWith('gallery/') || out.includes('gallery'), 'tail survives')
+})
+
 test('sessionRow: long names clip to a fixed grid so status columns align', () => {
   // regression: padR padded but never truncated → long branch ids shoved every
   // later column rightward. Now every row's liveness word lands at the same col.
@@ -241,6 +248,9 @@ test('footer: nav shows filter + working keys; filter mode shows the query', () 
   const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
   assert.match(filt, /filter: arm/)
   assert.match(filt, /esc/)
+  // After ↵, mode=nav but query remains — chip keeps the active filter visible.
+  const chip = footer(false, 0, 0, { mode: 'nav', query: 'Hermes' })
+  assert.match(chip, /filter✓ Hermes/)
 })
 
 test('footer: manage mode shows the action menu', () => {

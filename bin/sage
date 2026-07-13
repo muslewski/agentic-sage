@@ -261,8 +261,10 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
         refresh()
         return draw()
       }
-      if (k.length === 1 && k >= ' ') {
-        query += k
+      // Accept single keys and multi-char paste bursts (printable only; drop CSI/controls).
+      const printable = [...k].filter((ch) => ch >= ' ' && ch !== '\x7f').join('')
+      if (printable) {
+        query += printable
         refresh()
         return draw()
       }
@@ -313,6 +315,12 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
         mode = 'manage'
         confirm = false
         flash = ''
+        // Default war hides dead/closed — single-kill `k` would only flash
+        // "live — not killable". Reveal terminal rows while managing.
+        if (!showAll) {
+          showAll = true
+          refresh()
+        }
         return draw()
       }
       return
@@ -557,6 +565,8 @@ const main = async () => {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
       if (!a1) return console.log(`usage: sage ${cmd} <session_id>${cmd === 'link' ? ' [state]' : ''}`)
+      // Same path-safety guard as claim / SAGE_SELF_SID — sid becomes a filename under sessions/.
+      if (/[/\\]|\.\./.test(a1)) return console.log('sage: refusing an unsafe session_id')
       cmd === 'link'
         ? linkSession(home, repoId, a1, a2 || 'linked')
         : unlinkSession(home, repoId, a1)

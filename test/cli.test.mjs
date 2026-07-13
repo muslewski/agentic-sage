@@ -186,6 +186,13 @@ test('claim refuses an unsafe SAGE_SELF_SID (path traversal)', () => {
   assert.match(run(['claim', 'src/**'], home, repo, { SAGE_SELF_SID: '../../evil' }), /unsafe/)
 })
 
+test('link/unlink refuse unsafe session_id (path traversal)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  assert.match(run(['link', '../../evil'], home, repo), /unsafe/)
+  assert.match(run(['unlink', 'foo/../bar'], home, repo), /unsafe/)
+})
+
 test('claim onto a sid with no record prints a hint (no ghost row)', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()

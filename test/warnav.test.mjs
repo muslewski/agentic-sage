@@ -66,6 +66,25 @@ test('matchFleet: query narrows on repo+branch; totals preserved; empty repos dr
   assert.equal(matchFleet(fleet, { query: 'feat' }).totals, fleet.totals) // totals stay fleet-wide
 })
 
+test('matchFleet: query matches window_name (tmux name shown in sessionRow)', () => {
+  const fleet = {
+    totals: { repos: 1, sessions: 2, live: 2, working: 0, contested: 0 },
+    repos: [
+      {
+        label: 'alpha',
+        sessions: [
+          { branch: 'main', window_name: 'Hermes', liveness: 'idle' },
+          { branch: 'feat/x', window_name: 'other', liveness: 'idle' },
+        ],
+      },
+    ],
+  }
+  const hit = matchFleet(fleet, { query: 'Hermes' })
+  assert.equal(hit.repos.length, 1)
+  assert.equal(hit.repos[0].sessions.length, 1)
+  assert.equal(hit.repos[0].sessions[0].window_name, 'Hermes')
+})
+
 test('isKillable: dead/closed yes; live/nullish no', () => {
   assert.equal(isKillable({ liveness: 'dead' }), true)
   assert.equal(isKillable({ liveness: 'closed' }), true)
@@ -87,6 +106,21 @@ test('collectDead: flattens terminal sessions across repos, keeps repo_id + sess
   assert.equal(dead.length, 2)
   assert.deepEqual(dead.map((s) => s.session_id).sort(), ['s1', 's3'])
   assert.equal(dead.find((s) => s.session_id === 's1').repo_id, 'r1')
+})
+
+test('collectDead: stamps repo_id from parent repoId when body omits it', () => {
+  const fleet = {
+    repos: [
+      {
+        repoId: 'parent-r1',
+        sessions: [{ liveness: 'dead', session_id: 'orphan-sid' }],
+      },
+    ],
+  }
+  const dead = collectDead(fleet)
+  assert.equal(dead.length, 1)
+  assert.equal(dead[0].repo_id, 'parent-r1')
+  assert.equal(dead[0].session_id, 'orphan-sid')
 })
 
 test('collectDead: empty/absent fleet is safe', () => {
