@@ -37,3 +37,20 @@ test('isAlive: empty captured start-time opts out → falls back to probe', () =
   assert.equal(isAlive(process.pid, { startTime: '', startTimeOf: () => 'x' }), true)
   assert.equal(isAlive(2147483646, { startTime: '', startTimeOf: () => 'x' }), false)
 })
+
+// Golden compact sequence (plan 026 / interop contract): PreCompact stays hot,
+// never closed/idle/stalled as the derived face; drain after phase clear.
+test('interop golden compact sequence: phase compacting → working hot; clear → idle', () => {
+  const now = 1_000_000_000_000
+  // After PreCompact: record has phase; derive is working even if last_tool is stale.
+  assert.equal(
+    deriveLiveness({ alive: true, phase: 'compacting', lastToolAt: now - 700000, now }),
+    'working',
+  )
+  // Closed always wins (session ended mid-compact is terminal for fleet).
+  assert.equal(deriveLiveness({ closed: true, phase: 'compacting' }), 'closed')
+  // After PostCompact: phase cleared; without fresh tool activity → idle.
+  assert.equal(deriveLiveness({ alive: true, phase: undefined, now }), 'idle')
+  // Fresh PostToolUse after compact → working again.
+  assert.equal(deriveLiveness({ alive: true, lastToolAt: now, now }), 'working')
+})

@@ -296,6 +296,10 @@ before any git spawn). See [`CONVENTIONS.md`](./CONVENTIONS.md).
   surface it in `sage doctor`. Unset ⇒ the check stays green and says "not configured".
 - **tmux fleet pane** — `install.mjs` offers a `bind j` → `display-popup` running `sage board`
   (run `tmux source-file ~/.tmux.conf` to apply).
+- **status-herald** (sibling project: per-pane curtains/cards) — adjacent, not a dependency.
+  Shared compact/hot vocabulary only; full observational contract in
+  [`docs/interop-status-herald.md`](./docs/interop-status-herald.md) (see also
+  [`CONVENTIONS.md`](./CONVENTIONS.md)).
 
 ## Portability notes
 

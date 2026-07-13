@@ -106,6 +106,13 @@ Run these in order. Tell the user what each step does; stop and ask if anything 
 - Status: no Claude-style statusLine JSON in Grok TUI; invoke `sage statusline --session "$GROK_SESSION_ID" ...` from scripts or use fleet verb.
 - Skills: ~/.claude/skills linked by install are seen; also drop in ~/.grok/skills/ if wanted.
 
+## Related: status-herald interop
+
+If the user also runs **status-herald** (terminal curtains/cards), the two tools stay **independent**.
+Shared contract is observational only (especially PreCompact → distinct compacting face that stays
+hot). Read [`docs/interop-status-herald.md`](./docs/interop-status-herald.md) and the summary in
+[`CONVENTIONS.md`](./CONVENTIONS.md). Do not invent bridges or couple installs.
+
 ## Do NOT
 
 - **Do not arm the guard** (`sage guard on`) unless the user explicitly asks — it is the only thing

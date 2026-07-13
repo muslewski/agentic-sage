@@ -16,6 +16,25 @@ This document is the single source of truth for the *shared vocabulary on the co
 
 ---
 
+## Expect Divergence (read this first)
+
+These tools answer **different questions**. They will legitimately disagree outside the compact path.
+
+| Concern | Sage (fleet judge) | Herald (per-pane UI) |
+|---------|--------------------|----------------------|
+| Question | Is this session collision-relevant / hot for the fleet? | What face should *this* pane show the human right now? |
+| Authoritative surface | session record + derived `liveness` / `phase` | `@herald_state` + curtain/card stamps |
+| Subagents after Stop | Main Stop → `idle` (coarse; ignores subs) | Can stay `WORKING` while inflight subs exist |
+| Permission prompts | Usually no dedicated state (may stay prior liveness) | `NEEDS` face |
+| Stall judgment | `stalled` after last-tool age | No equivalent; keeps last face until next hook |
+| Storage / identity | repo-id + session records (global/project/legacy roots) | tmux opts + harness session id |
+
+**The only tightly shared contract:** for the *same normalized hook sequence on the compact path*, both must enter a distinct compacting face that remains busy/hot and is **never** shown as DONE. Everything else is allowed to differ — and documenting that difference is part of the contract.
+
+Do **not** treat either system as a slave of the other. Optional reads of sage `--json` or herald tmux opts are power-user enrichment, not a partnership requirement. No runtime bridges are shipped (see plan 026).
+
+---
+
 ## Canonical States / Phases
 
 **Herald's `STATES` (lib/curtain/state.mjs — authoritative for UI affordance):**
@@ -136,20 +155,22 @@ Both systems normalize event names (Claude snake, Grok camel/Pascal, env fallbac
 
 ---
 
-## Optional Consumption (Zero Hard Dependency)
+## Optional Consumption (explicit, experimental — not recommended by default)
 
-**Herald consuming sage (recommended for "objective truth" in bars/cards):**
-- Read per-repo session records directly: `~/.claude/agentic-sage/repos/<repoId>/sessions/<sid>.json` (or project-scoped equivalent via `sage where`).
-- Preferred: `sage board --json`, `sage fleet --json`, `sage war --json` (stable schema 1 envelope; `phase`, `liveness`, `ctx_*`, `handoff_*`, `working` counts, etc.).
-- Use for: showing sage "hot" or territory in a herald surface, or enriching a card with branch/zone/handoff age.
-- Fail-open: missing sage → fall back to herald's own state.
+Independence is the default. Cross-reads are **opt-in power-user** paths only. Plan 026 deliberately
+avoids shipping bridges; anything below is unsupported glue until a follow-up plan + harness exists.
 
-**Sage surfacing herald_state (optional, additive):**
-- Sage may read tmux session options (`@herald_state`, `@herald_bg_subagents`, etc.) via its tmux lib (best-effort) and include under an additive field e.g. `herald_state` on board/fleet JSON rows.
-- Never a hard dep; a pure sage install must continue to work.
-- Example use: war room could annotate a row with herald's sub count or "NEEDS" face.
+**If herald optionally wants sage judge truth:**
+- Prefer `sage board --json` / `fleet --json` / `war --json` (schema 1; `phase`, `liveness`, …).
+- Direct record paths under `~/.claude/agentic-sage/…` (or project storage via `sage where`) are
+  **unsupported** for external consumers — scope/legacy rules drift.
+- Fail-open: missing sage → herald uses its own court only.
 
-`asking` breadcrumb (for "⚖️ Asking Sage" status segment) remains separate and ephemeral.
+**If sage optionally wants herald UI faces (not implemented):**
+- Reading `@herald_state` / sub counts via tmux would be additive and best-effort only.
+- Pure sage installs must never require herald.
+
+`asking` breadcrumb (for "⚖️ Asking Sage") remains separate and ephemeral.
 
 ---
 
