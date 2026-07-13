@@ -127,6 +127,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let mode = 'nav'
   let query = ''
   let workingOnly = false
+  let showNested = false // Layer B: fold nested armory children into band rollup
   let confirm = false
   let flash = ''
   let bulkTargets = []
@@ -146,7 +147,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     const fleet = collectFleet(home, Date.now())
     const matched = matchFleet(filterFleet(fleet, { showAll }), { query, workingOnly })
     view = sortFleet(matched)
-    model = bodyModel(view, { wide })
+    model = bodyModel(view, { wide, showNested })
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
     selOrd = moveSelection(selCount(), selOrd, 0) // clamp to the new fleet size
@@ -166,6 +167,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       mode,
       query,
       workingOnly,
+      showNested,
       manageLabel: flash || labelOf(model[selIdx()]?.session),
       confirm,
       confirmCount: bulkTargets.length,
@@ -342,6 +344,11 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     }
     if (k === 'w') {
       workingOnly = !workingOnly
+      refresh()
+      return draw()
+    }
+    if (k === 'n') {
+      showNested = !showNested
       refresh()
       return draw()
     }

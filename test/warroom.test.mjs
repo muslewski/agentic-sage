@@ -21,16 +21,18 @@ import {
 } from '../lib/warroom.mjs'
 
 const fleet = {
-  totals: { repos: 2, sessions: 3, live: 2, working: 1, contested: 1, compacting: 0 },
+  totals: { repos: 2, sessions: 3, live: 2, working: 1, contested: 1, compacting: 0, human: 2, nested: 1 },
   repos: [
     {
       label: 'alpha',
+      nested: 1,
+      working: 1,
       sessions: [
         { session_id: 'w1', branch: 'main', liveness: 'working', ctx_used: 43, ctx_window: 100, touched_globs: ['lib/x.mjs'], handoff_bucket: 'fresh', handoff_age: '4m ago', dirty: true },
-        { session_id: 'i1', branch: 'feat', liveness: 'idle', touched_globs: ['hooks/'], handoff_bucket: 'none', handoff_age: '—' },
+        { session_id: 'i1', branch: 'feat', liveness: 'idle', touched_globs: ['hooks/'], handoff_bucket: 'none', handoff_age: '—', managed_by: 'nested' },
       ],
     },
-    { label: 'beta', sessions: [{ session_id: 'w2', branch: 'main', liveness: 'working', touched_globs: ['bin/'], handoff_bucket: 'fresh', handoff_age: '1m ago' }] },
+    { label: 'beta', nested: 0, working: 1, sessions: [{ session_id: 'w2', branch: 'main', liveness: 'working', touched_globs: ['bin/'], handoff_bucket: 'fresh', handoff_age: '1m ago' }] },
   ],
 }
 
@@ -44,7 +46,9 @@ test('renderPanels shows totals + is exactly 4 lines', () => {
   const p = renderPanels(fleet.totals, [1, 2, 3])
   assert.equal(p.split('\n').length, 4)
   assert.match(p, /2 repos/)
+  assert.match(p, /2 human/) // Layer B: human headline
   assert.match(p, /2 live/)
+  assert.match(p, /1 nested/)
   assert.match(p, /1 working|1 hot/)
 })
 
@@ -140,11 +144,20 @@ test('renderRepoSection: accent-bar band; hot rollup only when working > 0', () 
   assert.equal(cold[0], '▌ alpha · 1 session') // calm repo stays quiet — no rollup
 })
 
-test('bodyLines: one header per repo + one row per session', () => {
+test('bodyLines: one header per repo + one row per session (nested folded by default)', () => {
   const lines = bodyLines(fleet, {})
-  assert.ok(lines.some((l) => /alpha · 2 session/.test(l)))
+  // alpha has 1 human + 1 nested → band shows 1 session + "+1 nested"
+  assert.ok(lines.some((l) => /alpha · 1 session/.test(l)))
+  assert.ok(lines.some((l) => /\+1 nested/.test(l)))
   assert.ok(lines.some((l) => /beta · 1 session/.test(l)))
-  assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 3) // 3 session rows
+  assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 2) // human rows only
+})
+
+test('bodyLines showNested: expands nested armory children into body', () => {
+  const lines = bodyLines(fleet, { showNested: true })
+  assert.ok(lines.some((l) => /alpha · 2 session/.test(l)))
+  assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 3)
+  assert.doesNotMatch(lines.join('\n'), /\+1 nested/)
 })
 
 const scrollFleet = {
@@ -243,8 +256,10 @@ test('footer: nav shows filter + working keys; filter mode shows the query', () 
   const nav = footer(false, 0, 0, {})
   assert.match(nav, /\/ filter/)
   assert.match(nav, /w working/)
-  const on = footer(false, 0, 0, { workingOnly: true })
+  assert.match(nav, /n nested/)
+  const on = footer(false, 0, 0, { workingOnly: true, showNested: true })
   assert.match(on, /working✓/)
+  assert.match(on, /nested✓/)
   const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
   assert.match(filt, /filter: arm/)
   assert.match(filt, /esc/)
