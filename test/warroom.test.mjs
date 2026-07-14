@@ -26,6 +26,8 @@ import {
   COL,
   layoutFor,
   handoffCell,
+  renderHelp,
+  HELP_KEYS,
 } from '../lib/warroom.mjs'
 
 const fleet = {
@@ -370,6 +372,7 @@ test('footer: nav compact keys; filter mode shows the query', () => {
   assert.match(nav, /\//) // filter
   assert.match(nav, /\bw\b/)
   assert.match(nav, /\bn\b/)
+  assert.match(nav, /\?/) // help entry
   assert.ok([...nav].length <= 72, 'nav footer must stay wrap-safe')
   const on = footer(false, 0, 0, { workingOnly: true, showNested: true })
   assert.match(on, /w✓/)
@@ -380,6 +383,22 @@ test('footer: nav compact keys; filter mode shows the query', () => {
   // After ↵, mode=nav but query remains — chip keeps the active filter visible.
   const chip = footer(false, 0, 0, { mode: 'nav', query: 'Hermes' })
   assert.match(chip, /f:Hermes/)
+})
+
+test('renderHelp + help mode: full key map; every line ≤ row width', () => {
+  assert.ok(HELP_KEYS.length >= 8)
+  const lines = renderHelp(80)
+  assert.ok(lines.some((l) => /SAGE WAR ROOM — help/.test(l)))
+  assert.ok(lines.some((l) => /X\s+then y/.test(l) || /clear ALL dead/.test(l)))
+  assert.ok(lines.some((l) => /\?/.test(l)))
+  for (const ln of lines) assert.equal([...ln].length, ROW_W)
+  // 24-row terminal must show the full map (panels dropped in help mode).
+  const frame = renderWarRoom(fleet, { mode: 'help', cols: 80, rows: 24, clock: '12:00:00' })
+  assert.match(frame, /SAGE WAR ROOM — help/)
+  assert.match(frame, /clear ALL dead/)
+  assert.match(frame, /force refresh/)
+  assert.match(frame, /esc close|\? help/)
+  assert.equal(frame.split('\n').length, 24)
 })
 
 test('footer: manage mode shows the action menu', () => {

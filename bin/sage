@@ -58,7 +58,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
-  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ↵ enter · X clear dead · m manage
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
@@ -315,6 +315,14 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       }
       return
     }
+    // Help overlay — ? / h toggle; esc / q closes (q only closes help, not war).
+    if (mode === 'help') {
+      if (k === '?' || k === 'h' || k === 'H' || k === '\x1b' || k === 'q') {
+        mode = 'nav'
+        return draw()
+      }
+      return // ignore other keys while reading help
+    }
     if (mode === 'filter') {
       if (k === '\x1b') {
         query = ''
@@ -361,6 +369,11 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       return
     }
     if (k === 'q') return stop() // q quits in nav mode only (a filter char otherwise)
+    // Full instructions (compact footer only shows a reminder).
+    if (k === '?' || k === 'h' || k === 'H') {
+      mode = 'help'
+      return draw()
+    }
     // Natural graveyard kill from nav: X → y confirms (same path as manage X).
     if (k === 'X') return beginClearDead()
     if (k === 'm') {
