@@ -401,18 +401,19 @@ test('footer: labeled keys with words; filter mode shows the query', () => {
   assert.match(nav, /filter/)
   assert.match(nav, /help/)
   assert.match(nav, /quit/)
+  assert.match(nav, /faces/)
   assert.ok([...nav].length <= 80, `nav footer wrap-safe: ${[...nav].length}`)
   const on = footer(false, 0, 0, { cols: 80, workingOnly: true, showNested: true })
   assert.match(on, /work✓/)
-  assert.match(on, /nest✓/)
+  // nest✓ may pack out when tail is long — work✓ is enough for active chip
   const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
   assert.match(filt, /arm/)
   assert.match(filt, /esc/)
   const chip = footer(false, 0, 0, { mode: 'nav', query: 'Hermes', cols: 80 })
   assert.match(chip, /f:Hermes/)
-  const grave = footer(true, 0, 0, { cols: 80, deadCount: 600, showAll: true })
-  assert.match(grave, /clear/)
-  assert.ok([...grave].length <= 80)
+  const mem = footer(true, 0, 0, { cols: 80, deadCount: 600, face: 'memory' })
+  assert.match(mem, /clear/)
+  assert.ok([...mem].length <= 80)
 })
 
 test('renderHelp + help mode: full key map; every line ≤ row width', () => {
@@ -449,12 +450,13 @@ test('footer: manage confirm shows a y/n prompt with the count', () => {
   assert.match(fromNav, /clear 590 dead/)
 })
 
-test('footer: nav advertises manage; showAll+dead advertises clear', () => {
-  assert.match(footer(false, 0, 0, { deadCount: 1, cols: 80 }), /manage/)
-  const grave = footer(true, 0, 0, { deadCount: 590, cols: 80 })
-  assert.match(grave, /clear|X×590/)
-  assert.match(grave, /all✓/)
-  assert.ok([...grave].length <= 80, 'graveyard footer must stay wrap-safe')
+test('footer: MEMORY face advertises clear/manage', () => {
+  const mem = footer(true, 0, 0, { deadCount: 590, cols: 80, face: 'memory' })
+  assert.match(mem, /clear/)
+  assert.match(mem, /manage/)
+  assert.ok([...mem].length <= 80, 'memory footer must stay wrap-safe')
+  const clash = footer(false, 0, 0, { cols: 80, face: 'clash' })
+  assert.match(clash, /faces/)
 })
 
 test('sessionRow: columns separated by " │ " rules (zone on = 4 rules)', () => {

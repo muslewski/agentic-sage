@@ -32,6 +32,16 @@ import {
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
 import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
+import {
+  FACES,
+  nextFace,
+  prevFace,
+  buildClash,
+  filterMemoryFleet,
+  bodyModelClash,
+  renderWarHeader,
+  facePanelTotals,
+} from '../lib/warfaces.mjs'
 import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
@@ -123,6 +133,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let frame = 0
   let scroll = 0
   let selOrd = 0
+  let face = 'live' // LIVE · CLASH · MEMORY
   let showAll = showAll0
   let mode = 'nav'
   let query = ''
@@ -134,7 +145,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let bulkTargets = []
   let deadCache = [] // refreshed with fleet — X uses this (no second collectFleet)
   const heat = []
-  let view = { repos: [], totals: {} }
+  let view = { repos: [], totals: {} } // active face's fleet-ish view
+  let clashView = { repos: [], totals: {} }
   let model = []
   let lastCols = 0
   let paintTimer
@@ -157,7 +169,39 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   }
   const rebuildModel = () => {
     lastCols = termCols()
-    model = bodyModel(view, { wide, showNested, cols: lastCols, showZone })
+    if (face === 'clash') {
+      model = bodyModelClash(clashView, { cols: lastCols })
+    } else {
+      model = bodyModel(view, { wide, showNested, cols: lastCols, showZone: face === 'live' ? showZone : false })
+    }
+  }
+  const applyFaceData = () => {
+    // Derive active view from rawFleet + face (pure, no extra FS).
+    if (face === 'memory') {
+      const mem = filterMemoryFleet(rawFleet)
+      view = sortFleet(matchFleet(mem, { query, workingOnly: false }))
+      clashView = { repos: [], totals: { paths: 0, repos: 0, sessions: 0 } }
+    } else if (face === 'clash') {
+      view = { repos: [], totals: rawFleet.totals || {} }
+      clashView = buildClash(rawFleet, { query, workingOnly })
+    } else {
+      // LIVE
+      const matched = matchFleet(filterFleet(rawFleet, { showAll }), { query, workingOnly })
+      view = sortFleet(matched)
+      clashView = { repos: [], totals: { paths: 0, repos: 0, sessions: 0 } }
+    }
+    rebuildModel()
+  }
+  const setFace = (next) => {
+    if (!FACES.includes(next) || next === face) return
+    face = next
+    scroll = 0
+    selOrd = 0
+    query = ''
+    applyFaceData()
+    selOrd = moveSelection(selCount(), selOrd, 0)
+    syncScroll()
+    armDataTimer()
   }
   const refresh = () => {
     // Skip heavy re-collect while a bulk-confirm is open — keeps y/n snappy.
@@ -165,9 +209,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     const fleet = collectFleet(home, Date.now())
     rawFleet = fleet
     deadCache = collectDead(fleet)
-    const matched = matchFleet(filterFleet(fleet, { showAll }), { query, workingOnly })
-    view = sortFleet(matched)
-    rebuildModel()
+    applyFaceData()
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
     selOrd = moveSelection(selCount(), selOrd, 0) // clamp to the new fleet size
@@ -178,8 +220,15 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     // Resize: reflow the grid so rows never exceed terminal width (wrap = death).
     if (cols !== lastCols) rebuildModel()
     const clock = new Date().toTimeString().slice(0, 8)
+    const memRepos = face === 'memory' ? view.repos.length : undefined
+    const panels = facePanelTotals(
+      face,
+      rawFleet.totals || {},
+      clashView.totals || {},
+      { dead: deadCache.length, repos: memRepos },
+    )
     const text = renderWarRoom(view, {
-      showAll,
+      showAll: face === 'memory' ? true : showAll,
       heatValues: heat,
       scroll,
       rows: termRows(),
@@ -191,12 +240,16 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       query,
       workingOnly,
       showNested,
-      showZone,
+      showZone: face === 'live' ? showZone : false,
       manageLabel: flash || labelOf(model[selIdx()]?.session),
       confirm,
       confirmCount: bulkTargets.length,
       deadCount: deadCache.length,
+      face,
+      panelTotals: panels,
+      headerLine: renderWarHeader(face, clock, cols),
       model, // paint clock must NOT rebuild bodyModel
+      hideColumnHeader: face === 'clash',
     })
     const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
     const body = painted
@@ -206,10 +259,11 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     W.write(`\x1b[H${body}\x1b[J`)
     frame++
   }
-  // showAll re-reads hundreds of files — slow the data clock so the UI stays interactive.
+  // MEMORY / showAll: slower data clock so the UI stays interactive.
   const armDataTimer = () => {
     if (dataTimer) clearInterval(dataTimer)
-    dataTimer = setInterval(refresh, showAll ? 2500 : 1000)
+    const slow = face === 'memory' || showAll
+    dataTimer = setInterval(refresh, slow ? 2500 : 1000)
   }
   const teardown = () => {
     clearInterval(paintTimer)
@@ -329,7 +383,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       if (k === '\x1b') {
         query = ''
         mode = 'nav'
-        refresh()
+        applyFaceData()
+        selOrd = moveSelection(selCount(), selOrd, 0)
+        syncScroll()
         return draw()
       }
       if (k === '\r' || k === '\n') {
@@ -338,14 +394,18 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       }
       if (k === '\x7f' || k === '\b') {
         query = query.slice(0, -1)
-        refresh()
+        applyFaceData()
+        selOrd = moveSelection(selCount(), selOrd, 0)
+        syncScroll()
         return draw()
       }
       // Accept single keys and multi-char paste bursts (printable only; drop CSI/controls).
       const printable = [...k].filter((ch) => ch >= ' ' && ch !== '\x7f').join('')
       if (printable) {
         query += printable
-        refresh()
+        applyFaceData()
+        selOrd = moveSelection(selCount(), selOrd, 0)
+        syncScroll()
         return draw()
       }
       return
@@ -376,18 +436,49 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       mode = 'help'
       return draw()
     }
-    // Natural graveyard kill from nav: X → y confirms (same path as manage X).
-    if (k === 'X') return beginClearDead()
+    // Faces: ← → / [ ] / 1 2 3  (oracle-shaped; ↑↓ still moves selection)
+    if (k === '\x1b[C' || k === ']') {
+      setFace(nextFace(face))
+      return draw()
+    }
+    if (k === '\x1b[D' || k === '[') {
+      setFace(prevFace(face))
+      return draw()
+    }
+    if (k === '1') {
+      setFace('live')
+      return draw()
+    }
+    if (k === '2') {
+      setFace('clash')
+      return draw()
+    }
+    if (k === '3') {
+      setFace('memory')
+      return draw()
+    }
+    // Graveyard kill — first-class on MEMORY; still available on LIVE with showAll
+    if (k === 'X') {
+      if (face === 'clash') {
+        flash = 'use MEMORY to clear dead'
+        return draw()
+      }
+      return beginClearDead()
+    }
     if (k === 'm') {
+      if (face === 'clash') {
+        flash = 'use MEMORY to manage dead'
+        return draw()
+      }
       if (selIdx() != null) {
         mode = 'manage'
         flash = ''
-        // Default war hides dead/closed — single-kill `k` would only flash
-        // "live — not killable". Reveal terminal rows while managing.
-        if (!showAll) {
+        if (face !== 'memory' && !showAll) {
           showAll = true
           armDataTimer()
           refresh()
+        } else if (face === 'memory') {
+          // already terminal-only
         }
         return draw()
       }
@@ -396,6 +487,10 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     if (k === '\r' || k === '\n') return enter()
     if (k === 'c') return cdPrint()
     if (k === 'a') {
+      if (face !== 'live') {
+        flash = 'all is a LIVE lens — try MEMORY'
+        return draw()
+      }
       showAll = !showAll
       armDataTimer()
       refresh()
@@ -410,19 +505,33 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       return draw()
     }
     if (k === 'w') {
+      if (face === 'memory') {
+        flash = 'working filter is LIVE/CLASH'
+        return draw()
+      }
       workingOnly = !workingOnly
-      refresh()
+      applyFaceData()
+      selOrd = moveSelection(selCount(), selOrd, 0)
+      syncScroll()
       return draw()
     }
     if (k === 'n') {
+      if (face === 'clash') {
+        flash = 'nested is LIVE/MEMORY'
+        return draw()
+      }
       showNested = !showNested
       rebuildModel()
       selOrd = moveSelection(selCount(), selOrd, 0)
       syncScroll()
       return draw()
     }
-    // Toggle ZONE (path localization) — on by default
+    // Toggle ZONE (path localization) — LIVE only
     if (k === 'z') {
+      if (face !== 'live') {
+        flash = 'zone is a LIVE column'
+        return draw()
+      }
       showZone = !showZone
       rebuildModel()
       syncScroll()
