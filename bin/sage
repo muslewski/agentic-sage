@@ -128,7 +128,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let query = ''
   let workingOnly = false
   let showNested = false // Layer B: fold nested armory children into band rollup
-  let showZone = false // path localization column — off by default (`z`)
+  let showZone = true // path localization — on by default (`z` toggles)
   let confirm = false
   let flash = ''
   let bulkTargets = []
@@ -421,7 +421,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       syncScroll()
       return draw()
     }
-    // Toggle ZONE (path localization) — off by default; NAME|BRANCH stay primary
+    // Toggle ZONE (path localization) — on by default
     if (k === 'z') {
       showZone = !showZone
       rebuildModel()

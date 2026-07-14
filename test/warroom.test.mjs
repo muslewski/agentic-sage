@@ -233,7 +233,7 @@ test('sessionRow: NAME and BRANCH are separate cells (not glued)', () => {
   assert.match(r, /Hermes/)
   assert.match(r, /rtv-audio/)
   assert.doesNotMatch(r, /Hermes · rtv/)
-  assert.equal((r.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
+  assert.equal((r.match(/ │ /g) || []).length, 4) // NAME|BRANCH|STATUS|ZONE|AGE
 })
 
 test('sessionRow: no tmux name → · in NAME, branch in BRANCH', () => {
@@ -242,12 +242,12 @@ test('sessionRow: no tmux name → · in NAME, branch in BRANCH', () => {
   assert.match(r, /main/)
 })
 
-test('sessionRow: zone off by default; on when showZone', () => {
+test('sessionRow: zone on by default; hide with showZone:false', () => {
   const s = { window_name: 'w', branch: 'main', liveness: 'idle', touched_globs: ['lib/warroom.mjs'] }
+  const on = sessionRow(s, { cols: 80 }) // default
   const off = sessionRow(s, { cols: 80, showZone: false })
-  const on = sessionRow(s, { cols: 80, showZone: true })
-  assert.equal((off.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
-  assert.equal((on.match(/ │ /g) || []).length, 4) // + ZONE
+  assert.equal((on.match(/ │ /g) || []).length, 4) // NAME|BRANCH|STATUS|ZONE|AGE
+  assert.equal((off.match(/ │ /g) || []).length, 3)
   assert.match(on, /lib\//)
 })
 
@@ -457,7 +457,7 @@ test('footer: nav advertises manage; showAll+dead advertises clear', () => {
   assert.ok([...grave].length <= 80, 'graveyard footer must stay wrap-safe')
 })
 
-test('sessionRow: columns separated by " │ " rules (zone off = 3 rules)', () => {
+test('sessionRow: columns separated by " │ " rules (zone on = 4 rules)', () => {
   const row = sessionRow({
     session_id: 'w1',
     window_name: 'w',
@@ -470,7 +470,7 @@ test('sessionRow: columns separated by " │ " rules (zone off = 3 rules)', () =
     handoff_age: '4m ago',
     dirty: true,
   })
-  assert.equal((row.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
+  assert.equal((row.match(/ │ /g) || []).length, 4) // NAME|BRANCH|STATUS|ZONE|AGE
   assert.match(row, /working/)
 })
 
@@ -500,19 +500,19 @@ test('fitBand: always exactly width; long rollup clips left, not wrap', () => {
   assert.match(rolled, /ghosts/)
 })
 
-test('columnHeader: NAME | BRANCH | STATUS | AGE; ZONE when enabled', () => {
+test('columnHeader: NAME | BRANCH | STATUS | ZONE | AGE by default', () => {
   const h = columnHeader(80)
   assert.match(h, /NAME/)
   assert.match(h, /BRANCH/)
   assert.match(h, /STATUS/)
+  assert.match(h, /ZONE/)
   assert.match(h, /AGE/)
-  assert.doesNotMatch(h, /ZONE/)
-  assert.equal((h.match(/ │ /g) || []).length, 3)
+  assert.equal((h.match(/ │ /g) || []).length, 4)
   assert.equal(h.indexOf('NAME'), 4)
   assert.equal([...h].length, ROW_W)
-  const z = columnHeader(80, { showZone: true })
-  assert.match(z, /ZONE/)
-  assert.equal((z.match(/ │ /g) || []).length, 4)
+  const off = columnHeader(80, { showZone: false })
+  assert.doesNotMatch(off, /ZONE/)
+  assert.equal((off.match(/ │ /g) || []).length, 3)
 })
 
 test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {
@@ -525,7 +525,7 @@ test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {
 test('renderWarRoom includes the column header line above the body', () => {
   const lines = renderWarRoom(fleet, { rows: Infinity, cols: 80 }).split('\n')
   // line 0 = ⚔ header, 1..4 = panels, line 5 = column header
-  assert.match(lines[5], /NAME.*BRANCH.*STATUS.*AGE/)
-  const withZone = renderWarRoom(fleet, { rows: Infinity, cols: 80, showZone: true }).split('\n')
-  assert.match(withZone[5], /ZONE/)
+  assert.match(lines[5], /NAME.*BRANCH.*STATUS.*ZONE.*AGE/)
+  const noZone = renderWarRoom(fleet, { rows: Infinity, cols: 80, showZone: false }).split('\n')
+  assert.doesNotMatch(noZone[5], /ZONE/)
 })
