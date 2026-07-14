@@ -34,11 +34,15 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 | `touched_globs` | string[] | paths changed vs trunk |
 | `trunk` | string\|null | detected trunk branch |
 | `pid` | number | harness process id, when resolvable |
-| `alive` | boolean | derived: pid re-probed at read time (always present) |
+| `pid_start` | string\|undefined | `/proc/<pid>/stat` starttime at SessionStart (Linux); makes liveness recycle-proof. Absent on non-/proc platforms or legacy records. |
+| `alive` | boolean | derived: pid re-probed at read time (always present); with `pid_start`, requires starttime match |
 | `link_state` | string | `scoping` \| `linked` \| `closed` |
-| `source` | string\|null | harness-reported session source |
+| `source` | string\|null | harness-reported session source (`new`, `clear`, `startup`, `compact`, `resume`, …) |
 | `status` | string | `active` \| `closed` |
 | `liveness` | string | derived: `working` \| `idle` \| `stalled` \| `dead` \| `closed` (always present) |
+| `managed_by` | string\|undefined | provenance: `human` \| `nested` (armory/`SAGE_PARENT` or process-tree). Absent on pre-provenance records. |
+| `parent_sid` | string\|undefined | when nested via `SAGE_PARENT` tag — parent session id. Absent when human or tree-classified without a sid. |
+| `window_name` | string\|undefined | tmux window name at SessionStart ("the name you gave it") |
 | `opened_at` / `updated_at` | string | ISO-8601 |
 | `last_prompt_at` / `last_tool_at` / `handoff_at` | string\|null | ISO-8601, event stamps (absent until observed) |
 | `handoff_path` | string\|null | PreCompact handoff sidecar path (absent until observed) |
@@ -48,6 +52,8 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 | `claimed_row` | string | via `sage backlog claim` (absent until claimed) |
 | `row` | string | adapter-resolved backlog row (board enrichment only; absent with no adapter or on fleet) |
 | `tmux` | string | tmux pane id (board enrichment, pid-based; absent when no match or on fleet) |
+
+**Live-only collision surface.** `sage territory`, `sage why-diverged`, and `sage merge-brief` consider only sessions whose `liveness` is `working` \| `idle` \| `stalled`. Dead/closed history is storage — it must not cry wolf.
 
 ## Examples
 
@@ -113,12 +119,24 @@ Cross-repo roll-up — the seed of the Hermes machine layer.
   "kind": "sage.war",
   "generated_at": "<iso8601>",
   "repos": [{ "repo_id": "<id>", "sessions": [ /* board session rows */ ] }],
-  "totals": { "repos": 0, "sessions": 0, "live": 0, "working": 0, "contested": 0, "compacting": 0 }
+  "totals": {
+    "repos": 0,
+    "sessions": 0,
+    "live": 0,
+    "working": 0,
+    "contested": 0,
+    "compacting": 0,
+    "human": 0,
+    "nested": 0
+  }
 }
 ```
 
-`totals` covers the whole fleet (pre-filter). `sessions` uses the same row shape
-as `sage.board` (now including optional `phase`); `session_id` is always present.
-`compacting` (in totals and per-repo) is the count of sessions with `phase==='compacting'`.
+`totals.sessions` is the on-disk record count (including dead/closed).
+`live` / `working` / `human` / `nested` / `compacting` / `contested` are **live-first**:
+human and nested count only live sessions; contested is the sum of live-only
+`mergeBrief` path counts across repos (dead/`/clear` ghosts do not contribute).
+`sessions` rows use the same shape as `sage.board` (incl. optional `phase`,
+`managed_by`, `window_name`, …); `session_id` is always present.
 
 Verify keys against live output in a sandbox before relying on any field.

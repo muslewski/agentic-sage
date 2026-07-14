@@ -66,13 +66,18 @@ test('claimsOf: unions present fields, missing → []', () => {
 
 // ── Task 2: data builders ───────────────────────────────────────────────────
 
+// pid of a living process so collectSessions derives liveness ∈ LIVE (not dead).
+// process.pid is always probeable in tests; historical records without pid are
+// correctly treated as dead and must not enter the contested surface.
+const LIVE_PID = process.pid
+
 test('territory: query overlaps via touched + claimed; selfSid excluded', () => {
   const home = mkTmp('sage-h-')
   const id = 'r1'
   seed(home, id, [
-    { session_id: 'a', branch: 'feat-a', touched_globs: ['src/auth/login.ts'], updated_at: '2026-06-28T11:00:00Z' },
-    { session_id: 'b', branch: 'feat-b', claimed_globs: ['src/auth/**'], updated_at: '2026-06-28T11:00:00Z' },
-    { session_id: 'self', branch: 'feat-self', touched_globs: ['src/auth/x.ts'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'a', branch: 'feat-a', pid: LIVE_PID, touched_globs: ['src/auth/login.ts'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'b', branch: 'feat-b', pid: LIVE_PID, claimed_globs: ['src/auth/**'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'self', branch: 'feat-self', pid: LIVE_PID, touched_globs: ['src/auth/x.ts'], updated_at: '2026-06-28T11:00:00Z' },
   ])
   const o = territory(home, id, ['src/auth/**'], { now: NOW, selfSid: 'self' })
   assert.deepEqual(o.map((x) => x.session_id).sort(), ['a', 'b'])
@@ -84,8 +89,8 @@ test('whyDiverged: 2 sessions touch a file; generated flag set', () => {
   const home = mkTmp('sage-h-')
   const id = 'r1'
   seed(home, id, [
-    { session_id: 'a', branch: 'feat-a', touched_globs: ['pnpm-lock.yaml'], updated_at: '2026-06-28T11:00:00Z' },
-    { session_id: 'b', branch: 'feat-b', touched_globs: ['pnpm-lock.yaml'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'a', branch: 'feat-a', pid: LIVE_PID, touched_globs: ['pnpm-lock.yaml'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'b', branch: 'feat-b', pid: LIVE_PID, touched_globs: ['pnpm-lock.yaml'], updated_at: '2026-06-28T11:00:00Z' },
   ])
   const t = whyDiverged(home, id, 'pnpm-lock.yaml', { now: NOW })
   assert.equal(t.length, 2)
@@ -96,8 +101,8 @@ test('mergeBrief: file in >=2 sessions contested; single not; generated flagged'
   const home = mkTmp('sage-h-')
   const id = 'r1'
   seed(home, id, [
-    { session_id: 'a', branch: 'feat-a', touched_globs: ['shared.ts', 'a-only.ts'], updated_at: '2026-06-28T11:00:00Z' },
-    { session_id: 'b', branch: 'feat-b', touched_globs: ['shared.ts', 'dist/x.js'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'a', branch: 'feat-a', pid: LIVE_PID, touched_globs: ['shared.ts', 'a-only.ts'], updated_at: '2026-06-28T11:00:00Z' },
+    { session_id: 'b', branch: 'feat-b', pid: LIVE_PID, touched_globs: ['shared.ts', 'dist/x.js'], updated_at: '2026-06-28T11:00:00Z' },
   ])
   const c = mergeBrief(home, id, { now: NOW })
   const paths = c.map((x) => x.path)
@@ -105,6 +110,22 @@ test('mergeBrief: file in >=2 sessions contested; single not; generated flagged'
   assert.ok(!paths.includes('a-only.ts'))
   assert.equal(c.find((x) => x.path === 'shared.ts').sessions.length, 2)
   assert.ok(c.find((x) => x.path === 'dist/x.js') === undefined) // single session, not contested
+})
+
+test('mergeBrief + territory: dead/closed ghosts do not contest', () => {
+  const home = mkTmp('sage-h-')
+  const id = 'r1'
+  seed(home, id, [
+    // two live sessions share nothing contested alone
+    { session_id: 'live', branch: 'feat', pid: LIVE_PID, touched_globs: ['live-only.ts'], updated_at: '2026-06-28T11:00:00Z' },
+    // dead/closed graveyard that used to inflate contested into the hundreds
+    { session_id: 'ghost1', branch: 'main', status: 'closed', link_state: 'closed', touched_globs: ['shared.ts'], updated_at: '2026-06-28T10:00:00Z' },
+    { session_id: 'ghost2', branch: 'main', status: 'closed', link_state: 'closed', touched_globs: ['shared.ts'], updated_at: '2026-06-28T09:00:00Z' },
+    { session_id: 'dead', branch: 'old', pid: 2147483646, touched_globs: ['shared.ts'], updated_at: '2026-06-28T08:00:00Z' },
+  ])
+  assert.equal(mergeBrief(home, id, { now: NOW }).length, 0)
+  assert.equal(territory(home, id, ['shared.ts'], { now: NOW }).length, 0)
+  assert.equal(whyDiverged(home, id, 'shared.ts', { now: NOW }).length, 0)
 })
 
 // ── Task 4: renders ─────────────────────────────────────────────────────────

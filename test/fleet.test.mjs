@@ -90,14 +90,15 @@ test('isNested: managed_by nested → true; human/absent → false', () => {
   assert.equal(isNested({}), false)
 })
 
-test('tally counts live/working/human/nested', () => {
+test('tally counts live/working/human/nested (live-first; dead nested does not inflate)', () => {
   const rows = [
     { liveness: 'working', managed_by: 'human' },
     { liveness: 'idle', managed_by: 'human' },
     { liveness: 'idle', managed_by: 'nested' },
     { liveness: 'dead', managed_by: 'nested' },
   ]
-  assert.deepEqual(tally(rows), { live: 3, working: 1, nested: 2, human: 2, compacting: 0 })
+  // human/nested over LIVE only — dead nested is storage, not the army
+  assert.deepEqual(tally(rows), { live: 3, working: 1, nested: 1, human: 2, compacting: 0 })
 })
 
 test('collectFleet totals split human vs nested', () => {

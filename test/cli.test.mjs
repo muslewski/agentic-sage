@@ -75,11 +75,21 @@ const seedSession = (home, id, rec) => {
   fs.writeFileSync(path.join(sessionsDir(home, id), `${rec.session_id}.json`), JSON.stringify(rec))
 }
 
+// pid 1 is typically alive via EPERM on Linux and is never the CLI process, so
+// self-resolution won't swallow the seed as "me".
+const OTHER_LIVE_PID = 1
+
 test('territory names the overlapping branch; a clear query says clear', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
-  seedSession(home, id, { session_id: 'a', branch: 'feat-a', touched_globs: ['src/auth/x.ts'], updated_at: '2026-06-28T12:00:00Z' })
+  seedSession(home, id, {
+    session_id: 'a',
+    branch: 'feat-a',
+    pid: OTHER_LIVE_PID,
+    touched_globs: ['src/auth/x.ts'],
+    updated_at: '2026-06-28T12:00:00Z',
+  })
   assert.match(run(['territory', 'src/auth/**'], home, repo), /feat-a/)
   assert.match(run(['territory', 'docs/**'], home, repo), /clear/i)
   assert.match(run(['territory'], home, repo), /usage/i) // no globs → usage
@@ -90,7 +100,13 @@ test('why-diverged + merge-brief surface a contested file', () => {
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
   for (const s of ['a', 'b'])
-    seedSession(home, id, { session_id: s, branch: `feat-${s}`, touched_globs: ['shared.ts'], updated_at: '2026-06-28T12:00:00Z' })
+    seedSession(home, id, {
+      session_id: s,
+      branch: `feat-${s}`,
+      pid: OTHER_LIVE_PID, // live peers, not the CLI process
+      touched_globs: ['shared.ts'],
+      updated_at: '2026-06-28T12:00:00Z',
+    })
   assert.match(run(['why-diverged', 'shared.ts'], home, repo), /feat-a/)
   const brief = run(['merge-brief'], home, repo)
   assert.match(brief, /shared\.ts/)
@@ -139,7 +155,13 @@ test('read verbs still report a genuinely OTHER session alongside self', { skip:
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
   seedSession(home, id, { session_id: 'me', pid: process.pid, branch: 'feat-me', touched_globs: ['src/a.ts'], updated_at: '2026-06-28T12:00:00Z' })
-  seedSession(home, id, { session_id: 'other', branch: 'feat-other', touched_globs: ['src/a.ts'], updated_at: '2026-06-28T11:00:00Z' })
+  seedSession(home, id, {
+    session_id: 'other',
+    pid: OTHER_LIVE_PID, // live other (not dead — dead no longer contests)
+    branch: 'feat-other',
+    touched_globs: ['src/a.ts'],
+    updated_at: '2026-06-28T11:00:00Z',
+  })
   const env = { SAGE_SELF_SID: '' }
   const out = run(['territory', 'src/**'], home, repo, env)
   assert.match(out, /feat-other/)
@@ -211,7 +233,13 @@ test('an adapter enriches board (row) + territory (zone); none → unchanged', (
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
-  seedSession(home, id, { session_id: 'a', branch: 'main', touched_globs: ['src/auth/x.ts'], updated_at: '2026-06-28T12:00:00Z' })
+  seedSession(home, id, {
+    session_id: 'a',
+    branch: 'main',
+    pid: OTHER_LIVE_PID,
+    touched_globs: ['src/auth/x.ts'],
+    updated_at: '2026-06-28T12:00:00Z',
+  })
   // no adapter → bare board, no zone/row tokens
   assert.doesNotMatch(run(['board'], home, repo), /↳|zone:/)
   // add a repo-local adapter

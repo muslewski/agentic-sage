@@ -18,6 +18,9 @@ import {
   clipLeft,
   columnHeader,
   WAR_CHROME,
+  collapseChurn,
+  isGhostSession,
+  prepareRepoView,
 } from '../lib/warroom.mjs'
 
 const fleet = {
@@ -50,6 +53,74 @@ test('renderPanels shows totals + is exactly 4 lines', () => {
   assert.match(p, /2 live/)
   assert.match(p, /1 nested/)
   assert.match(p, /1 working|1 hot/)
+  assert.match(p, /1 ⚔|contested/) // honest live contested (⚔ glyph)
+})
+
+test('renderPanels: calm HEAT says clear; compacting surfaces on line 2', () => {
+  const calm = renderPanels({ repos: 1, live: 1, working: 0, contested: 0, compacting: 0, human: 1, nested: 0 }, [])
+  assert.match(calm, /clear/)
+  assert.doesNotMatch(calm, /⚔/)
+  const busy = renderPanels(
+    { repos: 1, live: 2, working: 2, contested: 1, compacting: 2, human: 2, nested: 0 },
+    [1, 2],
+  )
+  assert.match(busy, /2 compact/)
+  assert.match(busy, /1 ⚔/)
+})
+
+test('collapseChurn: ghosts vanish into count; clear chain keeps newest per branch', () => {
+  const rows = [
+    { session_id: 'live', branch: 'feat', liveness: 'working', updated_at: '2026-07-14T12:00:00Z' },
+    // pure ghosts — never prompted
+    { session_id: 'g1', branch: 'main', liveness: 'closed', source: 'clear', updated_at: '2026-07-01T10:00:00Z' },
+    { session_id: 'g2', branch: 'main', liveness: 'dead', updated_at: '2026-07-01T09:00:00Z' },
+    // clear-churn with activity — keep newest only
+    {
+      session_id: 'c-old',
+      branch: 'main',
+      worktree: '/r',
+      liveness: 'closed',
+      source: 'clear',
+      last_prompt_at: '2026-07-10T10:00:00Z',
+      updated_at: '2026-07-10T10:00:00Z',
+    },
+    {
+      session_id: 'c-new',
+      branch: 'main',
+      worktree: '/r',
+      liveness: 'closed',
+      source: 'clear',
+      last_prompt_at: '2026-07-11T10:00:00Z',
+      updated_at: '2026-07-11T10:00:00Z',
+    },
+  ]
+  assert.equal(isGhostSession(rows[1]), true)
+  const { sessions, ghosts, churn } = collapseChurn(rows)
+  assert.equal(ghosts, 2)
+  assert.equal(churn, 1) // c-old folded
+  assert.equal(sessions.length, 2) // live + c-new
+  assert.ok(sessions.some((s) => s.session_id === 'live'))
+  assert.ok(sessions.some((s) => s.session_id === 'c-new'))
+  assert.ok(!sessions.some((s) => s.session_id === 'c-old'))
+})
+
+test('prepareRepoView + band: ghosts roll into +N ghosts on the repo header', () => {
+  const repo = {
+    label: 'alpha',
+    working: 0,
+    nested: 0,
+    sessions: [
+      { session_id: 'live', branch: 'feat', liveness: 'idle', touched_globs: [] },
+      { session_id: 'g1', branch: 'main', liveness: 'closed', touched_globs: [] },
+      { session_id: 'g2', branch: 'main', liveness: 'dead', touched_globs: [] },
+    ],
+  }
+  const v = prepareRepoView(repo, {})
+  assert.equal(v.sessions.length, 1)
+  assert.equal(v.ghosts, 2)
+  const [head, ...rows] = renderRepoSection(repo, {})
+  assert.match(head, /\+2 ghosts/)
+  assert.equal(rows.length, 1)
 })
 
 test('renderPanels: every line is the same display width (borders align)', () => {
