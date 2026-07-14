@@ -41,6 +41,7 @@ import {
   bodyModelClash,
   renderWarHeader,
   facePanelTotals,
+  faceCountsFromFleet,
 } from '../lib/warfaces.mjs'
 import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
@@ -147,6 +148,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   const heat = []
   let view = { repos: [], totals: {} } // active face's fleet-ish view
   let clashView = { repos: [], totals: {} }
+  let clashAll = { repos: [], totals: { paths: 0, repos: 0, sessions: 0 } } // unfiltered counts for tabs
+  let memoryMeta = { dead: 0, repos: 0, ghosts: 0 }
+  let faceCounts = { live: 0, clash: 0, memory: 0 }
   let model = []
   let lastCols = 0
   let paintTimer
@@ -180,7 +184,12 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     if (face === 'memory') {
       const mem = filterMemoryFleet(rawFleet)
       view = sortFleet(matchFleet(mem, { query, workingOnly: false }))
-      clashView = { repos: [], totals: { paths: 0, repos: 0, sessions: 0 } }
+      memoryMeta = {
+        dead: mem.totals.memory_dead || 0,
+        repos: mem.totals.memory_repos || view.repos.length,
+        ghosts: mem.totals.memory_ghosts || 0,
+      }
+      clashView = clashAll
     } else if (face === 'clash') {
       view = { repos: [], totals: rawFleet.totals || {} }
       clashView = buildClash(rawFleet, { query, workingOnly })
@@ -188,7 +197,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       // LIVE
       const matched = matchFleet(filterFleet(rawFleet, { showAll }), { query, workingOnly })
       view = sortFleet(matched)
-      clashView = { repos: [], totals: { paths: 0, repos: 0, sessions: 0 } }
+      clashView = clashAll
     }
     rebuildModel()
   }
@@ -198,6 +207,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     scroll = 0
     selOrd = 0
     query = ''
+    flash = ''
     applyFaceData()
     selOrd = moveSelection(selCount(), selOrd, 0)
     syncScroll()
@@ -209,6 +219,10 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     const fleet = collectFleet(home, Date.now())
     rawFleet = fleet
     deadCache = collectDead(fleet)
+    clashAll = buildClash(fleet, {}) // full clash for tab badges + LIVE hints
+    faceCounts = faceCountsFromFleet(fleet, deadCache.length)
+    // Prefer faceCounts.clash from full build (same as clashAll.totals.paths)
+    faceCounts.clash = clashAll.totals.paths || 0
     applyFaceData()
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
@@ -220,12 +234,15 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     // Resize: reflow the grid so rows never exceed terminal width (wrap = death).
     if (cols !== lastCols) rebuildModel()
     const clock = new Date().toTimeString().slice(0, 8)
-    const memRepos = face === 'memory' ? view.repos.length : undefined
     const panels = facePanelTotals(
       face,
       rawFleet.totals || {},
-      clashView.totals || {},
-      { dead: deadCache.length, repos: memRepos },
+      face === 'clash' ? clashView.totals || {} : clashAll.totals || {},
+      {
+        dead: deadCache.length,
+        repos: memoryMeta.repos || (face === 'memory' ? view.repos.length : 0),
+        ghosts: memoryMeta.ghosts || 0,
+      },
     )
     const text = renderWarRoom(view, {
       showAll: face === 'memory' ? true : showAll,
@@ -247,7 +264,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       deadCount: deadCache.length,
       face,
       panelTotals: panels,
-      headerLine: renderWarHeader(face, clock, cols),
+      headerLine: renderWarHeader(face, clock, cols, faceCounts),
+      clashCount: faceCounts.clash || 0,
       model, // paint clock must NOT rebuild bodyModel
       hideColumnHeader: face === 'clash',
     })
@@ -337,12 +355,17 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   }
   const commitClearDead = () => {
     const targets = bulkTargets
+    const n = targets.length
     bulkTargets = []
     confirm = false
     mode = 'nav'
     for (const s of targets) killRecord(s)
     deadCache = []
+    flash = n ? `cleared ${n} dead` : ''
     refresh()
+    // Stay on MEMORY so the human sees the graveyard empty out
+    if (face !== 'memory') face = 'memory'
+    applyFaceData()
     draw()
   }
   W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once

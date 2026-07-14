@@ -10,6 +10,8 @@ import {
   bodyModelClash,
   renderWarHeader,
   facePanelTotals,
+  pickPrimarySession,
+  faceCountsFromFleet,
 } from '../lib/warfaces.mjs'
 import { renderWarRoom } from '../lib/warroom.mjs'
 
@@ -22,15 +24,19 @@ test('nextFace / prevFace cycle LIVE · CLASH · MEMORY', () => {
   assert.equal(prevFace('clash'), 'live')
 })
 
-test('contestedPaths: live multi-touch only', () => {
+test('contestedPaths: live multi-touch only; claimed counts; working first', () => {
   const paths = contestedPaths([
-    { session_id: 'a', liveness: 'working', branch: 'a', touched_globs: ['x.ts', 'solo.ts'] },
-    { session_id: 'b', liveness: 'idle', branch: 'b', touched_globs: ['x.ts'] },
+    { session_id: 'a', liveness: 'idle', branch: 'a', touched_globs: ['x.ts', 'solo.ts'] },
+    { session_id: 'b', liveness: 'working', branch: 'b', touched_globs: ['x.ts'] },
     { session_id: 'c', liveness: 'closed', branch: 'c', touched_globs: ['x.ts'] }, // dead — ignore
+    { session_id: 'd', liveness: 'idle', branch: 'd', claimed_globs: ['y.ts'], touched_globs: [] },
+    { session_id: 'e', liveness: 'stalled', branch: 'e', claimed_globs: ['y.ts'], touched_globs: [] },
   ])
-  assert.equal(paths.length, 1)
-  assert.equal(paths[0].path, 'x.ts')
-  assert.equal(paths[0].sessions.length, 2)
+  assert.equal(paths.length, 2)
+  assert.equal(paths[0].path, 'x.ts') // more sessions / severity sort — both have 2
+  assert.equal(paths[0].sessions[0].liveness, 'working') // hottest first
+  assert.ok(paths.some((p) => p.path === 'y.ts'))
+  assert.equal(pickPrimarySession(paths[0].sessions).liveness, 'working')
 })
 
 test('buildClash: groups paths by repo; empty when clear', () => {
@@ -100,13 +106,36 @@ test('bodyModelClash: empty calm; path tree when contested', () => {
   assert.ok(model.some((m) => m.session && m.session.session_id === 'a'))
 })
 
-test('renderWarHeader: contains active face and fits width', () => {
+test('renderWarHeader: contains active face, counts, fits width', () => {
+  const counts = { live: 12, clash: 1, memory: 600 }
   for (const face of FACES) {
-    const line = renderWarHeader(face, '12:00:00', 80)
+    const line = renderWarHeader(face, '12:00:00', 80, counts)
     assert.ok([...line].length <= 80, line)
     assert.match(line, /SAGE WAR/)
     assert.match(line, new RegExp(face === 'live' ? 'LIVE' : face === 'clash' ? 'CLASH' : 'MEMORY'))
   }
+  assert.match(renderWarHeader('live', '12:00:00', 80, counts), /12/)
+})
+
+test('faceCountsFromFleet', () => {
+  const fleet = {
+    totals: { live: 3 },
+    repos: [
+      {
+        repoId: 'r',
+        label: 'r',
+        sessions: [
+          { session_id: 'a', liveness: 'working', touched_globs: ['p'] },
+          { session_id: 'b', liveness: 'idle', touched_globs: ['p'] },
+          { session_id: 'd', liveness: 'dead', touched_globs: [] },
+        ],
+      },
+    ],
+  }
+  const c = faceCountsFromFleet(fleet, 1)
+  assert.equal(c.live, 3)
+  assert.equal(c.clash, 1)
+  assert.equal(c.memory, 1)
 })
 
 test('facePanelTotals: clash and memory tags', () => {
