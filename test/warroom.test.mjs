@@ -28,8 +28,8 @@ import {
   handoffCell,
   renderHelp,
   HELP_KEYS,
-  sessionName,
-  nextNameMode,
+  nameCell,
+  branchCell,
 } from '../lib/warroom.mjs'
 
 const fleet = {
@@ -175,24 +175,23 @@ test('fitZone: bare long path (no +N) also keeps tail via left-ellipsis', () => 
   assert.ok(out.endsWith('gallery/') || out.includes('gallery'), 'tail survives')
 })
 
-test('sessionRow: long names clip to a fixed grid so status columns align', () => {
-  // NAME column is wide with zone off — force clip with a very long id.
+test('sessionRow: long branch clips; status columns stay aligned', () => {
   const opts = { cols: 80 }
   const long = sessionRow(
     {
-      branch: 'docs/fusion-advisor-design-extra-long-name-that-definitely-overflows-the-column',
+      window_name: 'hermes',
+      branch: 'docs/fusion-advisor-design-extra-long-name-that-definitely-overflows',
       liveness: 'idle',
       dirty: true,
-      touched_globs: [],
     },
     opts,
   )
-  const short = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, opts)
+  const short = sessionRow({ window_name: 'x', branch: 'main', liveness: 'idle' }, opts)
   assert.equal(long.indexOf('idle'), short.indexOf('idle')) // grid aligned
   assert.equal([...long].length, ROW_W)
   assert.equal([...short].length, ROW_W)
-  assert.match(long, /…/u) // long name was clipped
-  assert.match(long, /✎.*idle/u) // middle-ellipsis kept the tail ✎ marker
+  assert.match(long, /…/u) // long branch was clipped
+  assert.match(long, /✎/) // dirty mark present
 })
 
 test('layoutFor: rowW never exceeds terminal cols (wrap is death)', () => {
@@ -201,7 +200,7 @@ test('layoutFor: rowW never exceeds terminal cols (wrap is death)', () => {
       const L = layoutFor(c, { showZone })
       assert.ok(L.rowW <= c, `rowW ${L.rowW} > cols ${c}`)
       const row = sessionRow(
-        { branch: 'main', liveness: 'idle', handoff_bucket: 'fresh', handoff_age: '1h ago' },
+        { window_name: 'w', branch: 'main', liveness: 'idle', handoff_bucket: 'fresh', handoff_age: '1h ago' },
         { cols: c, showZone },
       )
       assert.equal([...row].length, L.rowW)
@@ -216,14 +215,11 @@ test('handoffCell: age-only compact (no fresh/ago — those wrapped onto the nex
   assert.equal(handoffCell({ handoff_bucket: 'none' }), '')
 })
 
-test('sessionName: default prefers tmux name; branch/both modes', () => {
-  assert.equal(sessionName({ window_name: 'Hermes', branch: 'main' }, 'name'), 'Hermes')
-  assert.equal(sessionName({ window_name: 'Hermes', branch: 'main' }, 'branch'), 'main')
-  assert.equal(sessionName({ window_name: 'Hermes', branch: 'main' }, 'both'), 'Hermes · main')
-  assert.equal(sessionName({ branch: 'feat/x' }, 'name'), 'feat/x')
-  assert.equal(nextNameMode('name'), 'branch')
-  assert.equal(nextNameMode('branch'), 'both')
-  assert.equal(nextNameMode('both'), 'name')
+test('nameCell / branchCell: separate columns', () => {
+  assert.equal(nameCell({ window_name: 'Hermes', branch: 'main' }), 'Hermes')
+  assert.equal(branchCell({ window_name: 'Hermes', branch: 'main' }), 'main')
+  assert.equal(nameCell({ branch: 'feat/x' }), '·') // placeholder when no tmux name
+  assert.equal(branchCell({ branch: 'feat/x' }), 'feat/x')
 })
 
 test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
@@ -232,77 +228,64 @@ test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
   assert.match(sessionRow(fleet.repos[0].sessions[1], {}), /^\s*● /u)
 })
 
-test('sessionRow: default name mode shows tmux name only (not glued branch)', () => {
-  const r = sessionRow({ window_name: 'Hermes', branch: 'rtv-audio', liveness: 'idle', touched_globs: [] }, {})
+test('sessionRow: NAME and BRANCH are separate cells (not glued)', () => {
+  const r = sessionRow({ window_name: 'Hermes', branch: 'rtv-audio', liveness: 'idle' }, { cols: 80 })
   assert.match(r, /Hermes/)
+  assert.match(r, /rtv-audio/)
   assert.doesNotMatch(r, /Hermes · rtv/)
-  const both = sessionRow(
-    { window_name: 'Hermes', branch: 'rtv-audio', liveness: 'idle', touched_globs: [] },
-    { nameMode: 'both' },
-  )
-  assert.match(both, /Hermes · rtv-audio/)
+  assert.equal((r.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
 })
 
-test('sessionRow: no tmux name → plain branch, no dangling separator', () => {
-  const r = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, {})
-  assert.match(r, /● main /u)
-  assert.doesNotMatch(r, / · main/u) // no leading "name ·" when window_name absent
+test('sessionRow: no tmux name → · in NAME, branch in BRANCH', () => {
+  const r = sessionRow({ branch: 'main', liveness: 'idle' }, { cols: 80 })
+  assert.match(r, /● · /)
+  assert.match(r, /main/)
 })
 
 test('sessionRow: zone off by default; on when showZone', () => {
-  const s = { branch: 'main', liveness: 'idle', touched_globs: ['lib/warroom.mjs'] }
+  const s = { window_name: 'w', branch: 'main', liveness: 'idle', touched_globs: ['lib/warroom.mjs'] }
   const off = sessionRow(s, { cols: 80, showZone: false })
   const on = sessionRow(s, { cols: 80, showZone: true })
-  assert.equal((off.match(/ │ /g) || []).length, 2) // NAME|STATUS|AGE
-  assert.equal((on.match(/ │ /g) || []).length, 3) // + ZONE
+  assert.equal((off.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
+  assert.equal((on.match(/ │ /g) || []).length, 4) // + ZONE
   assert.match(on, /lib\//)
 })
 
-test('sessionRow: long name clips and keeps grid + ✎', () => {
-  const long = sessionRow(
-    {
-      window_name: 'syndcast-75-extra-long-window-name-overflow',
-      branch: 'feat/vellum-notes-ia-very-long',
-      liveness: 'idle',
-      dirty: true,
-    },
-    { cols: 80, nameMode: 'both' },
-  )
-  const short = sessionRow({ window_name: 'x', branch: 'main', liveness: 'idle' }, { cols: 80 })
-  assert.match(long, /…/u) // clipped
-  assert.match(long, /✎.*idle/u)
-  assert.equal(long.indexOf('idle'), short.indexOf('idle'))
-})
-
-test('renderRepoSection: accent-bar band; hot rollup only when working > 0', () => {
+test('renderRepoSection: calm band — no · N hot; short when no rollup', () => {
   const hot = renderRepoSection(
     { label: 'syndcast', working: 2, sessions: [{ branch: 'main', liveness: 'working', touched_globs: [] }] },
-    {},
+    { cols: 80 },
   )
-  assert.match(hot[0], /^▌ syndcast · 1 session/u) // margin bar + name
-  assert.match(hot[0], /2 hot/u) // rollup on the right
-  assert.equal([...hot[0]].length, ROW_W) // fixed band width — no wrap jitter
-  const cold = renderRepoSection(
-    { label: 'alpha', working: 0, sessions: [{ branch: 'x', liveness: 'idle', touched_globs: [] }] },
-    {},
+  assert.match(hot[0], /^▌ syndcast · 1$/u) // no "hot" on the band
+  assert.doesNotMatch(hot[0], /hot/)
+  const nested = renderRepoSection(
+    {
+      label: 'alpha',
+      working: 0,
+      nested: 2,
+      sessions: [
+        { branch: 'x', liveness: 'idle', managed_by: 'human' },
+        { branch: 'y', liveness: 'idle', managed_by: 'nested' },
+        { branch: 'z', liveness: 'idle', managed_by: 'nested' },
+      ],
+    },
+    { cols: 80 },
   )
-  assert.match(cold[0], /^▌ alpha · 1 session/u) // calm repo — no hot/ghost rollup
-  assert.doesNotMatch(cold[0], /hot|ghosts|churn/)
-  assert.equal([...cold[0]].length, ROW_W)
+  assert.match(nested[0], /\+2 nested/)
 })
 
 test('bodyLines: one header per repo + one row per session (nested folded by default)', () => {
   const lines = bodyLines(fleet, {})
-  // alpha has 1 human + 1 nested → band shows 1 session + "+1 nested"
-  assert.ok(lines.some((l) => /alpha · 1 session/.test(l)))
+  // alpha has 1 human + 1 nested → band shows · 1 + "+1 nested"
+  assert.ok(lines.some((l) => /alpha · 1\b/.test(l)))
   assert.ok(lines.some((l) => /\+1 nested/.test(l)))
-  assert.ok(lines.some((l) => /beta · 1 session/.test(l)))
+  assert.ok(lines.some((l) => /beta · 1\b/.test(l)))
   assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 2) // human rows only
 })
 
 test('bodyLines showNested: expands nested armory children into body', () => {
   const lines = bodyLines(fleet, { showNested: true })
-  assert.ok(lines.some((l) => /alpha · 2 session/.test(l)))
+  assert.ok(lines.some((l) => /alpha · 2\b/.test(l)))
   assert.equal(lines.filter((l) => /◆|●/u.test(l)).length, 3)
   assert.doesNotMatch(lines.join('\n'), /\+1 nested/)
 })
@@ -418,7 +401,6 @@ test('footer: labeled keys with words; filter mode shows the query', () => {
   assert.match(nav, /filter/)
   assert.match(nav, /help/)
   assert.match(nav, /quit/)
-  assert.match(nav, /t name/) // default name mode chip
   assert.ok([...nav].length <= 80, `nav footer wrap-safe: ${[...nav].length}`)
   const on = footer(false, 0, 0, { cols: 80, workingOnly: true, showNested: true })
   assert.match(on, /work✓/)
@@ -475,9 +457,10 @@ test('footer: nav advertises manage; showAll+dead advertises clear', () => {
   assert.ok([...grave].length <= 80, 'graveyard footer must stay wrap-safe')
 })
 
-test('sessionRow: columns separated by " │ " rules (zone off = 2 rules)', () => {
+test('sessionRow: columns separated by " │ " rules (zone off = 3 rules)', () => {
   const row = sessionRow({
     session_id: 'w1',
+    window_name: 'w',
     branch: 'main',
     liveness: 'working',
     ctx_used: 43,
@@ -487,7 +470,7 @@ test('sessionRow: columns separated by " │ " rules (zone off = 2 rules)', () =
     handoff_age: '4m ago',
     dirty: true,
   })
-  assert.equal((row.match(/ │ /g) || []).length, 2) // NAME|STATUS|AGE
+  assert.equal((row.match(/ │ /g) || []).length, 3) // NAME|BRANCH|STATUS|AGE
   assert.match(row, /working/)
 })
 
@@ -495,6 +478,7 @@ test('sessionRow: fixed grid width — empty handoff does not shorten the row', 
   const empty = sessionRow({ session_id: 'x', branch: 'main', liveness: 'closed', handoff_bucket: 'none' })
   const full = sessionRow({
     session_id: 'y',
+    window_name: 'y',
     branch: 'main',
     liveness: 'idle',
     handoff_bucket: 'fresh',
@@ -505,7 +489,7 @@ test('sessionRow: fixed grid width — empty handoff does not shorten the row', 
   assert.equal([...empty].length, ROW_W)
   assert.equal([...full].length, ROW_W)
   assert.equal(empty.indexOf('closed'), full.indexOf('idle')) // status col aligned
-  assert.ok(empty.includes(' │ ')) // rules present even with empty zone/when
+  assert.ok(empty.includes(' │ '))
 })
 
 test('fitBand: always exactly width; long rollup clips left, not wrap', () => {
@@ -516,19 +500,19 @@ test('fitBand: always exactly width; long rollup clips left, not wrap', () => {
   assert.match(rolled, /ghosts/)
 })
 
-test('columnHeader: NAME by default; ZONE only when enabled', () => {
+test('columnHeader: NAME | BRANCH | STATUS | AGE; ZONE when enabled', () => {
   const h = columnHeader(80)
   assert.match(h, /NAME/)
+  assert.match(h, /BRANCH/)
   assert.match(h, /STATUS/)
   assert.match(h, /AGE/)
   assert.doesNotMatch(h, /ZONE/)
-  assert.equal((h.match(/ │ /g) || []).length, 2)
+  assert.equal((h.match(/ │ /g) || []).length, 3)
   assert.equal(h.indexOf('NAME'), 4)
   assert.equal([...h].length, ROW_W)
-  const z = columnHeader(80, { showZone: true, nameMode: 'branch' })
-  assert.match(z, /BRANCH/)
+  const z = columnHeader(80, { showZone: true })
   assert.match(z, /ZONE/)
-  assert.equal((z.match(/ │ /g) || []).length, 3)
+  assert.equal((z.match(/ │ /g) || []).length, 4)
 })
 
 test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {
@@ -541,7 +525,7 @@ test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {
 test('renderWarRoom includes the column header line above the body', () => {
   const lines = renderWarRoom(fleet, { rows: Infinity, cols: 80 }).split('\n')
   // line 0 = ⚔ header, 1..4 = panels, line 5 = column header
-  assert.match(lines[5], /NAME.*STATUS.*AGE/)
+  assert.match(lines[5], /NAME.*BRANCH.*STATUS.*AGE/)
   const withZone = renderWarRoom(fleet, { rows: Infinity, cols: 80, showZone: true }).split('\n')
   assert.match(withZone[5], /ZONE/)
 })
