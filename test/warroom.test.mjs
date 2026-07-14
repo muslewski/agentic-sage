@@ -24,6 +24,8 @@ import {
   fitBand,
   ROW_W,
   COL,
+  layoutFor,
+  handoffCell,
 } from '../lib/warroom.mjs'
 
 const fleet = {
@@ -172,11 +174,33 @@ test('fitZone: bare long path (no +N) also keeps tail via left-ellipsis', () => 
 test('sessionRow: long names clip to a fixed grid so status columns align', () => {
   // regression: padR padded but never truncated → long branch ids shoved every
   // later column rightward. Now every row's liveness word lands at the same col.
-  const long = sessionRow({ branch: 'docs/fusion-advisor-design', liveness: 'idle', dirty: true, touched_globs: [] }, {})
-  const short = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, {})
+  const opts = { cols: 80 }
+  const long = sessionRow(
+    { branch: 'docs/fusion-advisor-design-extra-long-name', liveness: 'idle', dirty: true, touched_globs: [] },
+    opts,
+  )
+  const short = sessionRow({ branch: 'main', liveness: 'idle', touched_globs: [] }, opts)
   assert.equal(long.indexOf('idle'), short.indexOf('idle')) // grid aligned
+  assert.equal([...long].length, ROW_W)
+  assert.equal([...short].length, ROW_W)
   assert.match(long, /…/u) // long name was clipped
   assert.match(long, /✎.*idle/u) // middle-ellipsis kept the tail ✎ marker (now with │ sep)
+})
+
+test('layoutFor: rowW never exceeds terminal cols (wrap is death)', () => {
+  for (const c of [60, 72, 80, 100, 120]) {
+    const L = layoutFor(c)
+    assert.ok(L.rowW <= c, `rowW ${L.rowW} > cols ${c}`)
+    const row = sessionRow({ branch: 'main', liveness: 'idle', handoff_bucket: 'fresh', handoff_age: '1h ago' }, { cols: c })
+    assert.equal([...row].length, L.rowW)
+    assert.ok([...columnHeader(c)].length <= c)
+  }
+})
+
+test('handoffCell: age-only compact (no fresh/ago — those wrapped onto the next line)', () => {
+  assert.equal(handoffCell({ handoff_bucket: 'fresh', handoff_age: '1h ago' }), '1h')
+  assert.equal(handoffCell({ handoff_bucket: 'fresh', handoff_age: 'just now' }), 'now')
+  assert.equal(handoffCell({ handoff_bucket: 'none' }), '')
 })
 
 test('sessionRow: working leads ◆, dirty marks ✎, idle leads ●', () => {
@@ -294,12 +318,24 @@ test('viewport clamps + slices to height', () => {
 })
 
 test('renderWarRoom composes; non-body lines == WAR_CHROME; footer present', () => {
-  const frame = renderWarRoom(fleet, { showAll: false, heatValues: [1, 2], scroll: 0, rows: Infinity, clock: '12:00:00' })
+  const frame = renderWarRoom(fleet, {
+    showAll: false,
+    heatValues: [1, 2],
+    scroll: 0,
+    rows: Infinity,
+    cols: 80,
+    clock: '12:00:00',
+  })
   assert.match(frame, /SAGE WAR ROOM/)
-  assert.match(frame, /q quit/)
+  assert.match(frame, /\bq\b/) // compact footer ends with q
   const lines = frame.split('\n')
-  const bodyCount = bodyLines({ ...fleet }, {}).length
+  const bodyCount = bodyLines({ ...fleet, cols: 80 }, { cols: 80 }).length
   assert.equal(lines.length, bodyCount + WAR_CHROME)
+  // No body/header line wider than the terminal (the wrap bug).
+  for (const ln of lines.slice(0, -1)) {
+    // panels are 56; body is layout rowW; header may use full cols
+    assert.ok([...ln].length <= 120, `line too wide: ${[...ln].length} ${ln.slice(0, 40)}`)
+  }
 })
 
 test('spinnerizeWar swaps ◆ for the frame glyph', () => {
@@ -329,43 +365,47 @@ test('renderWarRoom with selected shows one ❯; selected:null shows none', () =
   assert.equal(noSel.split('\n').filter((l) => l.startsWith('❯')).length, 0)
 })
 
-test('footer: nav shows filter + working keys; filter mode shows the query', () => {
+test('footer: nav compact keys; filter mode shows the query', () => {
   const nav = footer(false, 0, 0, {})
-  assert.match(nav, /\/ filter/)
-  assert.match(nav, /w working/)
-  assert.match(nav, /n nested/)
+  assert.match(nav, /\//) // filter
+  assert.match(nav, /\bw\b/)
+  assert.match(nav, /\bn\b/)
+  assert.ok([...nav].length <= 72, 'nav footer must stay wrap-safe')
   const on = footer(false, 0, 0, { workingOnly: true, showNested: true })
-  assert.match(on, /working✓/)
-  assert.match(on, /nested✓/)
+  assert.match(on, /w✓/)
+  assert.match(on, /n✓/)
   const filt = footer(false, 0, 0, { mode: 'filter', query: 'arm' })
-  assert.match(filt, /filter: arm/)
+  assert.match(filt, /arm/)
   assert.match(filt, /esc/)
   // After ↵, mode=nav but query remains — chip keeps the active filter visible.
   const chip = footer(false, 0, 0, { mode: 'nav', query: 'Hermes' })
-  assert.match(chip, /filter✓ Hermes/)
+  assert.match(chip, /f:Hermes/)
 })
 
 test('footer: manage mode shows the action menu', () => {
   const menu = footer(false, 0, 0, { mode: 'manage', manageLabel: 'Hermes · main' })
-  assert.match(menu, /manage ‹Hermes · main›/u)
+  assert.match(menu, /manage/)
+  assert.match(menu, /Hermes · main/)
   assert.match(menu, /k kill/)
-  assert.match(menu, /X clear all dead/)
-  assert.match(menu, /esc back/)
+  assert.match(menu, /X all dead/)
+  assert.match(menu, /esc/)
 })
 
 test('footer: manage confirm shows a y/n prompt with the count', () => {
   const conf = footer(false, 0, 0, { mode: 'manage', confirm: true, confirmCount: 31 })
-  assert.match(conf, /clear 31 dead session\(s\)\? y\/n/)
+  assert.match(conf, /clear 31 dead/)
+  assert.match(conf, /y confirm/)
   // Confirm is mode-agnostic (nav X uses the same footer).
   const fromNav = footer(true, 0, 0, { mode: 'nav', confirm: true, confirmCount: 590 })
   assert.match(fromNav, /clear 590 dead/)
 })
 
-test('footer: nav advertises manage; showAll+dead advertises X clear N', () => {
-  assert.match(footer(false, 0, 0, {}), /m manage/)
+test('footer: nav advertises manage; showAll+dead advertises X×N', () => {
+  assert.match(footer(false, 0, 0, { deadCount: 1 }), /\bm\b/)
   const grave = footer(true, 0, 0, { deadCount: 590 })
-  assert.match(grave, /X clear 590 dead/)
-  assert.match(grave, /dead✓/)
+  assert.match(grave, /X×590/)
+  assert.match(grave, /a✓/)
+  assert.ok([...grave].length <= 72, 'graveyard footer must stay wrap-safe')
 })
 
 test('sessionRow: columns separated by " │ " rules', () => {
@@ -400,11 +440,11 @@ test('fitBand: always exactly width; long rollup clips left, not wrap', () => {
 })
 
 test('columnHeader: labels present, grid-aligned, rules match sessionRow', () => {
-  const h = columnHeader()
+  const h = columnHeader(80)
   assert.match(h, /SESSION/)
   assert.match(h, /STATUS/)
   assert.match(h, /ZONE/)
-  assert.match(h, /HANDOFF/)
+  assert.match(h, /AGE/) // compact handoff age column (was HANDOFF)
   assert.equal((h.match(/ │ /g) || []).length, 3) // same 3 rules as a data row
   // SESSION starts at column 4 (clears the "  ● " glyph gutter of a data row)
   assert.equal(h.indexOf('SESSION'), 4)
@@ -413,13 +453,13 @@ test('columnHeader: labels present, grid-aligned, rules match sessionRow', () =>
 
 test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {
   assert.equal(WAR_CHROME, 7)
-  const lines = renderWarRoom(fleet, { rows: Infinity }).split('\n')
-  const bodyCount = bodyModel(fleet).length
+  const lines = renderWarRoom(fleet, { rows: Infinity, cols: 80 }).split('\n')
+  const bodyCount = bodyModel(fleet, { cols: 80 }).length
   assert.equal(lines.length, bodyCount + WAR_CHROME) // header+panels(4)+colHeader+footer = 7
 })
 
 test('renderWarRoom includes the column header line above the body', () => {
-  const lines = renderWarRoom(fleet, { rows: Infinity }).split('\n')
+  const lines = renderWarRoom(fleet, { rows: Infinity, cols: 80 }).split('\n')
   // line 0 = ⚔ header, 1..4 = panels, line 5 = column header
-  assert.match(lines[5], /SESSION.*STATUS.*ZONE.*HANDOFF/)
+  assert.match(lines[5], /SESSION.*STATUS.*ZONE.*AGE/)
 })

@@ -131,36 +131,58 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let confirm = false
   let flash = ''
   let bulkTargets = []
+  let deadCache = [] // refreshed with fleet — X uses this (no second collectFleet)
   const heat = []
   let view = { repos: [], totals: {} }
   let model = []
+  let lastCols = 0
   let paintTimer
   let dataTimer
-  const bodyHeight = () => Math.max(1, (W.rows || 24) - WAR_CHROME)
+  let rawFleet = { repos: [], totals: {} } // unfiltered — source for deadCache
+  const termCols = () => {
+    const c = W.columns
+    return Number.isFinite(c) && c >= 40 ? c : 80
+  }
+  const termRows = () => {
+    const r = W.rows
+    return Number.isFinite(r) && r >= 8 ? r : 24
+  }
+  const bodyHeight = () => Math.max(1, termRows() - WAR_CHROME)
   const selCount = () => selectableIndices(model).length
   const selIdx = () => selectedModelIndex(model, selOrd)
   const syncScroll = () => {
     const idx = selIdx()
     scroll = idx == null ? 0 : ensureVisible(idx, scroll, bodyHeight(), model.length)
   }
+  const rebuildModel = () => {
+    lastCols = termCols()
+    model = bodyModel(view, { wide, showNested, cols: lastCols })
+  }
   const refresh = () => {
+    // Skip heavy re-collect while a bulk-confirm is open — keeps y/n snappy.
+    if (confirm) return
     const fleet = collectFleet(home, Date.now())
+    rawFleet = fleet
+    deadCache = collectDead(fleet)
     const matched = matchFleet(filterFleet(fleet, { showAll }), { query, workingOnly })
     view = sortFleet(matched)
-    model = bodyModel(view, { wide, showNested })
+    rebuildModel()
     heat.push(fleet.totals.working)
     if (heat.length > 30) heat.shift()
     selOrd = moveSelection(selCount(), selOrd, 0) // clamp to the new fleet size
     syncScroll()
   }
   const draw = () => {
+    const cols = termCols()
+    // Resize: reflow the grid so rows never exceed terminal width (wrap = death).
+    if (cols !== lastCols) rebuildModel()
     const clock = new Date().toTimeString().slice(0, 8)
     const text = renderWarRoom(view, {
       showAll,
       heatValues: heat,
       scroll,
-      rows: W.rows || 24,
-      cols: W.columns || PANEL_W,
+      rows: termRows(),
+      cols,
       wide,
       clock,
       selected: selIdx(),
@@ -171,6 +193,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       manageLabel: flash || labelOf(model[selIdx()]?.session),
       confirm,
       confirmCount: bulkTargets.length,
+      deadCount: deadCache.length,
+      model, // paint clock must NOT rebuild bodyModel
     })
     const painted = paint(spinnerizeWar(text, SPINNER_FRAMES[frame % SPINNER_FRAMES.length]))
     const body = painted
@@ -179,6 +203,11 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       .join('\n')
     W.write(`\x1b[H${body}\x1b[J`)
     frame++
+  }
+  // showAll re-reads hundreds of files — slow the data clock so the UI stays interactive.
+  const armDataTimer = () => {
+    if (dataTimer) clearInterval(dataTimer)
+    dataTimer = setInterval(refresh, showAll ? 2500 : 1000)
   }
   const teardown = () => {
     clearInterval(paintTimer)
@@ -232,23 +261,42 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       if (s?.repo_id && s?.session_id) fs.rmSync(sessionFile(home, s.repo_id, s.session_id))
     } catch {}
   }
-  // Sweep every terminal record in the fleet (not just the filtered view).
+  // X from nav/manage: use the cached dead list (instant). y then deletes.
   const beginClearDead = () => {
-    bulkTargets = collectDead(collectFleet(home, Date.now()))
+    bulkTargets = deadCache.length ? deadCache.slice() : collectDead(rawFleet)
     if (!bulkTargets.length) {
-      flash = 'no dead sessions'
+      // One expensive rescan only when the cache is empty.
+      const fleet = collectFleet(home, Date.now())
+      rawFleet = fleet
+      deadCache = collectDead(fleet)
+      bulkTargets = deadCache.slice()
+    }
+    if (!bulkTargets.length) {
+      flash = 'no dead'
       return draw()
     }
     confirm = true
+    flash = ''
     return draw()
+  }
+  const commitClearDead = () => {
+    const targets = bulkTargets
+    bulkTargets = []
+    confirm = false
+    mode = 'nav'
+    for (const s of targets) killRecord(s)
+    deadCache = []
+    refresh()
+    draw()
   }
   W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
   refresh()
   draw()
   paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
-  dataTimer = setInterval(refresh, 1000)
+  armDataTimer()
   process.on('SIGINT', stop)
   process.on('SIGWINCH', () => {
+    rebuildModel()
     syncScroll()
     draw()
   })
@@ -259,14 +307,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     if (k === '\x03') return stop() // Ctrl-C always quits, even mid-filter
     // Confirm is global — nav X and manage X both land here (y/n/esc).
     if (confirm) {
-      if (k === 'y' || k === 'Y') {
-        for (const s of bulkTargets) killRecord(s)
-        confirm = false
-        mode = 'nav'
-        bulkTargets = []
-        refresh()
-        return draw()
-      }
+      if (k === 'y' || k === 'Y') return commitClearDead()
       if (k === 'n' || k === 'N' || k === '\x1b') {
         confirm = false
         bulkTargets = []
@@ -330,6 +371,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
         // "live — not killable". Reveal terminal rows while managing.
         if (!showAll) {
           showAll = true
+          armDataTimer()
           refresh()
         }
         return draw()
@@ -340,6 +382,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     if (k === 'c') return cdPrint()
     if (k === 'a') {
       showAll = !showAll
+      armDataTimer()
       refresh()
       return draw()
     }
@@ -358,7 +401,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     }
     if (k === 'n') {
       showNested = !showNested
-      refresh()
+      rebuildModel()
+      selOrd = moveSelection(selCount(), selOrd, 0)
+      syncScroll()
       return draw()
     }
     let d = 0

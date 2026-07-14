@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fleetLine } from '../lib/fleet.mjs'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
-import { collectFleet, filterFleet, sortFleet, isNested, tally } from '../lib/fleet.mjs'
+import { collectFleet, filterFleet, sortFleet, isNested, tally, contestedCount } from '../lib/fleet.mjs'
 
 const S = (over) => ({ liveness: 'idle', touched_globs: [], ...over })
 
@@ -111,4 +111,16 @@ test('collectFleet totals split human vs nested', () => {
   const g = f.repos.find((r) => r.repoId === 'gamma-aaaa1111')
   assert.equal(g.human, 1)
   assert.equal(g.nested, 1)
+})
+
+test('contestedCount: live multi-touch only; dead ignored (no re-read)', () => {
+  assert.equal(
+    contestedCount([
+      { liveness: 'idle', touched_globs: ['a.ts', 'b.ts'] },
+      { liveness: 'working', touched_globs: ['a.ts'] },
+      { liveness: 'closed', touched_globs: ['a.ts'] }, // dead — must not count
+    ]),
+    1,
+  )
+  assert.equal(contestedCount([{ liveness: 'idle', touched_globs: ['solo.ts'] }]), 0)
 })
