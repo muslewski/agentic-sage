@@ -89,3 +89,38 @@ test('paint: war column-header labels are cream; a lone │ rule is dim', () => 
     assert.ok(line.includes(`${DIM}│\x1b[0m`), 'rule painted dim')
   })
 })
+
+test('paint: face tabs — active gold, inactive dim; counts cyan on header', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const GOLD = '\x1b[33m'
+    const DIM = '\x1b[90m'
+    const CYAN = '\x1b[36m'
+    const hdr = paint('⚔  SAGE WAR     ‹ LIVE 12 · clash 1 · memory 600 ›     12:00:00')
+    assert.ok(hdr.includes(`${GOLD}LIVE\x1b[0m`), 'active LIVE gold')
+    assert.ok(hdr.includes(`${DIM}clash\x1b[0m`), 'inactive clash dim')
+    assert.ok(hdr.includes(`${DIM}memory\x1b[0m`), 'inactive memory dim')
+    assert.ok(hdr.includes(`${CYAN}12\x1b[0m`), 'live count cyan')
+    assert.ok(hdr.includes(`${DIM}‹\x1b[0m`) || hdr.includes('‹'), 'brackets present')
+  })
+})
+
+test('paint: footer — dim base, cream labels, gold motion keys', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const GOLD = '\x1b[33m'
+    const CREAM = '\x1b[37m'
+    const foot = paint(' ↑↓ move · ↵ open · / filter · zone✓ · ←→ faces · ? help · q quit')
+    assert.ok(foot.includes(`${GOLD}↑↓\x1b[0m`), '↑↓ gold')
+    assert.ok(foot.includes(`${GOLD}←→\x1b[0m`), '←→ gold')
+    assert.ok(foot.includes(`${CREAM}move\x1b[0m`), 'move cream')
+    assert.ok(foot.includes(`${CREAM}help\x1b[0m`), 'help cream')
+    assert.ok(foot.includes(`${CREAM}faces\x1b[0m`), 'faces cream')
+  })
+})
+
+test('paint: MEMORY clear CTA and CLASH path lead', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const GOLD = '\x1b[33m'
+    assert.ok(paint(' X clear×600 · m manage · ←→ faces · ? help · q quit').includes(`${GOLD}clear×600\x1b[0m`))
+    assert.ok(paint('  ⚔ lib/warroom.mjs  ·2 1hot').includes(`${GOLD}⚔\x1b[0m`))
+  })
+})
