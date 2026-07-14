@@ -31,7 +31,14 @@ import {
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
-import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
+import {
+  renderWarRoom,
+  spinnerizeWar,
+  PANEL_W,
+  bodyModel,
+  WAR_CHROME,
+  nextNameMode,
+} from '../lib/warroom.mjs'
 import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
@@ -128,6 +135,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let query = ''
   let workingOnly = false
   let showNested = false // Layer B: fold nested armory children into band rollup
+  let nameMode = 'name' // name (tmux) | branch | both — cycle with `t`
+  let showZone = false // path localization column — off by default (`z`)
   let confirm = false
   let flash = ''
   let bulkTargets = []
@@ -156,7 +165,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   }
   const rebuildModel = () => {
     lastCols = termCols()
-    model = bodyModel(view, { wide, showNested, cols: lastCols })
+    model = bodyModel(view, { wide, showNested, cols: lastCols, nameMode, showZone })
   }
   const refresh = () => {
     // Skip heavy re-collect while a bulk-confirm is open — keeps y/n snappy.
@@ -190,6 +199,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       query,
       workingOnly,
       showNested,
+      nameMode,
+      showZone,
       manageLabel: flash || labelOf(model[selIdx()]?.session),
       confirm,
       confirmCount: bulkTargets.length,
@@ -416,6 +427,20 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       showNested = !showNested
       rebuildModel()
       selOrd = moveSelection(selCount(), selOrd, 0)
+      syncScroll()
+      return draw()
+    }
+    // Cycle NAME column: tmux name → branch → both
+    if (k === 't') {
+      nameMode = nextNameMode(nameMode)
+      rebuildModel()
+      syncScroll()
+      return draw()
+    }
+    // Toggle ZONE (path localization) — off by default for a cleaner roster
+    if (k === 'z') {
+      showZone = !showZone
+      rebuildModel()
       syncScroll()
       return draw()
     }
