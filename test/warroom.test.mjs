@@ -21,6 +21,9 @@ import {
   collapseChurn,
   isGhostSession,
   prepareRepoView,
+  fitBand,
+  ROW_W,
+  COL,
 } from '../lib/warroom.mjs'
 
 const fleet = {
@@ -207,12 +210,15 @@ test('renderRepoSection: accent-bar band; hot rollup only when working > 0', () 
     {},
   )
   assert.match(hot[0], /^▌ syndcast · 1 session/u) // margin bar + name
-  assert.match(hot[0], /· 2 hot$/u) // rollup on the right
+  assert.match(hot[0], /2 hot/u) // rollup on the right
+  assert.equal([...hot[0]].length, ROW_W) // fixed band width — no wrap jitter
   const cold = renderRepoSection(
     { label: 'alpha', working: 0, sessions: [{ branch: 'x', liveness: 'idle', touched_globs: [] }] },
     {},
   )
-  assert.equal(cold[0], '▌ alpha · 1 session') // calm repo stays quiet — no rollup
+  assert.match(cold[0], /^▌ alpha · 1 session/u) // calm repo — no hot/ghost rollup
+  assert.doesNotMatch(cold[0], /hot|ghosts|churn/)
+  assert.equal([...cold[0]].length, ROW_W)
 })
 
 test('bodyLines: one header per repo + one row per session (nested folded by default)', () => {
@@ -350,10 +356,16 @@ test('footer: manage mode shows the action menu', () => {
 test('footer: manage confirm shows a y/n prompt with the count', () => {
   const conf = footer(false, 0, 0, { mode: 'manage', confirm: true, confirmCount: 31 })
   assert.match(conf, /clear 31 dead session\(s\)\? y\/n/)
+  // Confirm is mode-agnostic (nav X uses the same footer).
+  const fromNav = footer(true, 0, 0, { mode: 'nav', confirm: true, confirmCount: 590 })
+  assert.match(fromNav, /clear 590 dead/)
 })
 
-test('footer: nav advertises the manage key', () => {
+test('footer: nav advertises manage; showAll+dead advertises X clear N', () => {
   assert.match(footer(false, 0, 0, {}), /m manage/)
+  const grave = footer(true, 0, 0, { deadCount: 590 })
+  assert.match(grave, /X clear 590 dead/)
+  assert.match(grave, /dead✓/)
 })
 
 test('sessionRow: columns separated by " │ " rules', () => {
@@ -362,10 +374,29 @@ test('sessionRow: columns separated by " │ " rules', () => {
   assert.match(row, /working/) // status token stays a clean, standalone token
 })
 
-test('sessionRow: empty trailing cells still trimmed, no dangling rule pad', () => {
-  const row = sessionRow({ session_id: 'x', branch: 'main', liveness: 'closed', handoff_bucket: 'none' })
-  assert.equal(row, row.replace(/\s+$/, '')) // no trailing whitespace
-  assert.ok(row.includes(' │ ')) // rules present even with empty zone/when
+test('sessionRow: fixed grid width — empty handoff does not shorten the row', () => {
+  const empty = sessionRow({ session_id: 'x', branch: 'main', liveness: 'closed', handoff_bucket: 'none' })
+  const full = sessionRow({
+    session_id: 'y',
+    branch: 'main',
+    liveness: 'idle',
+    handoff_bucket: 'fresh',
+    handoff_age: '4m ago',
+    touched_globs: ['lib/x.mjs'],
+    row: 'D7',
+  })
+  assert.equal([...empty].length, ROW_W)
+  assert.equal([...full].length, ROW_W)
+  assert.equal(empty.indexOf('closed'), full.indexOf('idle')) // status col aligned
+  assert.ok(empty.includes(' │ ')) // rules present even with empty zone/when
+})
+
+test('fitBand: always exactly width; long rollup clips left, not wrap', () => {
+  const short = fitBand('▌ alpha · 1 session', [], 40)
+  assert.equal([...short].length, 40)
+  const rolled = fitBand('▌ syndcast · 12 sessions', ['3 hot', '+40 ghosts', '+9 churn'], 56)
+  assert.equal([...rolled].length, 56)
+  assert.match(rolled, /ghosts/)
 })
 
 test('columnHeader: labels present, grid-aligned, rules match sessionRow', () => {
@@ -377,6 +408,7 @@ test('columnHeader: labels present, grid-aligned, rules match sessionRow', () =>
   assert.equal((h.match(/ │ /g) || []).length, 3) // same 3 rules as a data row
   // SESSION starts at column 4 (clears the "  ● " glyph gutter of a data row)
   assert.equal(h.indexOf('SESSION'), 4)
+  assert.equal([...h].length, ROW_W) // same right edge as session rows
 })
 
 test('WAR_CHROME is 7 and renderWarRoom stays self-consistent', () => {

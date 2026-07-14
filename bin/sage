@@ -58,7 +58,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
-  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ↵ enter a session · / filter
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ↵ enter · X clear dead · m manage
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
@@ -232,6 +232,16 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       if (s?.repo_id && s?.session_id) fs.rmSync(sessionFile(home, s.repo_id, s.session_id))
     } catch {}
   }
+  // Sweep every terminal record in the fleet (not just the filtered view).
+  const beginClearDead = () => {
+    bulkTargets = collectDead(collectFleet(home, Date.now()))
+    if (!bulkTargets.length) {
+      flash = 'no dead sessions'
+      return draw()
+    }
+    confirm = true
+    return draw()
+  }
   W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
   refresh()
   draw()
@@ -247,6 +257,23 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   process.stdin.on('data', (buf) => {
     const k = buf.toString('utf8')
     if (k === '\x03') return stop() // Ctrl-C always quits, even mid-filter
+    // Confirm is global — nav X and manage X both land here (y/n/esc).
+    if (confirm) {
+      if (k === 'y' || k === 'Y') {
+        for (const s of bulkTargets) killRecord(s)
+        confirm = false
+        mode = 'nav'
+        bulkTargets = []
+        refresh()
+        return draw()
+      }
+      if (k === 'n' || k === 'N' || k === '\x1b') {
+        confirm = false
+        bulkTargets = []
+        return draw()
+      }
+      return
+    }
     if (mode === 'filter') {
       if (k === '\x1b') {
         query = ''
@@ -276,22 +303,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       flash = '' // any key clears a transient flash
       if (k === '\x1b') {
         mode = 'nav'
-        confirm = false
         return draw()
-      }
-      if (confirm) {
-        if (k === 'y') {
-          for (const s of bulkTargets) killRecord(s)
-          confirm = false
-          mode = 'nav'
-          refresh()
-          return draw()
-        }
-        if (k === 'n') {
-          confirm = false
-          return draw()
-        }
-        return
       }
       if (k === 'k') {
         const s = model[selIdx()]?.session
@@ -304,18 +316,15 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
         refresh()
         return draw()
       }
-      if (k === 'X') {
-        bulkTargets = collectDead(collectFleet(home, Date.now()))
-        confirm = true
-        return draw()
-      }
+      if (k === 'X') return beginClearDead()
       return
     }
     if (k === 'q') return stop() // q quits in nav mode only (a filter char otherwise)
+    // Natural graveyard kill from nav: X → y confirms (same path as manage X).
+    if (k === 'X') return beginClearDead()
     if (k === 'm') {
       if (selIdx() != null) {
         mode = 'manage'
-        confirm = false
         flash = ''
         // Default war hides dead/closed — single-kill `k` would only flash
         // "live — not killable". Reveal terminal rows while managing.
