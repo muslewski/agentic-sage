@@ -271,3 +271,50 @@ test('doctor: grok check absent/na when ~/.grok missing', () => {
   const row = checks.find((c) => /grok/i.test(c.name))
   assert.ok(!row || row.ok !== false)
 })
+
+// ── Phase 5 Child B s4: health banner + checklist + fix hints ───────────────
+
+test('s4: renderDoctor health banner shows HEALTH ok/total + gauge + pct', () => {
+  const home = mkTmp('sage-s4-')
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const ok = checks.filter((c) => c.ok).length
+  const n = checks.length
+  const txt = renderDoctor(checks)
+  assert.match(txt, new RegExp(`SAGE doctor · HEALTH ${ok}/${n}`))
+  assert.match(txt, /[█░]+/)
+  assert.match(txt, /\d+%/)
+  // checklist + verdict still present
+  assert.match(txt, /[✓✗]/)
+  assert.match(txt, /\d+ ok · \d+ need attention/)
+})
+
+test('s4: every failing check carries a fix; renderDoctor prints a hint under each', () => {
+  const home = mkTmp('sage-s4-')
+  // force token-forecast absent + missing install surface
+  fs.mkdirSync(sageHome(home), { recursive: true })
+  fs.writeFileSync(
+    globalConfig(home),
+    JSON.stringify({ enabled: false, tokenForecastPath: path.join(home, 'missing-tf') }),
+  )
+  const checks = doctor(home, mkTmp('sage-norepo-'))
+  const fails = checks.filter((c) => !c.ok)
+  assert.ok(fails.length >= 1)
+  for (const f of fails) {
+    assert.ok(f.fix, `failing check "${f.name}" must carry a fix hint`)
+  }
+  const rendered = renderDoctor(checks)
+  for (const f of fails) {
+    // each failure line is followed (next non-empty indent) by → run: …
+    const re = new RegExp(
+      `✗ ${f.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} — [^\\n]*\\n\\s+→ run: ${f.fix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+    )
+    assert.match(rendered, re)
+  }
+})
+
+test('s4: doctor exit stays 0 regardless of failures (CLI wiring contract)', async () => {
+  // Pure contract: renderDoctor / doctor never throw; process exit is bin's job
+  // and remains always-0 for doctor. Guarded here as a pure non-throw invariant.
+  const home = mkTmp('sage-s4-')
+  assert.doesNotThrow(() => renderDoctor(doctor(home, mkTmp('sage-norepo-'))))
+})

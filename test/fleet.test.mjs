@@ -5,7 +5,22 @@ import path from 'node:path'
 import { fleetLine } from '../lib/fleet.mjs'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
-import { collectFleet, filterFleet, sortFleet, isNested, tally, contestedCount } from '../lib/fleet.mjs'
+import {
+  collectFleet,
+  filterFleet,
+  sortFleet,
+  isNested,
+  tally,
+  contestedCount,
+  isOrphanRepo,
+  activitySpark,
+  liveGauge,
+  buildReposView,
+  renderRepos,
+  fzfRepoLine,
+  composeHud,
+  fleetHud,
+} from '../lib/fleet.mjs'
 
 const S = (over) => ({ liveness: 'idle', touched_globs: [], ...over })
 
@@ -123,4 +138,117 @@ test('contestedCount: live multi-touch only; dead ignored (no re-read)', () => {
     1,
   )
   assert.equal(contestedCount([{ liveness: 'idle', touched_globs: ['solo.ts'] }]), 0)
+})
+
+// ── Phase 5 Child B s5: repos groups + fleet HUD (no empty chips) ───────────
+
+test('s5: isOrphanRepo flags subagent UUID noise; product names stay product', () => {
+  assert.equal(isOrphanRepo('subagent-019f5d70-aaaa-bbbb'), true)
+  assert.equal(isOrphanRepo('subagent-019f5d70-aaaa-bbbb-deadbeef'), true)
+  assert.equal(isOrphanRepo('agentic-sage-0e480620'), false)
+  assert.equal(isOrphanRepo('hermes-aabbccdd'), false)
+})
+
+test('s5: activitySpark buckets timestamps; liveGauge reflects live/total', () => {
+  assert.equal(activitySpark([]), '')
+  const now = NOW
+  const ts = [now - 1 * H, now - 3 * H, now - 6 * H, now - 12 * H, now - 20 * H]
+  const spark = activitySpark(ts, { now, buckets: 8, windowMs: 24 * H })
+  assert.match(spark, /^[▁▂▃▄▅▆▇█]+$/u)
+  assert.equal(spark.length, 8)
+  assert.equal(liveGauge(0, 0), '░░░░░')
+  assert.match(liveGauge(2, 4), /[█░]+/)
+  assert.equal(liveGauge(4, 4), '█████') // 100% full
+})
+
+test('s5: buildReposView + renderRepos groups product vs orphan; filters subagent noise by default', () => {
+  const home = mkTmp('sage-rv-')
+  seedF(home, 'hermes-aaaa1111', 'w', {
+    branch: 'main',
+    pid: process.pid,
+    updated_at: ago(1 * H),
+    last_tool_at: ago(1000),
+  })
+  seedF(home, 'hermes-aaaa1111', 'i', { branch: 'feat', pid: process.pid, updated_at: ago(2 * H) })
+  seedF(home, 'agentic-sage-bbbb2222', 'a', {
+    branch: 'main',
+    pid: process.pid,
+    updated_at: ago(3 * H),
+  })
+  seedF(home, 'subagent-019f5d70-cccc3333', 's', {
+    branch: 'main',
+    updated_at: ago(4 * H),
+  })
+  const fleet = collectFleet(home, NOW)
+  const view = buildReposView(fleet, { now: NOW })
+  assert.equal(view.product.length, 2)
+  assert.equal(view.orphan.length, 1)
+  assert.ok(view.product.every((r) => !isOrphanRepo(r.repoId)))
+  assert.ok(view.orphan.every((r) => isOrphanRepo(r.repoId)))
+
+  const txt = renderRepos(view)
+  assert.match(txt, /SAGE repos · 2 product/)
+  assert.match(txt, /hermes/)
+  assert.match(txt, /agentic-sage/)
+  assert.match(txt, /[█░]+/) // live gauge
+  assert.match(txt, /[▁▂▃▄▅▆▇█]+/u) // activity spark
+  // orphan subagent noise folded by default
+  assert.match(txt, /▸ orphans? \(1\)/)
+  assert.ok(!txt.includes('subagent-019f5d70'), 'orphan body folded by default')
+
+  const all = renderRepos(view, { all: true })
+  assert.match(all, /subagent/)
+})
+
+test('s5: fzfRepoLine ends with repoId for board jump parse-back', () => {
+  const line = fzfRepoLine({
+    repoId: 'hermes-aaaa1111',
+    label: 'hermes',
+    live: 2,
+    sessions: 5,
+    gauge: '██░░░',
+    spark: '▁▂▄█',
+  })
+  assert.match(line, /hermes/)
+  assert.match(line, /\thermes-aaaa1111$/)
+})
+
+test('s5: composeHud drops empty chips; fleetHud composes live/⚔/nearest', () => {
+  assert.equal(composeHud(['18 live', '', null, '97 ⚔', undefined]), '18 live · 97 ⚔')
+  assert.equal(composeHud([]), '')
+  assert.equal(composeHud(['', null]), '')
+
+  const sessions = [
+    S({ session_id: 'self', branch: 'mine', updated_at: '2026-06-28T13:00:00Z', ctx_used: 50, ctx_window: 100 }),
+    S({
+      session_id: 'a',
+      branch: 'feat-a',
+      liveness: 'working',
+      touched_globs: ['src/a.ts'],
+      updated_at: '2026-06-28T12:00:00Z',
+    }),
+    S({
+      session_id: 'b',
+      branch: 'feat-b',
+      liveness: 'idle',
+      touched_globs: ['src/a.ts'],
+      updated_at: '2026-06-28T11:00:00Z',
+    }),
+  ]
+  const hud = fleetHud(sessions, { selfSid: 'self' })
+  assert.match(hud, /2 live/)
+  assert.match(hud, /⚔/) // contested chip present when paths overlap
+  assert.match(hud, /nearest/)
+  // no empty chips (no " ·  · " or trailing ·)
+  assert.ok(!/·\s*·/.test(hud))
+  assert.ok(!/·\s*$/.test(hud))
+
+  // solo self → no empty chips; either empty or only self-ctx if provided
+  const solo = fleetHud([S({ session_id: 'self', ctx_used: 60, ctx_window: 100 })], {
+    selfSid: 'self',
+    asking: true,
+  })
+  // asking pulse alone is fine; never empty separators
+  assert.ok(!/·\s*·/.test(solo))
+  if (solo) assert.match(solo, /Asking|ctx|⚖/)
 })

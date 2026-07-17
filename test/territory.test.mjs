@@ -15,6 +15,9 @@ import {
   renderTerritory,
   renderWhyDiverged,
   renderMergeBrief,
+  pathRisk,
+  pathHeat,
+  fzfPathLine,
 } from '../lib/territory.mjs'
 
 const NOW = Date.parse('2026-06-28T12:00:00Z')
@@ -157,4 +160,101 @@ test('renderMergeBrief: contested path + generated rule; empty → none', () => 
   assert.match(s, /pnpm-lock\.yaml/)
   assert.match(s, /regenerate/i)
   assert.match(renderMergeBrief([], { repoId: 'r1' }), /no contested/i)
+})
+
+// ── Phase 5 Child B s5: risk score + heat spark on merge surfaces ───────────
+
+test('s5: pathRisk scores session count + working + generated', () => {
+  const low = pathRisk({
+    path: 'a.ts',
+    generated: false,
+    sessions: [
+      { session_id: 'a', branch: 'a', liveness: 'idle' },
+      { session_id: 'b', branch: 'b', liveness: 'idle' },
+    ],
+  })
+  assert.equal(low.level, 'low')
+  assert.match(low.bar, /[█░]+/)
+  assert.equal(low.label, 'low')
+
+  const high = pathRisk({
+    path: 'pnpm-lock.yaml',
+    generated: true,
+    sessions: [
+      { session_id: 'a', branch: 'a', liveness: 'working' },
+      { session_id: 'b', branch: 'b', liveness: 'working' },
+      { session_id: 'c', branch: 'c', liveness: 'stalled' },
+    ],
+  })
+  assert.equal(high.level, 'high')
+  assert.match(high.bar, /█/)
+})
+
+test('s5: pathHeat sparkline scales session hotness', () => {
+  assert.equal(pathHeat([]), '')
+  const spark = pathHeat([
+    { liveness: 'idle' },
+    { liveness: 'working' },
+    { liveness: 'stalled' },
+    { liveness: 'working' },
+  ])
+  assert.match(spark, /^[▁▂▃▄▅▆▇█]+$/u)
+  assert.equal(spark.length, 4)
+})
+
+test('s5: renderMergeBrief shows RISK chip + heat spark per path', () => {
+  const contested = [
+    {
+      path: 'lib/board.mjs',
+      generated: false,
+      sessions: [
+        { session_id: 'a', branch: 'main', liveness: 'working' },
+        { session_id: 'b', branch: 'feat-x', liveness: 'idle' },
+      ],
+    },
+    {
+      path: 'pnpm-lock.yaml',
+      generated: true,
+      sessions: [
+        { session_id: 'a', branch: 'main', liveness: 'working' },
+        { session_id: 'b', branch: 'feat-x', liveness: 'working' },
+      ],
+    },
+  ]
+  const s = renderMergeBrief(contested, { repoId: 'r1' })
+  assert.match(s, /RISK/)
+  assert.match(s, /[█░]+/) // risk bar chip
+  assert.match(s, /\b(low|medium|high)\b/)
+  assert.match(s, /lib\/board\.mjs/)
+  assert.match(s, /[▁▂▃▄▅▆▇█]+/u) // per-path heat spark
+  assert.match(s, /contested by:/)
+  assert.match(s, /regenerate/i)
+  // empty still stable
+  assert.match(renderMergeBrief([], { repoId: 'r1' }), /no contested/i)
+})
+
+test('s5: renderWhyDiverged shows RISK + heat on multi-touch fixture', () => {
+  const touches = [
+    { session_id: 'a', branch: 'feat-a', via: 'touched', liveness: 'working', handoff_age: '—', generated: false },
+    { session_id: 'b', branch: 'feat-b', via: 'touched', liveness: 'idle', handoff_age: '—', generated: false, stat: [{ added: 2, deleted: 0 }] },
+  ]
+  const s = renderWhyDiverged(touches, { file: 'shared.ts' })
+  assert.match(s, /RISK/)
+  assert.match(s, /[▁▂▃▄▅▆▇█]+/u)
+  assert.match(s, /feat-a/)
+  assert.match(s, /\+2\/-0/)
+  assert.match(renderWhyDiverged([], { file: 'shared.ts' }), /no other session/i)
+})
+
+test('s5: fzfPathLine embeds path for drill-in parse-back', () => {
+  const line = fzfPathLine({
+    path: 'lib/board.mjs',
+    generated: false,
+    sessions: [
+      { branch: 'main', liveness: 'working' },
+      { branch: 'feat', liveness: 'idle' },
+    ],
+  })
+  assert.match(line, /lib\/board\.mjs/)
+  assert.match(line, /\tlib\/board\.mjs$/) // tab-delimited path for fzf --with-nth
 })
