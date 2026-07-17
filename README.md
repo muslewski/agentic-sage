@@ -25,6 +25,10 @@
   <img src="https://img.shields.io/badge/node-%3E%3D20-blue?style=flat" alt="Node >=20">
 </p>
 
+<p align="center"><img src="./assets/demo-war.gif" width="720" alt="sage war demo"></p>
+
+---
+
 **S**ession **A**wareness & **G**uidance **E**ngine: a passive, read-only **fleet judge** for
 running many parallel agent coding sessions (Claude Code, Grok Build CLI, etc.). It does no work, spawns nothing,
 edits nothing — it watches every session, holds each one's self-declared truth (time-aware), and
@@ -177,9 +181,6 @@ node install.mjs             # same as sage init --global, from source
 sage on
 ```
 
-> **Demo:** run `sage board --watch` in a repo with live sessions for the
-> animated board. (A recorded asciinema demo may land in a future release.)
-
 > **Upgrading from an older SAGE?** Nothing breaks after `npm update` — an existing
 > `~/.claude/sage/` (the pre-rename state dir) keeps working in place (reads and writes) for
 > config, storage, and adapter discovery, so no re-init is required. Run `sage init` or
@@ -194,6 +195,7 @@ sage board [--json]     # who's live, on what branch, how stale, what they touch
 sage war [--json]       # live full-screen cockpit of every session across every repo
 #   (TTY interactive: ↵ enter a session (tmux jump or cd), ↑↓/j/k move, / filter, w working-only, c cd, a all, q quit)
 sage fleet [--json]     # one-line fleet summary (fold into a status tick)
+sage repos [--all]      # product/orphan atlas with live gauges + activity sparklines
 sage territory 'src/**' # before you start: does another session already claim this?
 sage why-diverged f.ts  # per-session intent + cross-branch diff for one file
 sage merge-brief        # all contested paths + the regenerate-don't-merge rule
@@ -203,6 +205,16 @@ sage doctor             # validate config / hook / settings / linked skills / ad
 sage where              # this repo's resolved scope + storage + which rule matched
 sage off                # freeze judging (global master — see "Scope vs storage" above)
 ```
+
+<p><img src="./assets/demo-board.gif" width="600" alt="sage board demo"></p>
+
+<details><summary>▶ demo — doctor</summary>
+<p><img src="./assets/demo-doctor.gif" width="600" alt="sage doctor demo"></p>
+</details>
+
+<details><summary>▶ demo — repos</summary>
+<p><img src="./assets/demo-repos.gif" width="600" alt="sage repos demo"></p>
+</details>
 
 Machine-readable output (`board --json`, `fleet --json`) follows the schema-1 envelope documented in `SCHEMA.md`.
 
