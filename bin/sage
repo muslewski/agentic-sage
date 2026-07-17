@@ -24,7 +24,6 @@ import {
   setRepoEnabled,
   linkSession,
   unlinkSession,
-  listRepos,
   doctor,
   renderDoctor,
 } from '../lib/control.mjs'
@@ -38,7 +37,18 @@ import {
   fzfPathLine,
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
-import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
+import {
+  fleetLine,
+  collectFleet,
+  filterFleet,
+  sortFleet,
+  contestedCount,
+  buildReposView,
+  renderRepos,
+  fzfRepoLine,
+  fleetHud,
+  composeHud,
+} from '../lib/fleet.mjs'
 import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
 import {
   FACES,
@@ -82,7 +92,7 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   territory <glob…>    who else claims/touches these paths (pre-flight)
   why-diverged <file>  which sessions touch a file + why (+ numstat)
   merge-brief          all contested paths before you merge
-  repos                list all judged repos
+  repos [--all]        product/orphan atlas; --all expands orphan fold
   prune [--days N] [--yes]   remove closed/dead sessions older than N days (default 7)
   on | off             enable/disable SAGE globally
   link <sid> [state]   manual link_state override (default: linked)
@@ -103,6 +113,74 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
 const adapterCtx = async (home, repoId, cwd) => {
   const ctx = { repoRoot: resolveRepoRoot(cwd) }
   return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
+}
+
+// Optional fzf over product repos → jump to hottest live session (board-style
+// cd/tmux hint). Cancel / missing fzf → false (caller prints plain atlas).
+const tryReposFzfJump = (home, view, { all = false, now = Date.now() } = {}) => {
+  const rows = [...(view.product || []), ...(all ? view.orphan || [] : [])]
+  if (!rows.length) return false
+  if (!process.stdout.isTTY || !process.stdin.isTTY) return false
+  let fzfPath
+  try {
+    fzfPath = execFileSync('sh', ['-c', 'command -v fzf'], { encoding: 'utf8' }).trim()
+  } catch {
+    return false
+  }
+  if (!fzfPath) return false
+  const input = rows.map(fzfRepoLine).join('\n')
+  let stdout = ''
+  try {
+    stdout = execFileSync(
+      fzfPath,
+      ['--height=40%', '--reverse', '--prompt=repos ❯ ', '--delimiter=\t', '--with-nth=1'],
+      {
+        encoding: 'utf8',
+        input,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      },
+    )
+  } catch {
+    return false
+  }
+  const line = String(stdout || '').trim()
+  if (!line) return false
+  const repoId = line.includes('\t') ? line.split('\t').pop() : ''
+  const hit = rows.find((r) => r.repoId === repoId) || rows.find((r) => line.includes(r.repoId))
+  if (!hit) return false
+  // Hottest live session in that repo → board-style jump; else print board hint.
+  let sessions = []
+  try {
+    sessions = collectSessions(home, hit.repoId, now)
+  } catch {
+    sessions = []
+  }
+  const { live } = partitionSessions(sessions)
+  const target = live[0]
+  if (target) {
+    if (target.tmux || target.pid) {
+      const panes = tmuxPanes()
+      const pane = target.tmux || (target.pid ? paneForPid(target.pid, panes) : null)
+      if (pane) {
+        try {
+          const args = process.env.TMUX
+            ? ['switch-client', '-t', pane]
+            : ['attach-session', '-t', String(pane).split(':')[0]]
+          execFileSync('tmux', args, { stdio: 'inherit' })
+          return true
+        } catch {
+          /* fall through */
+        }
+      }
+    }
+    const hint = jumpHint(target)
+    if (hint) {
+      process.stdout.write(`${hint}\n`)
+      return true
+    }
+  }
+  process.stdout.write(`# sage board  (${hit.label || hit.repoId})\n`)
+  return true
 }
 
 // Optional fzf path drill-in over contested merge-brief rows. Prints the
@@ -797,7 +875,27 @@ const main = async () => {
         }))
       }
       const selfSid = resolveSelfSid(home, repoId) || undefined
-      const line = fleetLine(collectSessions(home, repoId, now), { selfSid })
+      const sessions = collectSessions(home, repoId, now)
+      // Human HUD: composable chips (live, ⚔, nearest, ctx, asking). fleetLine
+      // stays the SessionStart brief + emitter path (byte-stable, untested here).
+      const asking =
+        selfSid &&
+        (() => {
+          try {
+            return askingAgeMs(home, selfSid, now) < 8000
+          } catch {
+            return false
+          }
+        })()
+      const hud = fleetHud(sessions, {
+        selfSid,
+        asking,
+        contested: contestedCount(sessions.filter((s) => s.liveness !== 'dead' && s.liveness !== 'closed')),
+      })
+      if (hud) return console.log(`sage: ${hud}`)
+      // Back-compat empty: still surface nearest-neighbour line when HUD is empty
+      // but fleetLine has content (should not happen), else clear empty-state.
+      const line = fleetLine(sessions, { selfSid })
       return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
     }
     case 'territory': {
@@ -848,13 +946,16 @@ const main = async () => {
       return console.log(renderMergeBrief(contested, { repoId }))
     }
     case 'repos': {
-      const repos = listRepos(home)
-      if (!repos.length) return console.log('sage: no judged repos yet')
-      return console.log(
-        repos
-          .map((r) => `  ${r.repoId.replace(/-[0-9a-f]{8}$/, '')} (${r.repoId} · ${r.sessions} session(s))`)
-          .join('\n'),
-      )
+      const showAll = process.argv.slice(3).includes('--all')
+      const fleet = collectFleet(home, now)
+      const view = buildReposView(fleet, { now })
+      if (!view.product.length && !view.orphan.length) return console.log('sage: no judged repos yet')
+      // TTY+fzf → pick a product repo and jump (board-style); cancel → atlas.
+      if (process.stdout.isTTY && process.stdin.isTTY) {
+        const jumped = tryReposFzfJump(home, view, { all: showAll, now })
+        if (jumped) return
+      }
+      return console.log(renderRepos(view, { all: showAll }))
     }
     case 'war': {
       const flags = process.argv.slice(3)
@@ -1055,8 +1156,12 @@ const main = async () => {
         const cfg = readJson(globalConfig(home)) || {}
         const ttlMs = Number.isFinite(cfg.statuslineTtlMs) ? cfg.statuslineTtlMs : 8000
         const label = typeof cfg.statuslineLabel === 'string' ? cfg.statuslineLabel : '⚖️ Asking Sage'
-        if (askingAgeMs(home, sid, now) < ttlMs) process.stdout.write(label)
-        else clearAsking(home, sid)
+        // Composable HUD: only non-empty chips. Today the sole chip is the
+        // asking pulse; empty → print nothing (fail-open, never an empty chip).
+        if (askingAgeMs(home, sid, now) < ttlMs) {
+          const out = composeHud([label])
+          if (out) process.stdout.write(out)
+        } else clearAsking(home, sid)
       } catch {
         /* fail-open: print nothing */
       }
