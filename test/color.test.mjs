@@ -124,3 +124,77 @@ test('paint: MEMORY clear CTA and CLASH path lead', () => {
     assert.ok(paint('  ⚔ lib/warroom.mjs  ·2 1hot').includes(`${GOLD}⚔\x1b[0m`))
   })
 })
+
+// ── Phase 5 Child A: semantic paint + help uncolored (s3) ──
+
+test('s3: paint maps session states semantically (live/attention/idle/dead)', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const GOLD = '\x1b[33m'
+    const OLIVE = '\x1b[32m'
+    const RED = '\x1b[31m'
+    const DIM = '\x1b[90m'
+
+    // working / attention → gold lead, not olive-live on a hot row
+    const work = paint('● feat/a  working · 71%  src/a/  4m')
+    assert.ok(work.includes(`${GOLD}●\x1b[0m`) || work.includes(`${GOLD}working\x1b[0m`), 'working state gold')
+
+    // idle → olive lead (calm live)
+    const idle = paint('● feat/b  idle  src/b/  1h')
+    assert.ok(idle.includes(`${OLIVE}●\x1b[0m`) || idle.includes(`${OLIVE}idle\x1b[0m`), 'idle olive')
+
+    // dead row → ● is NOT olive (the audit bug); dim or red
+    const dead = paint('● main  dead  3d')
+    assert.ok(!dead.includes(`${OLIVE}●\x1b[0m`), 'dead ● must not be olive')
+    assert.ok(
+      dead.includes(`${DIM}●\x1b[0m`) || dead.includes(`${RED}●\x1b[0m`) || dead.includes(`${RED}dead\x1b[0m`),
+      'dead painted dim/red',
+    )
+
+    // archive fold → dim
+    const fold = paint('▸ archive (80)')
+    assert.ok(fold.includes(`${DIM}`) || fold === '▸ archive (80)', 'archive fold dim or plain')
+    const stripped = fold.replace(/\x1b\[[0-9;]*m/g, '')
+    assert.equal(stripped, '▸ archive (80)')
+  })
+})
+
+test('s3: help/usage prose contains zero color codes', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const usage = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
+  board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
+  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
+  fleet [--json]                         one-line nearest-neighbour summary`
+
+    const out = paint(usage)
+    assert.equal(out, usage, 'usage must be identity under FORCE_COLOR')
+    assert.ok(!/\x1b\[/.test(out), 'zero ANSI in help')
+
+    // false-friend words must NOT be recolored when inside usage
+    assert.ok(!out.includes('\x1b[90mlive\x1b[0m'))
+    assert.ok(!out.includes('\x1b[31mdead\x1b[0m'))
+  })
+})
+
+test('s3: war help overlay prose is uncolored', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const help = `SAGE WAR ROOM — help
+
+Three faces (← →): LIVE army · CLASH contests · MEMORY graveyard.
+
+  ← →  [ ]     switch face: LIVE · CLASH · MEMORY
+Press ?  h  or  esc  to close`
+    const out = paint(help)
+    assert.equal(out, help)
+  })
+})
+
+test('s3: column headers stay cream; gauge blocks inherit status color path', () => {
+  withEnv({ NO_COLOR: null, FORCE_COLOR: '1' }, () => {
+    const CREAM = '\x1b[37m'
+    const hdr = paint('  CTX    STATUS     BRANCH          ZONE        AGE')
+    assert.ok(hdr.includes(`${CREAM}STATUS\x1b[0m`) || hdr.includes(`${CREAM}BRANCH\x1b[0m`))
+    // block gauge paints (cyan like % or gold for heat)
+    const gauge = paint('● feat  ████░ working · 80%  lib/  4m')
+    assert.match(gauge, /\x1b\[[0-9;]*m/)
+  })
+})

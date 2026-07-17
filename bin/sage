@@ -8,7 +8,14 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { resolveRepoId, resolveRepoRoot } from '../lib/repo-id.mjs'
 import { loadAdapter, zoneOf, rowOf } from '../lib/adapter.mjs'
-import { collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import {
+  collectSessions,
+  renderBoard,
+  spinnerize,
+  partitionSessions,
+  fzfLine,
+  jumpHint,
+} from '../lib/board.mjs'
 import { planPrune } from '../lib/prune.mjs'
 import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
@@ -68,7 +75,7 @@ const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
-  board [--watch] [--wide|-w] [--json]   roster of this repo's sessions (--watch = live)
+  board [--watch] [--wide|-w] [--all] [--json]  live-first roster; --all expands archive
   war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
@@ -95,6 +102,64 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
 const adapterCtx = async (home, repoId, cwd) => {
   const ctx = { repoRoot: resolveRepoRoot(cwd) }
   return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
+}
+
+// Optional fzf jump over live board rows. Zero package deps — shells out to
+// `fzf` when present. Returns true if a jump was emitted (caller should exit);
+// false → print the plain roster. Non-TTY / missing fzf / cancel → false.
+const tryBoardFzfJump = (sessions) => {
+  const { live } = partitionSessions(sessions)
+  if (!live.length) return false
+  let fzfPath
+  try {
+    fzfPath = execFileSync('sh', ['-c', 'command -v fzf'], { encoding: 'utf8' }).trim()
+  } catch {
+    return false
+  }
+  if (!fzfPath) return false
+  const input = live.map(fzfLine).join('\n')
+  let stdout = ''
+  try {
+    stdout = execFileSync(
+      fzfPath,
+      ['--height=40%', '--reverse', '--prompt=board ❯ ', '--delimiter=\t', '--with-nth=1'],
+      {
+        encoding: 'utf8',
+        input,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      },
+    )
+  } catch {
+    return false // cancel / non-zero
+  }
+  const line = String(stdout || '').trim()
+  if (!line) return false
+  const sid = line.includes('\t') ? line.split('\t').pop() : ''
+  const s = live.find((x) => x.session_id === sid) || live.find((x) => line.includes(x.session_id))
+  if (!s) return false
+  // Prefer tmux attach when we have a pane; else print cd/worktree hint (war style).
+  if (s.tmux || s.pid) {
+    const panes = tmuxPanes()
+    const pane = s.tmux || (s.pid ? paneForPid(s.pid, panes) : null)
+    if (pane) {
+      try {
+        const args = process.env.TMUX
+          ? ['switch-client', '-t', pane]
+          : ['attach-session', '-t', String(pane).split(':')[0]]
+        execFileSync('tmux', args, { stdio: 'inherit' })
+        return true
+      } catch {
+        /* fall through to cd hint */
+      }
+    }
+  }
+  const hint = jumpHint(s)
+  if (hint) {
+    // Bypass paint for shell-eval friendly cd lines.
+    process.stdout.write(`${hint}\n`)
+    return true
+  }
+  return false
 }
 
 // Live board: alt-screen + hidden cursor. Two clocks — paint the spinner fast
@@ -597,6 +662,7 @@ const main = async () => {
       const flags = process.argv.slice(3)
       const watch = flags.includes('--watch')
       const wide = flags.includes('--wide') || flags.includes('-w')
+      const showAll = flags.includes('--all')
       const json = flags.includes('--json')
       if (json && watch) {
         console.error('sage: --json and --watch are mutually exclusive')
@@ -638,13 +704,27 @@ const main = async () => {
       // render(sessions, frame): frame == null → static (no spinner). Data
       // collection (buildSessions) is now on a separate 1 Hz clock, so --watch
       // re-reads the fs once per second, not once per 100 ms spinner frame.
+      const termCols = () => {
+        const c = process.stdout.columns
+        return Number.isFinite(c) && c >= 40 ? c : undefined
+      }
       const render = (sessions, frame) => {
-        const text = renderBoard(sessions, { repoId, wide })
+        const text = renderBoard(sessions, { repoId, wide, all: showAll, cols: termCols() })
         return frame == null ? text : spinnerize(text, sessions, frame)
       }
       // --watch animates, but only on a real TTY; piped/non-TTY → one static frame.
-      if (!watch || !process.stdout.isTTY) return console.log(render(buildSessions(), null))
-      return runWatch({ collect: buildSessions, render })
+      if (watch) {
+        if (!process.stdout.isTTY) return console.log(render(buildSessions(), null))
+        return runWatch({ collect: buildSessions, render })
+      }
+      // Static board. TTY+fzf → optional jump picker over live rows; cancel or
+      // missing fzf falls through to the plain roster (parse-stable either way).
+      const sessions = buildSessions()
+      if (process.stdout.isTTY && process.stdin.isTTY && !showAll) {
+        const jumped = tryBoardFzfJump(sessions)
+        if (jumped) return
+      }
+      return console.log(render(sessions, null))
     }
     case 'fleet': {
       const repoId = resolveRepoId(cwd)

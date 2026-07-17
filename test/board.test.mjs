@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { mkTmp } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
-import { handoffBucket, collectSessions, renderBoard, spinnerize } from '../lib/board.mjs'
+import { handoffBucket, collectSessions, renderBoard, spinnerize, partitionSessions } from '../lib/board.mjs'
 import { startTimeOf } from '../lib/tmux.mjs'
 import { SPINNER_FRAMES } from '../lib/spinner.mjs'
 
@@ -145,4 +145,170 @@ test('collectSessions: pid_start match → alive, mismatch → dead (recycle-pro
   const out = collectSessions(home, id, NOW)
   assert.notEqual(out.find((s) => s.session_id === 'match').liveness, 'dead')
   assert.equal(out.find((s) => s.session_id === 'recycled').liveness, 'dead')
+})
+
+// ── Phase 5 Child A: live-first roster + archive fold + ctx gauge (s1/s2) ──
+
+const LIVE = (id, over = {}) => ({
+  session_id: id,
+  branch: over.branch || `feat/${id}`,
+  liveness: over.liveness || 'working',
+  dirty: !!over.dirty,
+  touched_globs: over.touched_globs || [`src/${id}/a.ts`],
+  handoff_bucket: over.handoff_bucket || 'fresh',
+  handoff_age: over.handoff_age || '4m ago',
+  ctx_used: over.ctx_used,
+  ctx_window: over.ctx_window,
+  phase: over.phase,
+  row: over.row,
+  updated_at: over.updated_at || '2026-06-28T12:00:00.000Z',
+})
+
+const DEAD = (id, over = {}) => ({
+  session_id: id,
+  branch: over.branch || 'main',
+  liveness: over.liveness || 'dead',
+  dirty: false,
+  touched_globs: over.touched_globs || [],
+  handoff_bucket: over.handoff_bucket || 'stale',
+  handoff_age: over.handoff_age || '3d ago',
+  updated_at: over.updated_at || '2026-06-20T12:00:00.000Z',
+  ...over,
+})
+
+test('s1: 3 live + 80 dead → live on top with headers + gauges; one archive fold', () => {
+  const live = [
+    LIVE('a', { liveness: 'working', ctx_used: 80, ctx_window: 100, touched_globs: ['docs/superpowers/x.md'] }),
+    LIVE('b', { liveness: 'idle', ctx_used: 40, ctx_window: 100, touched_globs: ['lib/board.mjs'] }),
+    LIVE('c', { liveness: 'working', phase: 'compacting', ctx_used: 20, ctx_window: 100, touched_globs: ['bin/sage'] }),
+  ]
+  const dead = Array.from({ length: 80 }, (_, i) => DEAD(`d${i}`, { branch: i % 2 ? 'main' : '(none)' }))
+  const sessions = [...dead, ...live] // dead first in input — must not dominate output
+  const txt = renderBoard(sessions, { repoId: 'repo' })
+  const lines = txt.split('\n')
+
+  // header announces live + archive, not "83 sessions" landfill
+  assert.match(lines[0], /3 live/)
+  assert.match(lines[0], /80 archive/)
+
+  // column headers present
+  assert.match(txt, /\bBRANCH\b/)
+  assert.match(txt, /\bSTATUS\b/)
+  assert.match(txt, /\bZONE\b/)
+  assert.match(txt, /\bAGE\b/)
+  assert.match(txt, /\bCTX\b/)
+
+  // live branches appear before the archive fold
+  const foldIdx = lines.findIndex((l) => /▸ archive \(80\)/.test(l))
+  assert.ok(foldIdx > 0, 'exactly one archive fold line')
+  assert.equal(lines.filter((l) => /▸ archive/.test(l)).length, 1)
+
+  const bodyBeforeFold = lines.slice(0, foldIdx).join('\n')
+  assert.match(bodyBeforeFold, /feat\/a/)
+  assert.match(bodyBeforeFold, /feat\/b/)
+  assert.match(bodyBeforeFold, /feat\/c/)
+
+  // dead branch landfill not expanded by default
+  assert.ok(!txt.includes('● main'), 'dead main rows folded away')
+  assert.ok(!/\(none\).*dead/.test(txt) || !lines.some((l) => l.startsWith('●') && l.includes('(none)') && l.includes('dead')))
+
+  // only 3 live session lead-rows (● or ◆), not 83
+  const leadRows = lines.filter((l) => /^[●◆] /.test(l))
+  assert.equal(leadRows.length, 3)
+
+  // ctx gauges present (block characters)
+  assert.match(txt, /[█░]+/)
+})
+
+test('s1: --all expands archive; dead rows stay present and not live-marked', () => {
+  const sessions = [
+    LIVE('hot', { liveness: 'working', ctx_used: 50, ctx_window: 100 }),
+    DEAD('old1', { branch: 'feat/old', liveness: 'dead' }),
+    DEAD('old2', { branch: 'feat/gone', liveness: 'closed' }),
+  ]
+  const folded = renderBoard(sessions, { repoId: 'repo' })
+  assert.match(folded, /▸ archive \(2\)/)
+  assert.ok(!folded.includes('feat/old'))
+
+  const all = renderBoard(sessions, { repoId: 'repo', all: true })
+  assert.ok(!/▸ archive/.test(all), '--all has no fold line')
+  assert.match(all, /feat\/old/)
+  assert.match(all, /feat\/gone/)
+  assert.match(all, /feat\/hot/)
+  // live first
+  const lines = all.split('\n').filter((l) => /^[●◆] /.test(l))
+  assert.match(lines[0], /feat\/hot/)
+})
+
+test('s1: non-TTY row grammar is stable (plain text, parseable columns)', () => {
+  const sessions = [
+    LIVE('x', { liveness: 'idle', ctx_used: 10, ctx_window: 100, dirty: true }),
+    DEAD('y'),
+  ]
+  const txt = renderBoard(sessions, { repoId: 'repo' })
+  assert.equal(txt.includes('\x1b['), false, 'renderer emits zero ANSI')
+  assert.match(txt, /^SAGE · repo · /m)
+  assert.match(txt, /▸ archive \(1\)/)
+  // live row keeps branch-led grammar + status token
+  assert.match(txt, /[●◆] feat\/x ✎/)
+  assert.match(txt, /idle/)
+})
+
+test('s2: zone names never mid-clip; ctx gauge reflects fixture percentages', () => {
+  const sessions = [
+    LIVE('z1', {
+      liveness: 'working',
+      ctx_used: 100,
+      ctx_window: 100,
+      touched_globs: ['docs/superpowers/specs/design.md'],
+    }),
+    LIVE('z2', {
+      liveness: 'idle',
+      ctx_used: 0,
+      ctx_window: 100,
+      touched_globs: ['lib/color.mjs'],
+    }),
+  ]
+  const txt = renderBoard(sessions, { repoId: 'repo' })
+  // full zone dirs present — never mid-clip garbage like bare "ocs/" from "docs/"
+  assert.match(txt, /docs\/superpowers\//)
+  assert.ok(!/(?:^|\s)ocs\//m.test(txt), 'no mid-clip bare ocs/ zone')
+  assert.match(txt, /lib\//)
+
+  // 100% → full gauge blocks; 0% → empty (all light)
+  assert.match(txt, /█████/) // 5-col full
+  assert.match(txt, /░░░░░/) // 5-col empty
+  // status still carries percent for back-compat consumers
+  assert.match(txt, /100%/)
+  assert.match(txt, /0%/)
+})
+
+test('s2: long zone keeps a readable tail (left-ellipsis, not middle garbage)', () => {
+  // force a narrow zone budget via cols so clipping is exercised
+  const sessions = [
+    LIVE('deep', {
+      liveness: 'working',
+      touched_globs: ['docs/superpowers/specs/very-long-name-here.md'],
+      ctx_used: 50,
+      ctx_window: 100,
+    }),
+  ]
+  const txt = renderBoard(sessions, { repoId: 'repo', cols: 60 })
+  // must not produce mid-clip "ocs/" style garbage; either full path or …tail
+  assert.ok(!/ocs\//.test(txt), 'no mid-clip ocs/')
+  assert.ok(
+    /docs\/superpowers\//.test(txt) || /…/.test(txt) || /specs\//.test(txt),
+    'zone readable',
+  )
+})
+
+test('partition: live-first sort ranks working above idle above dead', () => {
+  const { live, archive } = partitionSessions([
+    DEAD('d'),
+    LIVE('i', { liveness: 'idle' }),
+    LIVE('w', { liveness: 'working' }),
+  ])
+  assert.equal(live.map((s) => s.session_id).join(','), 'w,i')
+  assert.equal(archive.length, 1)
+  assert.equal(archive[0].session_id, 'd')
 })
