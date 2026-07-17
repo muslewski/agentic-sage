@@ -125,6 +125,18 @@ seed() {
 JSON
   # shellcheck disable=SC2086
   (cd "$repo_path" && SAGE_SELF_SID="$sid" sage claim $globs_csv) >/dev/null
+  # claim stamps updated_at=now — restore the anchor-relative age so board
+  # ages and repos sparklines stay deterministic.
+  node -e "
+    const fs = require('fs')
+    const p = process.argv[1]
+    const at = process.argv[2]
+    const j = JSON.parse(fs.readFileSync(p, 'utf8'))
+    j.updated_at = at
+    j.last_prompt_at = at
+    j.last_tool_at = j.last_tool_at ? process.argv[3] : j.last_tool_at
+    fs.writeFileSync(p, JSON.stringify(j, null, 2))
+  " "$sdir/${sid}.json" "$updated" "$last_tool"
 }
 
 # Live sessions — zones from touched_globs, ctx gauges from ctx_used/window.
