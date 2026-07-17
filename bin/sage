@@ -35,6 +35,7 @@ import {
   renderTerritory,
   renderWhyDiverged,
   renderMergeBrief,
+  fzfPathLine,
 } from '../lib/territory.mjs'
 import { crossStat } from '../lib/git.mjs'
 import { fleetLine, collectFleet, filterFleet, sortFleet } from '../lib/fleet.mjs'
@@ -102,6 +103,48 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
 const adapterCtx = async (home, repoId, cwd) => {
   const ctx = { repoRoot: resolveRepoRoot(cwd) }
   return { ctx, adapter: await loadAdapter(home, repoId, ctx.repoRoot) }
+}
+
+// Optional fzf path drill-in over contested merge-brief rows. Prints the
+// selected path's why-diverged-style detail block; cancel/missing fzf → false
+// so the caller falls through to the plain brief (parse-stable).
+const tryMergeFzfDrill = (contested, { fileDetail } = {}) => {
+  if (!contested.length) return false
+  if (!process.stdout.isTTY || !process.stdin.isTTY) return false
+  let fzfPath
+  try {
+    fzfPath = execFileSync('sh', ['-c', 'command -v fzf'], { encoding: 'utf8' }).trim()
+  } catch {
+    return false
+  }
+  if (!fzfPath) return false
+  const input = contested.map(fzfPathLine).join('\n')
+  let stdout = ''
+  try {
+    stdout = execFileSync(
+      fzfPath,
+      ['--height=40%', '--reverse', '--prompt=merge ❯ ', '--delimiter=\t', '--with-nth=1'],
+      {
+        encoding: 'utf8',
+        input,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      },
+    )
+  } catch {
+    return false
+  }
+  const line = String(stdout || '').trim()
+  if (!line) return false
+  const p = line.includes('\t') ? line.split('\t').pop() : ''
+  const hit = contested.find((c) => c.path === p) || contested.find((c) => line.includes(c.path))
+  if (!hit) return false
+  // Drill-in: print the single-path brief block (or caller-supplied detail).
+  if (typeof fileDetail === 'function') {
+    console.log(fileDetail(hit))
+  } else {
+    console.log(renderMergeBrief([hit], { repoId: hit.path }))
+  }
+  return true
 }
 
 // Optional fzf jump over live board rows. Zero package deps — shells out to
@@ -795,6 +838,13 @@ const main = async () => {
       const extraGlobs = adapter?.generatedGlobs?.() ?? []
       const contested = mergeBrief(home, repoId, { now, selfSid, extraGlobs })
       if (adapter) for (const c of contested) c.zone = zoneOf(adapter, ctx, c.path)
+      // TTY+fzf → path drill-in; cancel/missing fzf falls through to full brief.
+      if (process.stdout.isTTY && process.stdin.isTTY && contested.length) {
+        const drilled = tryMergeFzfDrill(contested, {
+          fileDetail: (hit) => renderMergeBrief([hit], { repoId }),
+        })
+        if (drilled) return
+      }
       return console.log(renderMergeBrief(contested, { repoId }))
     }
     case 'repos': {
