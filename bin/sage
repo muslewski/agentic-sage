@@ -49,7 +49,7 @@ import {
   fleetHud,
   composeHud,
 } from '../lib/fleet.mjs'
-import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME } from '../lib/warroom.mjs'
+import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME, stickyViewport } from '../lib/warroom.mjs'
 import {
   FACES,
   nextFace,
@@ -62,6 +62,7 @@ import {
   faceCountsFromFleet,
 } from '../lib/warfaces.mjs'
 import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
+import { parseMouseEvents, MOUSE_ENABLE, MOUSE_DISABLE } from '../lib/mouse.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
@@ -283,15 +284,19 @@ const tryBoardFzfJump = (sessions) => {
   return false
 }
 
-// Live board: alt-screen + hidden cursor. Two clocks — paint the spinner fast
-// (100 ms) while re-collecting sessions slowly (1 s), so liveness/ctx/age refresh
-// live without 10 Hz fs churn; Ctrl-C restores and exits. `render(data, frame)`
-// draws the board; `collect()` re-reads. TTY-only (the caller guards).
+// Live board: alt-screen + hidden cursor + SGR mouse tracking. Two clocks —
+// paint the spinner fast (100 ms) while re-collecting sessions slowly (1 s), so
+// liveness/ctx/age refresh live without 10 Hz fs churn; Ctrl-C restores and
+// exits. `render(data, frame)` draws the board; `collect()` re-reads. TTY-only
+// (the caller guards). Board has no selection machinery — mouse sequences are
+// parsed so they never leak as garbage keys; wheel/click are no-ops here.
 const runWatch = ({ collect, render }) => {
   const W = process.stdout
   let i = 0
   let data = collect()
+  let mousePending = ''
   W.write('\x1b[?1049h\x1b[?25l') // enter alt screen, hide cursor
+  W.write(MOUSE_ENABLE) // button tracking + SGR extended coords
   const draw = () => {
     W.write('\x1b[H\x1b[2J' + paint(render(data, SPINNER_FRAMES[i % SPINNER_FRAMES.length])) + '\n')
     i++
@@ -304,10 +309,21 @@ const runWatch = ({ collect, render }) => {
   const stop = () => {
     clearInterval(paintTimer)
     clearInterval(dataTimer)
-    W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt screen
+    if (process.stdin.isTTY) process.stdin.setRawMode(false)
+    process.stdin.pause()
+    // Disable mouse BEFORE leaving alt-screen so tracking never leaks to the shell.
+    W.write(MOUSE_DISABLE + '\x1b[?25h\x1b[?1049l')
     process.exit(0)
   }
   process.on('SIGINT', stop)
+  if (process.stdin.isTTY) process.stdin.setRawMode(true)
+  process.stdin.resume()
+  process.stdin.on('data', (buf) => {
+    const { rest, pending } = parseMouseEvents(mousePending + buf.toString('utf8'))
+    mousePending = pending
+    // Consume mouse; board has no selection — only quit keys matter.
+    if (rest === '\x03' || rest === 'q') return stop()
+  })
 }
 
 // Live war-room: alt-screen + raw-mode keys + a selectable, scrollable body.
@@ -474,7 +490,8 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     clearInterval(dataTimer)
     if (process.stdin.isTTY) process.stdin.setRawMode(false)
     process.stdin.pause()
-    W.write('\x1b[?25h\x1b[?1049l') // show cursor, leave alt-screen
+    // Disable mouse BEFORE leaving alt-screen so tracking never leaks to the shell.
+    W.write(MOUSE_DISABLE + '\x1b[?25h\x1b[?1049l')
   }
   const stop = () => {
     teardown()
@@ -555,6 +572,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     draw()
   }
   W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt-screen, hide cursor, clear once
+  W.write(MOUSE_ENABLE) // button tracking + SGR extended coords
   refresh()
   draw()
   paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
@@ -567,8 +585,44 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   })
   if (process.stdin.isTTY) process.stdin.setRawMode(true)
   process.stdin.resume()
+  let mousePending = ''
+  // Chrome above the body: header(1)+panels(4)+colHeader(1) = WAR_CHROME - footer(1).
+  // SGR y is 1-based; body row 0 sits on screen row (chromeAbove + 1).
+  const chromeAboveBody = () => WAR_CHROME - 1
+  const applyMouse = (ev) => {
+    // Only nav mode moves the selection — same gate as j/k (confirm/help/filter/manage own keys).
+    if (mode !== 'nav' || confirm) return
+    if (ev.type === 'wheel-up') {
+      selOrd = moveSelection(selCount(), selOrd, -1)
+      syncScroll()
+      return draw()
+    }
+    if (ev.type === 'wheel-down') {
+      selOrd = moveSelection(selCount(), selOrd, 1)
+      syncScroll()
+      return draw()
+    }
+    if (ev.type === 'click') {
+      const height = bodyHeight()
+      const bodyRow = ev.y - 1 - chromeAboveBody() // 0-based within body viewport
+      if (bodyRow < 0 || bodyRow >= height) return // chrome / footer / off-screen
+      const vp = stickyViewport(model, { scroll, height, selected: selIdx() })
+      const entry = vp.rows[bodyRow]
+      const mi = entry?.modelIndex
+      if (mi == null) return // stuck header / empty
+      const ord = selectableIndices(model).indexOf(mi)
+      if (ord < 0) return // repo band — not selectable
+      selOrd = ord
+      syncScroll()
+      return draw()
+    }
+  }
   process.stdin.on('data', (buf) => {
-    const k = buf.toString('utf8')
+    const parsed = parseMouseEvents(mousePending + buf.toString('utf8'))
+    mousePending = parsed.pending
+    for (const ev of parsed.events) applyMouse(ev)
+    const k = parsed.rest
+    if (!k) return // pure mouse chunk or incomplete prefix held as pending
     if (k === '\x03') return stop() // Ctrl-C always quits, even mid-filter
     // Confirm is global — nav X and manage X both land here (y/n/esc).
     if (confirm) {
