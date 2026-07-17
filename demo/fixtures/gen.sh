@@ -14,10 +14,10 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # --- PATH shims (persist via files under $HOME; record.sh puts $HOME/bin first) ---
 mkdir -p "$HOME/bin" "$HOME/src"
 
-# sage → this worktree's CLI, forced color-clean for VHS .txt privacy/clarity.
+# sage → this worktree's CLI (no color env — pty detection is natural).
 cat >"$HOME/bin/sage" <<EOF
 #!/usr/bin/env bash
-exec env -u FORCE_COLOR NO_COLOR=1 node "$ROOT/bin/sage" "\$@"
+exec node "$ROOT/bin/sage" "\$@"
 EOF
 chmod +x "$HOME/bin/sage"
 
@@ -30,8 +30,6 @@ EOF
 chmod +x "$HOME/bin/fzf"
 
 export PATH="$HOME/bin:$PATH"
-export NO_COLOR=1
-unset FORCE_COLOR 2>/dev/null || true
 
 # --- Wire SAGE (global + grok + enabled) so doctor hits 11/11 inside a repo ---
 node "$ROOT/bin/sage" init --global --harness both --enable >/dev/null
