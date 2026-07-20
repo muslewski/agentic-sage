@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## [1.1.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.0.0...agentic-sage-v1.1.0) (2026-07-20)
+
+
+### Features
+
+* **board:** live-first roster, archive fold, ctx gauges ([a1d0adc](https://github.com/muslewski/agentic-sage/commit/a1d0adccf5961c0878681ace1bc3a3d11d014717))
+* **cli:** board --all + optional fzf jump on TTY ([81597a7](https://github.com/muslewski/agentic-sage/commit/81597a7b64f0da7339001ea1931abc5a77bc6bc5))
+* **cli:** enable SGR mouse in sage war and board --watch ([55c35dc](https://github.com/muslewski/agentic-sage/commit/55c35dce9bee9f34043b5a14f2443666dc180e53))
+* **cli:** sage board --json versioned envelope ([9268c53](https://github.com/muslewski/agentic-sage/commit/9268c53ec845d63a0f21f991fbf4504b53ca79c6))
+* **cli:** sage fleet --json envelope ([984a895](https://github.com/muslewski/agentic-sage/commit/984a89564d76600d8c089bd01c2d583a52725f75))
+* **cli:** sage prune — drop old closed/dead sessions ([0a623e3](https://github.com/muslewski/agentic-sage/commit/0a623e38a1031de607df487c3a58d6d6c3f5002e))
+* **cli:** sage war — static cockpit + --json envelope + board hint ([2d2d2e3](https://github.com/muslewski/agentic-sage/commit/2d2d2e36243dccac4a26695208abcb08f932a758))
+* **cli:** sage war live cockpit — raw-mode keys + scroll ([fda4a0b](https://github.com/muslewski/agentic-sage/commit/fda4a0b1388ab45c84110227187286554596e69b))
+* **cli:** sage war war-room cockpit (round 4, plan 018) ([ed50e27](https://github.com/muslewski/agentic-sage/commit/ed50e27765d4f531afeb0441c65de368bdf85f14))
+* **color:** semantic state→style paint; help stays uncolored ([f6a9985](https://github.com/muslewski/agentic-sage/commit/f6a99853e4257e327c18da8785d8434034de76c4))
+* **doctor:** grok wiring check with remedy ([516e9f8](https://github.com/muslewski/agentic-sage/commit/516e9f80debc9b55e249a50405160dd843ff308c))
+* **doctor:** health banner + gauge; every failure gets a fix hint ([899d794](https://github.com/muslewski/agentic-sage/commit/899d79443b89087b676cc586f2d47aa6a6b78f61))
+* **emit:** capture pid_start at SessionStart ([c1dcaea](https://github.com/muslewski/agentic-sage/commit/c1dcaea54115c6d10d78d14c471c757065760cbf))
+* **emit:** capture ppid pid + provenance + tmux window name at SessionStart ([695c3d4](https://github.com/muslewski/agentic-sage/commit/695c3d4e5eecee4a740bd1b8633acece0ec5f2fd))
+* **fleet:** classify human vs nested; split totals via pure tally ([627d026](https://github.com/muslewski/agentic-sage/commit/627d026909be02e0f6310fcf7d2f272bf5452ef7))
+* **fleet:** collectFleet/filterFleet/sortFleet cross-repo roll-up ([67a76fa](https://github.com/muslewski/agentic-sage/commit/67a76fac7fbcd8c0118bd40219fd066e45231522))
+* **grok:** grok-compat pass — emitter event map, snippets, docs ([eb8dfb8](https://github.com/muslewski/agentic-sage/commit/eb8dfb87c4c457255e645022a2d5da2ff28c0233))
+* **init:** --harness both wires claude and grok ([3b6b89d](https://github.com/muslewski/agentic-sage/commit/3b6b89dfe29be1e60ce513f3c0c0a65ffd2f04cd))
+* land interop-026 compacting face + Phase 0/1 contract work ([3ce7a04](https://github.com/muslewski/agentic-sage/commit/3ce7a04e98278e8a8e63e12b88c01b3d5f1e3236))
+* live-first fleet truth — contested, panels, ghost collapse ([4602f79](https://github.com/muslewski/agentic-sage/commit/4602f795cf557b235988c3b4e418cbed82920598))
+* **liveness:** recycle-proof isAlive via start-time match ([20beca7](https://github.com/muslewski/agentic-sage/commit/20beca727bb5d5d806af23275150193e463a3eac))
+* **merge-brief:** risk chip, heat sparkline, TTY fzf path drill-in ([6f7588e](https://github.com/muslewski/agentic-sage/commit/6f7588e731b33900bed5ca11113073de74394fc5))
+* **mouse:** pure SGR parseMouseEvents helper + unit tests ([4dbbeda](https://github.com/muslewski/agentic-sage/commit/4dbbeda5b16c801e2a9f907f668a913cfe4cee5a))
+* **provenance:** classify human vs nested by launcher tag + process tree ([fd27f93](https://github.com/muslewski/agentic-sage/commit/fd27f93b90a5a90840f39ef9c30167cb05985e47))
+* **repos,fleet:** product/orphan atlas + composable HUD segments ([11b0a4a](https://github.com/muslewski/agentic-sage/commit/11b0a4a0c17b7d8e05633bd971058cbfd6c177ba))
+* **scripts:** sandboxed verify-fleet end-to-end checker ([d2243db](https://github.com/muslewski/agentic-sage/commit/d2243db2b79fc8742889ab6d1e4274f6ae3f45f7))
+* **tmux:** add commOf/cmdlineOf/windowNameForPane readers ([0a74423](https://github.com/muslewski/agentic-sage/commit/0a7442315cf4a3b8137c974869b810f2b78a10b0))
+* **tmux:** add startTimeOf/parseStartTime /proc reader ([1f77575](https://github.com/muslewski/agentic-sage/commit/1f77575f3770d1ac00822ae4008b1b4bd859e24f))
+* **war:** ? help overlay with full key map ([2f17682](https://github.com/muslewski/agentic-sage/commit/2f17682e3a16d9be1dd6709f6fb7099b4a22cfc8))
+* **war:** / filter + w working-only over the fleet body ([fdf6c22](https://github.com/muslewski/agentic-sage/commit/fdf6c2241eca324200b8c3c3a556a7e941c6a441))
+* **war:** color face tabs and footer for contrast ([74a8532](https://github.com/muslewski/agentic-sage/commit/74a85327a1e873bc76f9f8066925cd05d9646698))
+* **war:** cream column-header labels ([aeeeeb8](https://github.com/muslewski/agentic-sage/commit/aeeeeb87a6913851b5a46f280ffdaa894d4a6722))
+* **war:** Layer B nested rollup — fold armory children by default (plan 024) ([82702ff](https://github.com/muslewski/agentic-sage/commit/82702ffe0b5c8c75e097f785ce2af8d47a462d02))
+* **war:** LIVE · CLASH · MEMORY faces (←→ tabs) ([018d565](https://github.com/muslewski/agentic-sage/commit/018d5654986f02a9f1bcbe2945012b998426e150))
+* **war:** make faces more useful — counts, smarter CLASH, MEMORY feedback ([13b913a](https://github.com/muslewski/agentic-sage/commit/13b913a46e50a15be437f5b071423ee670c9f978))
+* **war:** manage mode — kill dead sessions from the cockpit ([2876db4](https://github.com/muslewski/agentic-sage/commit/2876db4afa8131737b82d8b09104c592d1812b58))
+* **war:** manage-mode footer menu + confirm + nav hint ([d7927b8](https://github.com/muslewski/agentic-sage/commit/d7927b82abec40f88f7f30b99b8f3da52142bb90))
+* **war:** NAME | BRANCH grid — fill the gap, calm repo bands ([8a48de0](https://github.com/muslewski/agentic-sage/commit/8a48de0fae2dc57ef8647dcb0d6d053d381e5619))
+* **war:** name-first layout, zone toggle, labeled footer ([1afbbb7](https://github.com/muslewski/agentic-sage/commit/1afbbb74c75198d124ad79fcee3746137d23afef))
+* **war:** nav X clears dead; fixed-width grid stops layout jitter ([94a3742](https://github.com/muslewski/agentic-sage/commit/94a37424d6dbac9d1b0f24f864fbdd88d50718fd))
+* **warnav:** isKillable + collectDead for dead-session removal ([7ddbb5b](https://github.com/muslewski/agentic-sage/commit/7ddbb5b701dc02ac9fe3db5b0ffacc53826ed495))
+* **warnav:** selection engine + body-model session handle ([c08123f](https://github.com/muslewski/agentic-sage/commit/c08123f5a11fde6965ed5eb17bd6ee3e239bbb29))
+* **warroom:** cockpit renderers — panels, body, viewport, spinner ([09768e7](https://github.com/muslewski/agentic-sage/commit/09768e7f97c2d20ab433ec2d521f11516906fa2b))
+* **warroom:** cursor viewport + selection marker, skinned ([7dff508](https://github.com/muslewski/agentic-sage/commit/7dff508071c35d26551913b190cb5c393624ef5b))
+* **warroom:** repo header band with accent bar + hot rollup ([b1f8206](https://github.com/muslewski/agentic-sage/commit/b1f8206bf00c8664618675eb362e80fac024306c))
+* **warroom:** sticky repo band while scrolling ([7b7d8b5](https://github.com/muslewski/agentic-sage/commit/7b7d8b515913e03303208616b5c8cee3dea5c904))
+* **war:** ruled columns + fixed column-header row ([01879a5](https://github.com/muslewski/agentic-sage/commit/01879a5ebb81f99abfdd0e28d41a8806f5079d0e))
+* **war:** select rows + Enter to jump to the session's tmux pane ([1897f00](https://github.com/muslewski/agentic-sage/commit/1897f0039890db0877f1d5c2da2a3665ebcf3aab))
+* **war:** show tmux window_name · branch in session rows ([a204cc8](https://github.com/muslewski/agentic-sage/commit/a204cc8be46868a0ba0e3610023db2991ba46886))
+* **war:** show ZONE column by default ([168bb9a](https://github.com/muslewski/agentic-sage/commit/168bb9aaddd73713b44bfedace20be093810daf9))
+* **wiring:** native grok hook file in wireAll ([4ed6575](https://github.com/muslewski/agentic-sage/commit/4ed6575d278b518273e16eb932b76c0e460d09ea))
+
+
+### Bug Fixes
+
+* **board:** backfill session_id from filename in collectSessions ([56a5406](https://github.com/muslewski/agentic-sage/commit/56a540626c3942c95b4ac6f41af524ab3a834f20))
+* **board:** enforce pid start-time at read (recycle → dead) ([b9aa2ae](https://github.com/muslewski/agentic-sage/commit/b9aa2ae3111848f5a6e26d3059510644b3225afb))
+* **board:** pid-less record reads dead, not alive (honest liveness) ([6f791e9](https://github.com/muslewski/agentic-sage/commit/6f791e944f223e05b99f113501d8ed4ef47d6d8b))
+* **emit:** stamp session_id on every event, not just SessionStart ([707544b](https://github.com/muslewski/agentic-sage/commit/707544b9475f396e40a9996dc4f05c12a090bce0))
+* Grok 4.5 quality-revise — war UX, manage delete, sid safety ([e434096](https://github.com/muslewski/agentic-sage/commit/e4340964a22d2d9fe94bf916b9d2860cac8c67ea))
+* Grok 4.5 quality-revise wave 2 — docs truth + legacy migration traps ([d80b608](https://github.com/muslewski/agentic-sage/commit/d80b60848dfeb1d99b9f1efb19a25572f19d277c))
+* **provenance:** skip the session's own agent in the tree walk ([0217b91](https://github.com/muslewski/agentic-sage/commit/0217b9148cdcdde7524c6c0e781e6286bc1bca7d))
+* **war:** keep q as a filter char; only Ctrl-C quits mid-filter ([32f22e5](https://github.com/muslewski/agentic-sage/commit/32f22e5528802b1a06d29dcf7e2365c7b343ccbd))
+* **warroom:** flicker-free repaint, aligned rounded panels, skinned chrome ([2956eca](https://github.com/muslewski/agentic-sage/commit/2956eca7e1ff7906c4441f0e6fb6b1516018ad89))
+* **warroom:** rigid session grid, middle-ellipsis long names ([b6baa63](https://github.com/muslewski/agentic-sage/commit/b6baa63583e2bcee63e5ce762dabe4e11fed266f))
+* **war:** scale cockpit for 2k+ session fleets (lag + reorder) ([c97a2db](https://github.com/muslewski/agentic-sage/commit/c97a2db8f59dbbd2de95bc784d43cd72fb4da70b))
+* **war:** stop wrap/flicker/lag; make X clear dead reliable ([e08f3db](https://github.com/muslewski/agentic-sage/commit/e08f3dbc9272048fd11dc1b4d342b2df18a08365))
+* **war:** zone column keeps path tail via left-ellipsis ([8716c77](https://github.com/muslewski/agentic-sage/commit/8716c777d11ab395add42194860815fbb95b4b43))
+* **wiring:** dedup hooks by link path, not full command ([7610b8d](https://github.com/muslewski/agentic-sage/commit/7610b8d5be23e23627ed3d13839696056d43002e))
+
+
+### Performance Improvements
+
+* **sage:** decouple board --watch data refresh from paint clock ([0e9cb5b](https://github.com/muslewski/agentic-sage/commit/0e9cb5bc62b8d796d99263e89c91a043ba883046))
+
 ## [1.0.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v0.2.1...agentic-sage-v1.0.0) (2026-07-02)
 
 
