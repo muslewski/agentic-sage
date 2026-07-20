@@ -30,7 +30,10 @@ import {
   HELP_KEYS,
   nameCell,
   branchCell,
+  dividerEntry,
+  liveModel,
 } from '../lib/warroom.mjs'
+import { selectableIndices, reselectBySid } from '../lib/warnav.mjs'
 
 const fleet = {
   totals: { repos: 2, sessions: 3, live: 2, working: 1, contested: 1, compacting: 0, human: 2, nested: 1 },
@@ -530,4 +533,42 @@ test('renderWarRoom includes the column header line above the body', () => {
   assert.match(lines[5], /NAME.*BRANCH.*STATUS.*ZONE.*AGE/)
   const noZone = renderWarRoom(fleet, { rows: Infinity, cols: 80, showZone: false }).split('\n')
   assert.doesNotMatch(noZone[5], /ZONE/)
+})
+
+// ── LIVE hot-float divider (fleet.sortFleet → hotfloat.floatHot → liveModel) ──
+const mkRepo = (id, ...liveness) => ({
+  repoId: id,
+  label: id,
+  sessions: liveness.map((l, i) => ({ session_id: `${id}${i}`, branch: 'main', liveness: l, window_name: id })),
+})
+
+test('dividerEntry: a non-selectable rule pinned to rowW', () => {
+  const d = dividerEntry(100, { showZone: true })
+  assert.equal(d.isHeader, true) // never a cursor target
+  assert.equal(d.divider, true)
+  assert.equal(d.session, null)
+  assert.equal([...d.text].length, layoutFor(100, { showZone: true }).rowW)
+  assert.match(d.text, /quiet/)
+})
+
+test('liveModel: divider sits between the hot group and the quiet remainder; cursor skips it', () => {
+  // view.repos already [hot…, quiet…]; hotCount = 2 → split after the 2nd band.
+  const view = { repos: [mkRepo('hotA', 'working'), mkRepo('hotB', 'working', 'idle'), mkRepo('quietC', 'idle'), mkRepo('quietD', 'idle')], totals: {} }
+  const model = liveModel(view, { hotCount: 2, cols: 100, showZone: true })
+  const divIdx = model.findIndex((m) => m.divider)
+  assert.ok(divIdx > 0, 'divider present')
+  // Everything before the divider belongs to a hot repo; nothing after does.
+  const sel = selectableIndices(model)
+  assert.equal(sel.includes(divIdx), false) // divider is not selectable
+  assert.ok(sel.every((i) => !model[i].isHeader)) // only session rows selectable
+  // Selection follows a quiet-group session across the divider on rebuild.
+  const ord = reselectBySid(model, 'quietC0', 0)
+  assert.equal(model[sel[ord]].session.session_id, 'quietC0')
+})
+
+test('liveModel: no divider when every live repo is hot (or none are)', () => {
+  const allHot = { repos: [mkRepo('a', 'working'), mkRepo('b', 'working')], totals: {} }
+  assert.equal(liveModel(allHot, { hotCount: 2, cols: 100 }).some((m) => m.divider), false)
+  const noneHot = { repos: [mkRepo('a', 'idle')], totals: {} }
+  assert.equal(liveModel(noneHot, { hotCount: 0, cols: 100 }).some((m) => m.divider), false)
 })

@@ -8,6 +8,7 @@ import {
   matchFleet,
   isKillable,
   collectDead,
+  reselectBySid,
 } from '../lib/warnav.mjs'
 
 const model = [
@@ -17,6 +18,33 @@ const model = [
   { text: '▌ beta', isHeader: true },
   { text: '  ● b1', isHeader: false },
 ]
+
+test('reselectBySid: cursor follows the same session after a reorder', () => {
+  const m1 = [
+    { isHeader: true, session: null },
+    { isHeader: false, session: { session_id: 'x' } },
+    { isHeader: false, session: { session_id: 'y' } },
+  ]
+  // cursor on ordinal 1 = session y
+  const prevOrd = 1
+  const sid = 'y'
+  // rows reorder: y is now first
+  const m2 = [
+    { isHeader: true, session: null },
+    { isHeader: false, session: { session_id: 'y' } },
+    { isHeader: false, session: { session_id: 'x' } },
+  ]
+  assert.equal(reselectBySid(m2, sid, prevOrd), 0) // follows y to its new ordinal
+})
+
+test('reselectBySid: falls back to clamped prev ordinal when session is gone', () => {
+  const m = [
+    { isHeader: true, session: null },
+    { isHeader: false, session: { session_id: 'x' } },
+  ]
+  assert.equal(reselectBySid(m, 'ghost', 5), 0) // clamp into range
+  assert.equal(reselectBySid([], 'x', 3), 0) // nothing selectable
+})
 
 test('selectableIndices: only non-header rows', () => {
   assert.deepEqual(selectableIndices(model), [1, 2, 4])

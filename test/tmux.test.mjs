@@ -29,7 +29,9 @@ test('paneForPid: resolves an ancestor pane via the /proc walk', () => {
 })
 
 test('commOf returns this process comm; missing pid → empty', () => {
-  assert.match(commOf(process.pid), /node|test/i) // the test runner
+  // Node ≤22 typically reports "node"; Node 24+ uses the V8 isolate name
+  // "MainThread" for the main thread's /proc/<pid>/comm (and thus for commOf).
+  assert.match(commOf(process.pid), /node|test|MainThread/i)
   assert.equal(commOf(2147483646), '') // no such pid
   assert.equal(commOf(0), '')
 })

@@ -8,10 +8,16 @@ import { handoffBucket, collectSessions, renderBoard, spinnerize, partitionSessi
 import { startTimeOf } from '../lib/tmux.mjs'
 import { SPINNER_FRAMES } from '../lib/spinner.mjs'
 
+// Write atomically (tmp+rename) exactly like production (lib/store.mjs) so the
+// sessions-dir mtime moves on every write — the war-room's dir-mtime fast path
+// relies on that invariant, and an in-place overwrite would not honor it.
 const seed = (home, repoId, sid, rec) => {
   const dir = sessionsDir(home, repoId)
   fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(path.join(dir, `${sid}.json`), JSON.stringify({ session_id: sid, ...rec }))
+  const file = path.join(dir, `${sid}.json`)
+  const tmp = `${file}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify({ session_id: sid, ...rec }))
+  fs.renameSync(tmp, file)
 }
 const NOW = Date.parse('2026-06-28T12:00:00.000Z')
 const ago = (ms) => new Date(NOW - ms).toISOString()
@@ -36,6 +42,38 @@ test('collectSessions enriches liveness + sorts newest-first; dead pid → dead'
 
 test('collectSessions: missing repo → []', () => {
   assert.deepEqual(collectSessions(mkTmp('sage-b-'), 'nope-0000', NOW), [])
+})
+
+test('collectSessions: dir-gate fast path still re-derives liveness as time passes (no stale working)', () => {
+  const home = mkTmp('sage-b-')
+  const id = 'repo-dddd4444'
+  const start = startTimeOf(process.pid) // recycle-proof → stays alive across collects
+  // A live session whose last tool was 5m ago → working.
+  seed(home, id, 'live', { branch: 'x', pid: process.pid, pid_start: start, last_tool_at: ago(5 * 60000) })
+  assert.equal(collectSessions(home, id, NOW)[0].liveness, 'working')
+  // The file is UNCHANGED, so the dir-gate serves the cached row — but liveness
+  // must still re-derive: 15m after the last tool, working → stalled.
+  const later = NOW + 11 * 60000
+  assert.equal(collectSessions(home, id, later)[0].liveness, 'stalled')
+})
+
+test('collectSessions: a record rewritten since the last collect is not served stale', () => {
+  const home = mkTmp('sage-b-')
+  const id = 'repo-cccc3333'
+  seed(home, id, 's1', { branch: 'before', updated_at: ago(2 * H) })
+  const first = collectSessions(home, id, NOW)
+  assert.equal(first[0].branch, 'before')
+  // Rewrite the same record, then advance the dir + file mtimes to model the
+  // real war-room timeline (re-collect happens whole seconds later, so the
+  // sessions-dir mtime is always detectably newer than when we cached). This
+  // keeps the assertion off sub-millisecond FS mtime granularity.
+  seed(home, id, 's1', { branch: 'after-a-much-longer-branch-name', updated_at: ago(1 * H) })
+  const dir = sessionsDir(home, id)
+  const t = Date.now() / 1000 + 5
+  fs.utimesSync(dir, t, t)
+  fs.utimesSync(path.join(dir, 's1.json'), t, t)
+  const second = collectSessions(home, id, NOW)
+  assert.equal(second[0].branch, 'after-a-much-longer-branch-name')
 })
 
 test('renderBoard shows branches + bucket; empty → no sessions', () => {

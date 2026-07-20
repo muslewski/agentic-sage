@@ -89,14 +89,20 @@ test('filterFleet drops dead sessions + empty repos unless showAll', () => {
   assert.equal(all.repos.length, 2)
 })
 
-test('sortFleet orders repos by recency, sessions by liveness', () => {
+test('sortFleet: band order is STABLE across session-count/activity changes; sessions live-first', () => {
   const home = mkTmp('sage-sf-')
   seedF(home, 'old-aaaa1111', 'a', { branch: 'a', updated_at: ago(10 * H) })
   seedF(home, 'new-bbbb2222', 'b', { branch: 'b', pid: process.pid, updated_at: ago(1 * H), last_tool_at: ago(1000) })
   seedF(home, 'new-bbbb2222', 'c', { branch: 'c', updated_at: ago(30 * 60000) }) // idle, newer
-  const f = sortFleet(collectFleet(home, NOW))
-  assert.equal(f.repos[0].repoId, 'new-bbbb2222') // most-recent activity first
-  assert.equal(f.repos[0].sessions[0].liveness, 'working') // working ranks above idle
+  const before = sortFleet(collectFleet(home, NOW)).repos.map((r) => r.repoId)
+  // The reorder-on-count bug: adding a session to a repo must NOT reshuffle the
+  // bands. A hot new session in the OTHER repo previously yanked it to the top.
+  seedF(home, 'old-aaaa1111', 'd', { branch: 'd', pid: process.pid, updated_at: ago(60000), last_tool_at: ago(500) })
+  const after = sortFleet(collectFleet(home, NOW)).repos.map((r) => r.repoId)
+  assert.deepEqual(after, before) // spatially stable regardless of counts/activity
+  // Within a band, working still ranks above idle.
+  const nb = sortFleet(collectFleet(home, NOW)).repos.find((r) => r.repoId === 'new-bbbb2222')
+  assert.equal(nb.sessions[0].liveness, 'working')
 })
 
 test('isNested: managed_by nested → true; human/absent → false', () => {

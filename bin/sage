@@ -49,7 +49,7 @@ import {
   fleetHud,
   composeHud,
 } from '../lib/fleet.mjs'
-import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME, stickyViewport } from '../lib/warroom.mjs'
+import { renderWarRoom, spinnerizeWar, PANEL_W, bodyModel, WAR_CHROME, stickyViewport, liveModel } from '../lib/warroom.mjs'
 import {
   FACES,
   nextFace,
@@ -61,7 +61,8 @@ import {
   facePanelTotals,
   faceCountsFromFleet,
 } from '../lib/warfaces.mjs'
-import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead } from '../lib/warnav.mjs'
+import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, matchFleet, isKillable, collectDead, reselectBySid } from '../lib/warnav.mjs'
+import { floatHot } from '../lib/hotfloat.mjs'
 import { parseMouseEvents, MOUSE_ENABLE, MOUSE_DISABLE } from '../lib/mouse.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
@@ -295,10 +296,15 @@ const runWatch = ({ collect, render }) => {
   let i = 0
   let data = collect()
   let mousePending = ''
-  W.write('\x1b[?1049h\x1b[?25l') // enter alt screen, hide cursor
+  W.write('\x1b[?1049h\x1b[?25l\x1b[2J') // enter alt screen, hide cursor, clear ONCE
   W.write(MOUSE_ENABLE) // button tracking + SGR extended coords
   const draw = () => {
-    W.write('\x1b[H\x1b[2J' + paint(render(data, SPINNER_FRAMES[i % SPINNER_FRAMES.length])) + '\n')
+    // Incremental repaint (same as the war room): home the cursor, clear each
+    // line to EOL as we overwrite it, then clear below — instead of a full
+    // \x1b[2J every 100ms, which flashed the whole screen (visible flicker).
+    const painted = paint(render(data, SPINNER_FRAMES[i % SPINNER_FRAMES.length]))
+    const body = painted.split('\n').map((l) => `${l}\x1b[K`).join('\n')
+    W.write(`\x1b[H${body}\x1b[J`)
     i++
   }
   draw()
@@ -357,6 +363,9 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   let lastCols = 0
   let paintTimer
   let dataTimer
+  let hotState = new Map() // repoId → last-hot ms, for the LIVE hot-float hysteresis
+  let hotCount = 0 // repos currently floated into the HOT group (LIVE face)
+  const HOT_LINGER_MS = 4000 // a cooled repo lingers hot this long before dropping
   let rawFleet = { repos: [], totals: {} } // unfiltered — source for deadCache
   const termCols = () => {
     const c = W.columns
@@ -377,12 +386,19 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     lastCols = termCols()
     if (face === 'clash') {
       model = bodyModelClash(clashView, { cols: lastCols })
+      return
+    }
+    const showZoneNow = face === 'live' ? showZone : false
+    if (face === 'live') {
+      // LIVE: hot group floated on top, quiet remainder below, divider between.
+      model = liveModel(view, { hotCount, cols: lastCols, showZone: showZoneNow, wide, showNested })
     } else {
-      model = bodyModel(view, { wide, showNested, cols: lastCols, showZone: face === 'live' ? showZone : false })
+      model = bodyModel(view, { wide, showNested, cols: lastCols, showZone: showZoneNow })
     }
   }
   const applyFaceData = () => {
     // Derive active view from rawFleet + face (pure, no extra FS).
+    hotCount = 0 // only the LIVE face floats a hot group
     if (face === 'memory') {
       const mem = filterMemoryFleet(rawFleet)
       view = sortFleet(matchFleet(mem, { query, workingOnly: false }))
@@ -396,9 +412,13 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       view = { repos: [], totals: rawFleet.totals || {} }
       clashView = buildClash(rawFleet, { query, workingOnly })
     } else {
-      // LIVE
+      // LIVE: stable base order, then float the hot group on top (hysteresis).
       const matched = matchFleet(filterFleet(rawFleet, { showAll }), { query, workingOnly })
-      view = sortFleet(matched)
+      const stable = sortFleet(matched)
+      const fl = floatHot(stable.repos, hotState, Date.now(), { lingerMs: HOT_LINGER_MS })
+      hotState = fl.hotState
+      hotCount = fl.hotCount
+      view = { repos: fl.order, totals: stable.totals }
       clashView = clashAll
     }
     rebuildModel()
@@ -415,21 +435,41 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     syncScroll()
     armDataTimer()
   }
+  // The session_id under the cursor right now — the anchor we keep the selection
+  // pinned to across a rebuild so a reorder/re-collect never slides the cursor
+  // onto a different session.
+  const selectedSid = () => model[selIdx()]?.session?.session_id || null
+  // Re-derive the view after a filter edit while keeping the cursor on the same
+  // session (or clamped if it filtered out).
+  const refilter = () => {
+    const sid = selectedSid()
+    applyFaceData()
+    selOrd = reselectBySid(model, sid, selOrd)
+    syncScroll()
+  }
   const refresh = () => {
     // Skip heavy re-collect while a bulk-confirm is open — keeps y/n snappy.
     if (confirm) return
-    const fleet = collectFleet(home, Date.now())
-    rawFleet = fleet
-    deadCache = collectDead(fleet)
-    clashAll = buildClash(fleet, {}) // full clash for tab badges + LIVE hints
-    faceCounts = faceCountsFromFleet(fleet, deadCache.length)
-    // Prefer faceCounts.clash from full build (same as clashAll.totals.paths)
-    faceCounts.clash = clashAll.totals.paths || 0
-    applyFaceData()
-    heat.push(fleet.totals.working)
-    if (heat.length > 30) heat.shift()
-    selOrd = moveSelection(selCount(), selOrd, 0) // clamp to the new fleet size
-    syncScroll()
+    const anchorSid = selectedSid() // keep the cursor on this session post-rebuild
+    try {
+      const fleet = collectFleet(home, Date.now())
+      rawFleet = fleet
+      deadCache = collectDead(fleet)
+      clashAll = buildClash(fleet, {}) // full clash for tab badges + LIVE hints
+      // Reuse the clash count just built — faceCountsFromFleet used to rebuild the
+      // whole clash model again (a second full O(fleet) pass) just for this number.
+      faceCounts = faceCountsFromFleet(fleet, deadCache.length, clashAll.totals.paths || 0)
+      applyFaceData()
+      heat.push(fleet.totals.working)
+      if (heat.length > 30) heat.shift()
+      selOrd = reselectBySid(model, anchorSid, selOrd) // stay on the same session
+      syncScroll()
+    } catch {
+      // A repo dir vanishing mid-collect (worktree removed, storage moved) must
+      // not kill the cockpit — degrade to the last good frame and try again next
+      // tick rather than crash out of alt-screen.
+      flash = 'refresh skipped (fs changed)'
+    }
   }
   const draw = () => {
     const cols = termCols()
@@ -480,18 +520,34 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     frame++
   }
   // MEMORY / showAll: slower data clock so the UI stays interactive.
+  // Data-clock cadence scales with fleet size: a huge fleet does not need a 1 Hz
+  // re-collect, and even with the mtime cache the stat pass + model rebuild has a
+  // cost worth spacing out. MEMORY / showAll stay on the slow clock.
+  const baseInterval = () => {
+    const n = rawFleet.totals?.sessions || 0
+    if (n > 800) return 2500
+    if (n > 300) return 1800
+    return 1000
+  }
   const armDataTimer = () => {
     if (dataTimer) clearInterval(dataTimer)
     const slow = face === 'memory' || showAll
-    dataTimer = setInterval(refresh, slow ? 2500 : 1000)
+    dataTimer = setInterval(refresh, slow ? 2500 : baseInterval())
   }
+  // Restore the terminal to a sane state. Idempotent + sync-only so it is safe
+  // as a last-ditch handler on ANY exit path (SIGTERM/SIGHUP/uncaught throw/exit)
+  // — previously only SIGINT + explicit user exits ran it, so a crash or kill
+  // left the shell stuck in alt-screen + raw mode + mouse tracking.
+  let restored = false
   const teardown = () => {
-    clearInterval(paintTimer)
-    clearInterval(dataTimer)
-    if (process.stdin.isTTY) process.stdin.setRawMode(false)
-    process.stdin.pause()
+    if (restored) return
+    restored = true
+    try { clearInterval(paintTimer) } catch {}
+    try { clearInterval(dataTimer) } catch {}
+    try { if (process.stdin.isTTY) process.stdin.setRawMode(false) } catch {}
+    try { process.stdin.pause() } catch {}
     // Disable mouse BEFORE leaving alt-screen so tracking never leaks to the shell.
-    W.write(MOUSE_DISABLE + '\x1b[?25h\x1b[?1049l')
+    try { W.write(MOUSE_DISABLE + '\x1b[?25h\x1b[?1049l') } catch {}
   }
   const stop = () => {
     teardown()
@@ -578,6 +634,14 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
   paintTimer = setInterval(draw, SPINNER_INTERVAL_MS)
   armDataTimer()
   process.on('SIGINT', stop)
+  process.on('SIGTERM', stop)
+  process.on('SIGHUP', stop)
+  process.on('exit', teardown) // last-ditch sync restore on any exit path
+  process.on('uncaughtException', (e) => {
+    teardown()
+    console.error(e)
+    process.exit(1)
+  })
   process.on('SIGWINCH', () => {
     rebuildModel()
     syncScroll()
@@ -646,9 +710,7 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       if (k === '\x1b') {
         query = ''
         mode = 'nav'
-        applyFaceData()
-        selOrd = moveSelection(selCount(), selOrd, 0)
-        syncScroll()
+        refilter()
         return draw()
       }
       if (k === '\r' || k === '\n') {
@@ -657,18 +719,14 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
       }
       if (k === '\x7f' || k === '\b') {
         query = query.slice(0, -1)
-        applyFaceData()
-        selOrd = moveSelection(selCount(), selOrd, 0)
-        syncScroll()
+        refilter()
         return draw()
       }
       // Accept single keys and multi-char paste bursts (printable only; drop CSI/controls).
       const printable = [...k].filter((ch) => ch >= ' ' && ch !== '\x7f').join('')
       if (printable) {
         query += printable
-        applyFaceData()
-        selOrd = moveSelection(selCount(), selOrd, 0)
-        syncScroll()
+        refilter()
         return draw()
       }
       return
