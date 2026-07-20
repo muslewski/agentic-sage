@@ -1,13 +1,18 @@
 name: Publish to npm
 
-# release-please prepares the release PR + CHANGELOG + version tag. To publish, a human
-# pushes the tag (`git push origin vX.Y.Z`) — a human-pushed tag triggers this workflow —
-# or runs it manually via workflow_dispatch. A tag auto-pushed by release-please's
-# GITHUB_TOKEN will NOT trigger this; add a PAT/GitHub-App token to release-please for
-# full release automation.
+# release-please prepares the release PR + CHANGELOG + version tag. Tags look like
+# `agentic-sage-vX.Y.Z` (component-in-tag). A tag auto-pushed by release-please's
+# default GITHUB_TOKEN does NOT chain-trigger other workflows — so after merging the
+# release PR, either:
+#   1. Run this workflow manually (Actions → Publish to npm → Run workflow), or
+#   2. Push a human-created tag that matches the patterns below.
+# Full auto: give release-please a PAT/GitHub-App token with contents:write so its
+# tag push is treated as a real user event.
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
+      - 'agentic-sage-v*'
   workflow_dispatch:
 
 permissions:
