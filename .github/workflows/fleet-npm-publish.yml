@@ -1,0 +1,106 @@
+name: Fleet npm publish
+
+# One-shot: publish sibling fleet packages using this repo's NPM_TOKEN.
+# Use when other repos do not have the secret yet. Safe to re-run (npm rejects
+# same version if already published — those steps fail open with || true).
+#
+# Trigger: Actions → Fleet npm publish → Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Space-separated package dirs to publish (or "all")'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fleet packages
+        uses: actions/checkout@v4
+        with:
+          path: agentic-sage
+
+      - name: Checkout memory-atlas
+        uses: actions/checkout@v4
+        with:
+          repository: muslewski/memory-atlas
+          path: memory-atlas
+
+      - name: Checkout status-herald
+        uses: actions/checkout@v4
+        with:
+          repository: muslewski/status-herald
+          path: status-herald
+
+      - name: Checkout llm-armory
+        uses: actions/checkout@v4
+        with:
+          repository: muslewski/llm-armory
+          path: llm-armory
+
+      - name: Checkout mossferry
+        uses: actions/checkout@v4
+        with:
+          repository: muslewski/mossferry
+          path: mossferry
+
+      - name: Checkout token-oracle
+        uses: actions/checkout@v4
+        with:
+          repository: muslewski/token-oracle
+          path: token-oracle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish_one() {
+            local dir="$1"
+            echo "::group::publish $dir"
+            if [[ ! -f "$dir/package.json" ]]; then
+              echo "skip $dir — no package.json"
+              echo "::endgroup::"
+              return 0
+            fi
+            name=$(node -p "require('./$dir/package.json').name")
+            ver=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$ver" version >/dev/null 2>&1; then
+              echo "already on registry: $name@$ver"
+              echo "::endgroup::"
+              return 0
+            fi
+            # herald needs lockfile install for biome only if present; others have no deps
+            if [[ -f "$dir/package-lock.json" ]]; then
+              (cd "$dir" && npm install --ignore-scripts --omit=dev)
+            fi
+            (cd "$dir" && npm publish --access public --provenance) || {
+              echo "::warning::publish failed for $dir (see log)"
+              echo "::endgroup::"
+              return 0
+            }
+            echo "published $name@$ver"
+            echo "::endgroup::"
+          }
+
+          publish_one memory-atlas
+          publish_one status-herald
+          publish_one llm-armory
+          publish_one mossferry
+          publish_one token-oracle/npm
+
+          echo "--- verify ---"
+          for pkg in memory-atlas status-herald llm-armory mossferry token-oracle; do
+            npm view "$pkg" name version bin homepage 2>/dev/null || echo "MISSING $pkg"
+          done
