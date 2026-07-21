@@ -48,3 +48,9 @@ npx atlas init
 
 Do not hand-edit generated `map/index.md`. Zone bodies and ledger notes are
 the source of truth for claims.
+
+## Contributing with the mind
+
+Updating this vault when you change architecture is an **informal** habit that
+improves PR quality for the next human or agent — not a formal review gate.
+See the repo **CONTRIBUTING.md** (Project mind section). Skip for pure typos.
