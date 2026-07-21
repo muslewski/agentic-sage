@@ -5,8 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please describe the problem your feature would solve before proposing a solution —
-        it helps evaluate fit and find simpler alternatives.
+        Describe the problem first — it helps us find simpler alternatives.
+
+        For open-ended brainstorming, prefer
+        [Discussions](https://github.com/muslewski/agentic-sage/discussions).
 
   - type: textarea
     id: problem
@@ -28,10 +30,9 @@ body:
     id: alternatives
     attributes:
       label: Alternatives considered
-      description: Any other approaches you've thought about?
 
   - type: textarea
     id: context
     attributes:
       label: Additional context
-      description: Anything else relevant (screenshots, links, prior art, etc.)
+      description: Screenshots, links, prior art, related tools in the fleet, etc.

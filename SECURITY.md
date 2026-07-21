@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| latest 1.x (currently 1.0.x / npm latest) | Yes |
-| older | No — upgrade first |
+| latest 1.x on npm / main | Yes |
+| older | No — please upgrade first |
 
 ## Reporting a vulnerability
 
@@ -16,21 +16,18 @@ Report privately via
 or email **10kento10@gmail.com** with the subject line `[SECURITY] agentic-sage`.
 
 Include:
+
 - A description of the vulnerability
 - Steps to reproduce
 - Potential impact
 - Any suggested fix (optional)
 
-You will receive a response within 72 hours. We aim to release a patch within 14 days of
-a confirmed vulnerability.
+You will receive a response within **72 hours**. We aim to ship a patch within
+**14 days** of a confirmed vulnerability.
 
 ## Scope
 
-agentic-sage is a local CLI that reads git history and writes to `~/.claude`. It has no
-network server and no external API calls. The primary risk surface is:
+agentic-sage is a local CLI that reads git history and writes to agent config dirs. Primary risk: path traversal via untrusted adapter input, symlink races during install/uninstall, injected shell via hook configuration.
 
-- Path traversal via untrusted adapter input
-- Symlink race conditions during install/uninstall
-- Injected shell commands via hook configuration
-
-Out of scope: issues in Node.js itself, GitHub Actions runners, or the user's OS.
+Out of scope: issues in Node.js / Python / the OS, third-party CLIs this tool
+launches, or GitHub Actions runners themselves.

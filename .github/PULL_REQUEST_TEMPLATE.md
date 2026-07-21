@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-<!-- 1-3 bullet points describing the change -->
+<!-- 1–3 bullet points describing the change -->
 
 ## Type of change
 
@@ -9,21 +9,12 @@
 - [ ] Breaking change (fix or feature that changes existing behavior)
 - [ ] Documentation / tooling only
 
-## Secret pattern check
+## Checklist
 
-Confirm this PR contains none of the following patterns (grep the diff):
-
-- [ ] No `ghp_` (GitHub personal access token)
-- [ ] No `sk-` (API key prefix)
-- [ ] No `AKIA` (AWS access key ID)
-- [ ] No `xoxb-` or `xoxp-` (Slack tokens)
-- [ ] No hardcoded passwords, tokens, or private paths
-
-## Testing
-
-- [ ] `node --test` passes locally
-- [ ] `npx biome check .` passes locally
-- [ ] New behavior is covered by a test (or explain why not)
+- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md)
+- [ ] Tests / checks mentioned in CONTRIBUTING pass locally
+- [ ] No secrets in the diff (`ghp_`, `sk-`, `AKIA`, `xoxb-`, hardcoded tokens)
+- [ ] Docs / README updated if user-facing behavior changed
 
 ## Notes for reviewer
 

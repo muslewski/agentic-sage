@@ -2,6 +2,17 @@
 
 Thank you for your interest!
 
+
+## Community
+
+| Kind | Where |
+|---|---|
+| Questions, ideas, show-and-tell | [Discussions](https://github.com/muslewski/agentic-sage/discussions) |
+| Bugs & concrete feature requests | [Issues](https://github.com/muslewski/agentic-sage/issues/new/choose) |
+| Security | [SECURITY.md](./SECURITY.md) — private only |
+
+Please follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ## Dev setup
 
 ```bash
