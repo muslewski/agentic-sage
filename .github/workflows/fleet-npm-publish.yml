@@ -85,7 +85,10 @@ jobs:
             if [[ -f "$dir/package-lock.json" ]]; then
               (cd "$dir" && npm install --ignore-scripts --omit=dev)
             fi
-            (cd "$dir" && npm publish --access public --provenance) || {
+            # No --provenance here: this job runs under agentic-sage, and npm
+            # rejects provenance when package.json repository ≠ workflow repo.
+            # Per-repo publish.yml keeps --provenance for normal releases.
+            (cd "$dir" && npm publish --access public) || {
               echo "::warning::publish failed for $dir (see log)"
               echo "::endgroup::"
               return 0
