@@ -1,39 +1,26 @@
-# Fleet → awesome lists (tracker)
+# Awesome-list submissions
 
-Human action required for [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code):  
-**submissions must use the web issue form** (not `gh` CLI; not agent-filed).  
-See their [CONTRIBUTING](https://github.com/hesreallyhim/awesome-claude-code/blob/main/CONTRIBUTING.md) and bake note [#2310](https://github.com/hesreallyhim/awesome-claude-code/issues/2310).
+## Policy for this fleet
 
-## Eligibility (as of 2026-07-21)
+Public pitches and list forms must read as **a human shipping tools**:
 
-| Repo | Age | Category | Payload | Status |
-|---|---|---|---|---|
-| **agentic-sage** | ~23d | Multi-Agent Orchestration | [submission.md](../awesome-claude-code-submission.md) | **Ready — submit** |
-| **token-oracle** | ~21d | Observability & Monitoring | [token-oracle doc](https://github.com/muslewski/token-oracle/blob/main/docs/awesome-claude-code-submission.md) | **Ready — submit** |
-| **status-herald** | ~19d | Status Lines | [status-herald doc](https://github.com/muslewski/status-herald/blob/main/docs/awesome-claude-code-submission.md) | Ready (borderline bake) |
-| llm-armory | ~11d | Multi-Agent / Skills | — | **Wait** (~1 more week) |
-| mossferry | ~5d | (less CC-specific) | — | **Wait** / optional later |
-| memory-atlas | ~3d | Memory & Context Persistence | — | **Wait** (~2+ weeks) |
+- Author: **Mateusz Muślewski** / [muslewski](https://github.com/muslewski) only  
+- Never name models, copilots, or “agents” as authors or co-contributors  
+- Describe the product, not the stack that wrote the code  
+- Prefer plain English over launch-speak  
+- awesome-claude-code must be filled **by you in the browser** (their rules)
 
-## One-click open form
+## Ready now
 
-1. [Recommend agentic-sage](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20agentic-sage)
-2. [Recommend token-oracle](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20token-oracle)
-3. [Recommend status-herald](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20status-herald) *(optional third)*
-
-Paste Display Name, Category, Link, Author, Description from the payload docs. Tick all three checklist boxes.
-
-## After approval
-
-- Add the [mentioned badge](https://github.com/hesreallyhim/awesome-claude-code/blob/main/CONTRIBUTING.md#badges) to each product README.
-- Update this table Status → `Listed`.
-
-## Other lists (later / optional)
-
-| List | Fit | Notes |
+| Tool | Open form | Payload |
 |---|---|---|
-| [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) | sage-fleet, fusion-advisor | Skills-focused; PR if they accept |
-| [awesome-cli-apps](https://github.com/agarrharr/awesome-cli-apps) | sage, oracle, ferry | General CLI; needs PR + section fit |
-| npm / PyPI discovery | already published | keep keywords + homepage set |
+| agentic-sage | [form](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20agentic-sage) | [docs](../awesome-claude-code-submission.md) |
+| token-oracle | [form](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20token-oracle) | [docs](https://github.com/muslewski/token-oracle/blob/main/docs/awesome-claude-code-submission.md) |
 
-Do **not** spam multiple lists the same day; submit sage + oracle first, wait for signal.
+## Wait
+
+llm-armory, mossferry, memory-atlas — still young; status-herald optional.
+
+## After accept
+
+Add their “mentioned in” badge on the product README if you want.

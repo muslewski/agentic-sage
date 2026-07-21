@@ -1,57 +1,40 @@
-# awesome-claude-code Submission — agentic-sage
+# awesome-claude-code — agentic-sage
 
-**List:** [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) (~50k★)
-
-**Submit (web UI only — `gh` CLI is not accepted):**  
+Submit (you, in the browser — not via CLI/agents):  
 https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml&title=%5BResource%5D%3A%20agentic-sage
 
-> Maintainer note ([#2310](https://github.com/hesreallyhim/awesome-claude-code/issues/2310)): prefer resources that have **baked a few weeks** after going public — not day-1. agentic-sage was created **2026-06-28** (~3+ weeks).
+Repo is public since 2026-06-28. Not on the list yet (checked once; re-check before submit).
 
 ---
 
-## Form fields (copy-paste)
+## Form
 
 | Field | Value |
 |---|---|
-| **Display Name** | `agentic-sage` |
-| **Category** | `Multi-Agent Orchestration` |
-| **Link** | `https://github.com/muslewski/agentic-sage` |
-| **Author Name** | `muslewski` |
-| **Author Link** | `https://github.com/muslewski` |
-| **Description** | see block below |
+| **Display Name** | agentic-sage |
+| **Category** | Multi-Agent Orchestration |
+| **Link** | https://github.com/muslewski/agentic-sage |
+| **Author Name** | Mateusz Muślewski |
+| **Author Link** | https://github.com/muslewski |
 
-**Description** (descriptive, one block, no hype / no second-person):
+**Description** (paste as one block):
 
 ```
-Passive, read-only fleet judge for parallel Claude Code (and Grok Build) sessions. Global CLI `sage` plus Claude skills (`sage-fleet`, `sage-doctor`): territory checks, claim intent, merge briefs, and `sage board` for fleet altitude. Default OFF, zero runtime dependencies, MIT.
+A local CLI that watches parallel coding-agent sessions and answers fleet questions: who is working where, whether paths overlap, and why branches diverged. Ships a small skill so sessions can claim territory and request merge context; default off, no runtime deps, MIT.
 ```
 
-**Checklist (all required):**
-
-- [x] I checked that this resource isn't already on the list *(verified 2026-07-21 — not in README / THE_RESOURCES_TABLE.csv)*
-- [x] All links are working and publicly accessible
-- [x] This resource is specific to Claude Code *(hooks + skills for Claude Code; multi-agent fleet coordination)*
+Checklist: not already listed · links work · relevant to Claude Code workflows.
 
 ---
 
-## After approval
+## After they’re in
 
-Add the badge to the README:
-
-```markdown
-[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/hesreallyhim/awesome-claude-code)
-```
+Optional README badge from their CONTRIBUTING.
 
 ---
 
-## Related fleet submissions
+## Tone rules (for any public pitch)
 
-See sibling packages when they clear the “bake” window:
-
-| Package | Category | Eligible (rough) |
-|---|---|---|
-| [token-oracle](https://github.com/muslewski/token-oracle) | Observability & Monitoring | ~3 weeks (created 2026-06-30) |
-| [status-herald](https://github.com/muslewski/status-herald) | Status Lines / Observability | ~2.5 weeks (created 2026-07-02) |
-| llm-armory / mossferry / memory-atlas | various | wait longer (under 2 weeks) |
-
-Payloads: `docs/awesome-list-submissions/` in this repo (tracker) and per-product docs where present.
+- Author is a **person** (Mateusz / muslewski). Never list models or products as contributors.
+- Describe **what the tool does**, not which models wrote it.
+- Keep the sentence plain. No “fleet of agents”, no hype stack, no “Claude-first / multi-model” marketing in the one-liner unless the list forces a Claude Code angle — then one factual mention is enough.
