@@ -1,0 +1,53 @@
+{
+  "atlasVersion": "0.4.0",
+  "configVersion": 1,
+  "specVersion": "0.1",
+  "modules": [
+    "flows",
+    "programs",
+    "vision",
+    "reference",
+    "archive",
+    "backlog",
+    "drafts",
+    "reports"
+  ],
+  "wired": {
+    "claude": true,
+    "grok": true,
+    "rootBlocks": [
+      "CLAUDE.md",
+      "AGENTS.md"
+    ]
+  },
+  "vendored": {
+    "CLAUDE.md#atlas:onramp": {
+      "sha256": "44e45f29f516abffa2853f69d22ab0b619eab7c707c77cb97897cf926d15b307",
+      "atlasVersion": "0.4.0"
+    },
+    "AGENTS.md#atlas:onramp": {
+      "sha256": "b6864dedda464f6fc02192d465d318e4215c90ad0e2b0751370753912715828f",
+      "atlasVersion": "0.4.0"
+    },
+    "skills/atlas-adopt/SKILL.md": {
+      "sha256": "b59f1e8072ef9fd33552b34fef26dced70d5276658ad61b7f705e1212c1fc36f",
+      "atlasVersion": "0.4.0"
+    },
+    "skills/atlas-nav/SKILL.md": {
+      "sha256": "1e4276d9e9ba798681108356577701baf9ff3c99bdb91b372ffdc7002d897023",
+      "atlasVersion": "0.4.0"
+    },
+    "skills/atlas-recollection/SKILL.md": {
+      "sha256": "b331ce5dca091e158c8ec83ec317fb266c2ce823d37061ac798d8d6a4b93d766",
+      "atlasVersion": "0.4.0"
+    },
+    "skills/atlas-update/SKILL.md": {
+      "sha256": "021744729d0bd74ba47012925019ef934c9b91260634cf30222a8d70ae345b94",
+      "atlasVersion": "0.4.0"
+    },
+    "skills/writing-for-retrieval/SKILL.md": {
+      "sha256": "8c44453bc63d5e8fbfe6e75675e74043087cc8a5dd2fc025af0baffd0ffaac46",
+      "atlasVersion": "0.4.0"
+    }
+  }
+}

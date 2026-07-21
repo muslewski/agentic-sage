@@ -1,0 +1,80 @@
+{
+  "$schema": "./node_modules/memory-atlas/schema/atlas.config.schema.json",
+  "version": 1,
+  "enabled": true,
+  "vaultDir": "agentic-sage-mind",
+  "folders": {
+    "zones": "map/zones",
+    "decisions": "map/decisions",
+    "flows": "map/flows",
+    "specs": "specs",
+    "plans": "plans",
+    "programs": "programs",
+    "ideas": "ideas",
+    "techDebt": "tech-debt",
+    "vision": "vision",
+    "reference": "reference",
+    "archive": "archive",
+    "reports": "reports",
+    "drafts": "drafts",
+    "templates": "templates"
+  },
+  "modules": {
+    "flows": true,
+    "programs": true,
+    "vision": true,
+    "reference": true,
+    "archive": true,
+    "reports": true,
+    "backlog": true,
+    "drafts": true
+  },
+  "anchors": {
+    "testids": {
+      "enabled": false,
+      "pattern": "data-testid=\"{id}\"",
+      "root": "src"
+    },
+    "tools": {
+      "enabled": false,
+      "pattern": "'{id}'",
+      "root": ""
+    },
+    "routes": {
+      "enabled": false,
+      "fileGlobs": [],
+      "stripPrefix": "",
+      "stripSuffix": ""
+    }
+  },
+  "check": {
+    "strictFreshness": false,
+    "ownership": true,
+    "corpus": {
+      "enabled": false,
+      "maxSummaryLen": 500
+    }
+  },
+  "retrieval": {
+    "engine": "ctx-search",
+    "excludeFromSearch": [
+      "drafts/",
+      "visuals/"
+    ]
+  },
+  "skills": {
+    "dir": ".claude/skills",
+    "nav": "atlas-nav"
+  },
+  "hooks": {
+    "sessionStartStatus": true,
+    "sessionStartIndexRefresh": true
+  },
+  "routines": {
+    "enabled": false,
+    "cadenceDays": 7,
+    "tasks": [
+      "gardening"
+    ]
+  }
+}
