@@ -1,0 +1,58 @@
+name: Seal NPM_TOKEN for fleet sync
+
+# One-shot migration helper: encrypt secrets.NPM_TOKEN with a caller-supplied
+# RSA public key and upload the ciphertext as an artifact. The local tool
+# `sync-fleet-npm-token` generates the keypair, runs this workflow, decrypts,
+# and `gh secret set NPM_TOKEN` on every fleet repo.
+#
+# Secrets never appear in logs (only ciphertext in the artifact).
+# Delete the workflow run / artifact after sync if you like.
+#
+# Trigger:  sync-fleet-npm-token   (preferred)
+#       or: gh workflow run "Seal NPM_TOKEN for fleet sync" -R muslewski/agentic-sage -f pubkey_pem_b64=...
+
+on:
+  workflow_dispatch:
+    inputs:
+      pubkey_pem_b64:
+        description: "Base64 (no newlines) of an RSA public key PEM used to wrap the AES key"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  seal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Seal NPM_TOKEN
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PUBKEY_B64: ${{ inputs.pubkey_pem_b64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NPM_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN secret is empty on agentic-sage"
+            exit 1
+          fi
+          mkdir -p sealed
+          printf '%s' "$PUBKEY_B64" | base64 -d > pubkey.pem
+          # Hybrid encrypt: AES-256-CBC for payload, RSA-OAEP for the AES key
+          openssl rand -out aes.key 32
+          openssl rand -out aes.iv 16
+          printf '%s' "$NPM_TOKEN" | openssl enc -aes-256-cbc -salt -pbkdf2 \
+            -K "$(xxd -p -c 256 aes.key)" -iv "$(xxd -p -c 256 aes.iv)" \
+            -out sealed/token.enc
+          openssl pkeyutl -encrypt -pubin -inkey pubkey.pem -in aes.key \
+            -pkeyopt rsa_padding_mode:oaep -out sealed/aes.key.enc
+          cp aes.iv sealed/aes.iv
+          # wipe plaintext key material in workspace
+          shred -u aes.key 2>/dev/null || rm -f aes.key
+          rm -f pubkey.pem
+
+      - name: Upload sealed bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-token-sealed
+          path: sealed/
+          retention-days: 1
