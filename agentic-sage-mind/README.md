@@ -9,8 +9,9 @@ touching code.
 | Map index | [`map/index.md`](./map/index.md) |
 | Zones | `map/zones/` |
 | Decisions | `map/decisions/` |
-| Specs / plans | `specs/` · `plans/` |
+| Specs / plans | `specs/` · `plans/` (includes former `docs/superpowers/*`) |
 | Tech debt | `tech-debt/` |
+| Public product docs | [`../docs/`](../docs/) (guides/reference — not this vault) |
 
 ## Agent loop
 

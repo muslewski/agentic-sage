@@ -151,7 +151,7 @@ test('fit: pads short to exact width, middle-ellipsis keeps head+tail on long', 
 })
 
 test('fitZone: clips the path but keeps the +N overflow count adjacent', () => {
-  const z = fitZone('docs/superpowers/plans/ +1', 16)
+  const z = fitZone('agentic-sage-mind/plans/ +1', 16)
   assert.equal([...z].length, 16) // rigid width
   assert.match(z, /….*\+1$/u) // path clipped, +1 preserved at the tail
 })

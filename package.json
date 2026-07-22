@@ -2,7 +2,7 @@
   "name": "agentic-sage",
   "version": "1.1.0",
   "type": "module",
-  "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) — board, territory checks, merge briefings.",
+  "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) \u2014 board, territory checks, merge briefings.",
   "bin": {
     "sage": "./bin/sage",
     "agentic-sage": "./bin/sage"
@@ -29,9 +29,10 @@
     "test": "node --test",
     "postinstall": "node scripts/postinstall.mjs",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "docs:check": "node ../docs-kit/bin/docs-kit.mjs check docs/"
   },
-  "author": "Mateusz Muślewski <10kento10@gmail.com>",
+  "author": "Mateusz Mu\u015blewski <10kento10@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

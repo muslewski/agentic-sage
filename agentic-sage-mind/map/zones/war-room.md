@@ -40,4 +40,4 @@ Prefer empty until verified.
 
 ## Lineage
 
-docs/superpowers war-room design notes (in tree), lib/warroom.mjs and related headers, demo war tapes, 2026-07-21 atlas-seed pass.
+agentic-sage-mind/specs war-room design notes, lib/warroom.mjs and related headers, demo war tapes, 2026-07-21 atlas-seed pass.

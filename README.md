@@ -335,10 +335,12 @@ uninstall/                   surgical reversible uninstall (uninstall.mjs + READ
 test/*.test.mjs              node --test, hermetic (temp HOME, temp git repos)
 ```
 
-**Docs:** [`AGENTS.md`](./AGENTS.md) — agent setup runbook ("set it up for my repo"). ·
+**Docs:** [`docs/`](./docs/) — product documentation hub (getting started, concepts, CLI, recipes; pilot for fleet **docs-kit**). ·
+[`AGENTS.md`](./AGENTS.md) — agent setup runbook ("set it up for my repo"). ·
 [`SETUP.md`](./SETUP.md) — human walkthrough (required/optional tiers). ·
 [`ADAPTERS.md`](./ADAPTERS.md) — write a per-project adapter. ·
 [`CONVENTIONS.md`](./CONVENTIONS.md) — an *example* controller setup (worktree-at-go, the guard). ·
+[`agentic-sage-mind/`](./agentic-sage-mind/) — Atlas vault (zones, **specs**, **plans** — not public marketing docs). ·
 [`uninstall/`](./uninstall/README.md) — undo it. · `LICENSE` — MIT.
 
 ## Community

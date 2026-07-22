@@ -216,7 +216,7 @@ const DEAD = (id, over = {}) => ({
 
 test('s1: 3 live + 80 dead → live on top with headers + gauges; one archive fold', () => {
   const live = [
-    LIVE('a', { liveness: 'working', ctx_used: 80, ctx_window: 100, touched_globs: ['docs/superpowers/x.md'] }),
+    LIVE('a', { liveness: 'working', ctx_used: 80, ctx_window: 100, touched_globs: ['agentic-sage-mind/specs/x.md'] }),
     LIVE('b', { liveness: 'idle', ctx_used: 40, ctx_window: 100, touched_globs: ['lib/board.mjs'] }),
     LIVE('c', { liveness: 'working', phase: 'compacting', ctx_used: 20, ctx_window: 100, touched_globs: ['bin/sage'] }),
   ]
@@ -298,7 +298,7 @@ test('s2: zone names never mid-clip; ctx gauge reflects fixture percentages', ()
       liveness: 'working',
       ctx_used: 100,
       ctx_window: 100,
-      touched_globs: ['docs/superpowers/specs/design.md'],
+      touched_globs: ['agentic-sage-mind/specs/design.md'],
     }),
     LIVE('z2', {
       liveness: 'idle',
@@ -309,7 +309,7 @@ test('s2: zone names never mid-clip; ctx gauge reflects fixture percentages', ()
   ]
   const txt = renderBoard(sessions, { repoId: 'repo' })
   // full zone dirs present — never mid-clip garbage like bare "ocs/" from "docs/"
-  assert.match(txt, /docs\/superpowers\//)
+  assert.match(txt, /agentic-sage-mind\/specs\//)
   assert.ok(!/(?:^|\s)ocs\//m.test(txt), 'no mid-clip bare ocs/ zone')
   assert.match(txt, /lib\//)
 
@@ -326,7 +326,7 @@ test('s2: long zone keeps a readable tail (left-ellipsis, not middle garbage)', 
   const sessions = [
     LIVE('deep', {
       liveness: 'working',
-      touched_globs: ['docs/superpowers/specs/very-long-name-here.md'],
+      touched_globs: ['agentic-sage-mind/specs/very-long-name-here.md'],
       ctx_used: 50,
       ctx_window: 100,
     }),
@@ -335,7 +335,7 @@ test('s2: long zone keeps a readable tail (left-ellipsis, not middle garbage)', 
   // must not produce mid-clip "ocs/" style garbage; either full path or …tail
   assert.ok(!/ocs\//.test(txt), 'no mid-clip ocs/')
   assert.ok(
-    /docs\/superpowers\//.test(txt) || /…/.test(txt) || /specs\//.test(txt),
+    /agentic-sage-mind\/specs\//.test(txt) || /…/.test(txt) || /specs\//.test(txt),
     'zone readable',
   )
 })

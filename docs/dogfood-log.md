@@ -1,6 +1,6 @@
 # SAGE dogfood log
 
-Go-live: 2026-07 (dogfood-hardening round; spec: docs/superpowers/specs/2026-07-10-dogfood-hardening-design.md, gitignored).
+Go-live: 2026-07 (dogfood-hardening round; spec: agentic-sage-mind/specs/2026-07-10-dogfood-hardening-design.md, gitignored).
 Fill the friction table as you hit things. One week live → next round (war-room dashboard) gets specced against this log.
 
 ## Go-live runbook (run each step yourself, in order)

@@ -1,3 +1,15 @@
+---
+type: spec
+summary: "agentic-sage board rebuild + semantic paint — design spec"
+tags: [migrated-from-docs-superpowers]
+status: planned
+created: 2026-07-23
+updated: 2026-07-23
+origin: "migrated from docs/superpowers/specs/2026-07-17-sage-ui-design.md"
+related: []
+sources: []
+---
+
 # agentic-sage board rebuild + semantic paint — design spec
 
 **Date:** 2026-07-17 · **Status:** approved · **Phase:** 5 of the fleet UI campaign

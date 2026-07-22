@@ -1,0 +1,30 @@
+{
+  "title": "agentic-sage",
+  "description": "Passive fleet judge for parallel AI coding sessions",
+  "sidebar": [
+    { "title": "Home", "href": "index.md" },
+    { "title": "Getting started", "href": "getting-started.md" },
+    {
+      "title": "Concepts",
+      "items": [{ "title": "Fleet judge", "href": "concepts/fleet-judge.md" }]
+    },
+    {
+      "title": "Reference",
+      "items": [
+        { "title": "CLI", "href": "reference/cli.md" },
+        { "title": "Configuration", "href": "reference/configuration.md" },
+        { "title": "Adapters", "href": "reference/adapters.md" }
+      ]
+    },
+    {
+      "title": "Recipes",
+      "items": [
+        { "title": "Recipes index", "href": "recipes/index.md" },
+        { "title": "Multi-harness", "href": "recipes/multi-harness.md" },
+        { "title": "Dogfood", "href": "recipes/dogfood.md" },
+        { "title": "Statusline", "href": "recipes/statusline.md" }
+      ]
+    },
+    { "title": "Mind / specs moved", "href": "SUPERPOWERS-MOVED.md" }
+  ]
+}

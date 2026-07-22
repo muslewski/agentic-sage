@@ -3,7 +3,7 @@
 You're reading this because someone cloned **agentic-sage** and asked you (an AI coding agent such as Grok Build CLI or Claude Code) to
 **set it up for their repo**. This file is the runbook. It works *before* anything is installed —
 follow it top to bottom. The human-facing version is [`SETUP.md`](./SETUP.md); the deep reference is
-[`README.md`](./README.md).
+[`README.md`](./README.md). Public product docs hub: [`docs/`](./docs/). Architecture / specs / plans: [`agentic-sage-mind/`](./agentic-sage-mind/) (memory-atlas — **not** `docs/superpowers/`).
 
 Grok: you load this file natively (AGENTS.md). Claude loads CLAUDE.md which can point here or include equivalent. Use the steps below; prefer `node bin/sage ...` if `sage` not yet on PATH.
 
