@@ -1,0 +1,59 @@
+name: Propagate NPM_TOKEN to fleet
+
+# Copies secrets.NPM_TOKEN onto every fleet package repo.
+# Needs secrets.FLEET_GH_TOKEN = a GitHub token with admin on those repos
+# (fine-grained PAT recommended; `gh auth token` works for a one-shot sync).
+#
+#   gh auth token | gh secret set FLEET_GH_TOKEN -R muslewski/agentic-sage
+#   gh workflow run "Propagate NPM_TOKEN to fleet" -R muslewski/agentic-sage
+#
+# Or: sync-fleet-npm-token (sealed path) when Actions runners are free.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  propagate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set NPM_TOKEN on all fleet repos
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.FLEET_GH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NPM_TOKEN:-}" ]]; then
+            echo "::error::NPM_TOKEN missing on agentic-sage"
+            exit 1
+          fi
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::FLEET_GH_TOKEN missing. On your machine run:"
+            echo "  gh auth token | gh secret set FLEET_GH_TOKEN -R muslewski/agentic-sage"
+            exit 1
+          fi
+          REPOS=(
+            muslewski/agentic-sage
+            muslewski/memory-atlas
+            muslewski/status-herald
+            muslewski/llm-armory
+            muslewski/mossferry
+            muslewski/token-oracle
+          )
+          for repo in "${REPOS[@]}"; do
+            if printf '%s' "$NPM_TOKEN" | gh secret set NPM_TOKEN -R "$repo"; then
+              echo "ok $repo"
+            else
+              echo "::error::failed $repo"
+              exit 1
+            fi
+          done
+          echo "--- verify names ---"
+          for repo in "${REPOS[@]}"; do
+            gh secret list -R "$repo" | grep -E '^NPM_TOKEN' || {
+              echo "::error::verify failed $repo"
+              exit 1
+            }
+          done
