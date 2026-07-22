@@ -24,7 +24,6 @@
         { "title": "Dogfood", "href": "recipes/dogfood.md" },
         { "title": "Statusline", "href": "recipes/statusline.md" }
       ]
-    },
-    { "title": "Mind / specs moved", "href": "SUPERPOWERS-MOVED.md" }
+    }
   ]
 }

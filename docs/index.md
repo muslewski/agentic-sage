@@ -1,5 +1,5 @@
 ---
-title: "agentic-sage docs"
+title: "Documentation"
 description: "Fleet judge for parallel AI coding sessions — install, concepts, CLI, and recipes."
 section: home
 order: 0
