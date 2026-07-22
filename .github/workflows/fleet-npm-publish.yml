@@ -1,10 +1,19 @@
 name: Fleet npm publish
 
-# One-shot: publish sibling fleet packages using this repo's NPM_TOKEN.
-# Use when other repos do not have the secret yet. Safe to re-run (npm rejects
-# same version if already published — those steps fail open with || true).
+# Canonical CI publish for the whole muslewski npm fleet.
+#
+# Only THIS repo holds NPM_TOKEN (GitHub secrets are write-only; sibling
+# repos intentionally have no secret so tag-triggered publish cannot work).
+# Sibling per-repo publish.yml files are workflow_dispatch-only and point here.
+#
+# Preferred local path (no Actions):  ship-npm   # after: ship-npm --setup
+# Preferred CI path:                  this workflow
+#
+# Safe to re-run — versions already on the registry are skipped.
 #
 # Trigger: Actions → Fleet npm publish → Run workflow
+#      or: gh workflow run "Fleet npm publish" -R muslewski/agentic-sage
+#      or: ship-npm --fleet-only
 on:
   workflow_dispatch:
     inputs:
