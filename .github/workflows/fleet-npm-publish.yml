@@ -31,36 +31,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout fleet packages
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: agentic-sage
 
       - name: Checkout memory-atlas
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: muslewski/memory-atlas
           path: memory-atlas
 
       - name: Checkout status-herald
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: muslewski/status-herald
           path: status-herald
 
       - name: Checkout llm-armory
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: muslewski/llm-armory
           path: llm-armory
 
       - name: Checkout mossferry
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: muslewski/mossferry
           path: mossferry
 
       - name: Checkout token-oracle
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: muslewski/token-oracle
           path: token-oracle
