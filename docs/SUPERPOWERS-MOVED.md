@@ -15,3 +15,11 @@ Pipeline for agents (see root `CLAUDE.md` / `AGENTS.md`):
 - public product docs → `docs/` (this tree: guide, reference, recipes)
 
 Do not recreate `docs/superpowers/`.
+
+Also moved (internal, not public SSG):
+
+| Old path | New path |
+|----------|----------|
+| `docs/dogfood-log.md` | `agentic-sage-mind/reports/dogfood-log.md` |
+| `docs/launch/*` | `agentic-sage-mind/reports/launch/` |
+| `docs/awesome-*` | `agentic-sage-mind/reports/submissions/` |
