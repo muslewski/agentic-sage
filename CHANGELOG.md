@@ -12,9 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 * **judge:** optional live judge sessions publish continuous store-native briefs (`sage judge on/off/status/show/publish`)
+* **judge:** `sage judge run` — easy start with auto scope (fleet vs repo), harness auto (grok→claude→none), `--once` / `--print-only`
+* **judge:** fact-only keeper via `--harness none` (no LLM required)
 * **brief:** worker consult verbs layer fresh repo + fleet briefs after deterministic facts (`--no-brief` to skip)
 * **brief:** 30s post-exit **grace** window so burst publishes still attach when the judge process is gone; `· grace` chip in render
 * **collision:** sessions with `role=judge` excluded from territory / merge-brief / HEAT peers
+* **war:** header **⚖** chip + FLEET panel judge line when live/grace briefs or judge sessions
 * **skill:** `sage-judge` skill loop; `sage-fleet` notes brief authority vs CLI facts
 * **schema:** `sage.brief`, session `role`/`judge_scope`, fleet/war `briefs` + `totals.judges`
 

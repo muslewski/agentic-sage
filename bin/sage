@@ -95,6 +95,18 @@ import {
   renderBriefLayers,
   DEFAULT_TTL_MS,
 } from '../lib/brief.mjs'
+import {
+  readJudgeConfig,
+  resolveJudgeScope,
+  resolveHarness,
+  seedJudgeSession,
+  ensureJudgeSlot,
+  runNoneKeeper,
+  printOnlyKit,
+  spawnHarnessJudge,
+  summarizeJudgeChrome,
+} from '../lib/judge-run.mjs'
+import { randomUUID } from 'node:crypto'
 
 // Colorize all string output at the single print chokepoint. paint() is a
 // no-op when piped / NO_COLOR, so captured output (tests, pipes) stays plain.
@@ -127,7 +139,9 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   judge off            clear judge role; stale own brief
   judge status         live judges + brief ages
   judge show [--fleet|--repo]  print fresh brief text
-  judge publish        stdin JSON → atomic brief write (skill loop)`
+  judge publish        stdin JSON → atomic brief write (skill loop)
+  judge run [--auto|--fleet|--repo] [--harness auto|grok|claude|none]
+            [--once] [--takeover] [--print-only]  start live judge (easy path)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
 // repo with no adapter → the agnostic P1–P4 path).
@@ -472,12 +486,25 @@ const runWarWatch = (home, { wide, showAll: showAll0 = false } = {}) => {
     const anchorSid = selectedSid() // keep the cursor on this session post-rebuild
     try {
       const fleet = collectFleet(home, Date.now())
+      // Judge chrome for header + FLEET panel (live sessions and/or fresh briefs).
+      try {
+        const jc = summarizeJudgeChrome(home, fleet, { now: Date.now() })
+        fleet.totals = {
+          ...(fleet.totals || {}),
+          judges: jc.judges || fleet.totals?.judges || 0,
+          judge_label: jc.label || '',
+          judge_grace: jc.grace || false,
+        }
+      } catch {
+        /* panels still work without chrome */
+      }
       rawFleet = fleet
       deadCache = collectDead(fleet)
       clashAll = buildClash(fleet, {}) // full clash for tab badges + LIVE hints
       // Reuse the clash count just built — faceCountsFromFleet used to rebuild the
       // whole clash model again (a second full O(fleet) pass) just for this number.
       faceCounts = faceCountsFromFleet(fleet, deadCache.length, clashAll.totals.paths || 0)
+      faceCounts.judgeChip = fleet.totals?.judge_label || ''
       applyFaceData()
       heat.push(fleet.totals.working)
       if (heat.length > 30) heat.shift()
@@ -1117,6 +1144,17 @@ const main = async () => {
       const showAll = flags.includes('--all')
       const wide = flags.includes('--wide') || flags.includes('-w')
       const fleet = collectFleet(home, now)
+      try {
+        const jc = summarizeJudgeChrome(home, fleet, { now })
+        fleet.totals = {
+          ...(fleet.totals || {}),
+          judges: jc.judges || fleet.totals?.judges || 0,
+          judge_label: jc.label || '',
+          judge_grace: jc.grace || false,
+        }
+      } catch {
+        /* ignore */
+      }
       if (json) {
         let fleetBrief = null
         try {
@@ -1133,6 +1171,10 @@ const main = async () => {
             repos: fleet.repos.map((r) => ({ repo_id: r.repoId, sessions: r.sessions })),
             totals: fleet.totals,
             briefs: { fleet: fleetBrief, repo: null },
+            judge: {
+              label: fleet.totals?.judge_label || '',
+              grace: !!fleet.totals?.judge_grace,
+            },
           }),
         )
       }
@@ -1141,7 +1183,22 @@ const main = async () => {
       if (process.stdout.isTTY) return runWarWatch(home, { wide, showAll })
       const view = sortFleet(filterFleet(fleet, { showAll }))
       const clock = new Date().toTimeString().slice(0, 8)
-      return console.log(renderWarRoom(view, { showAll, heatValues: [], scroll: 0, rows: Number.POSITIVE_INFINITY, wide, clock }))
+      const counts = {
+        ...faceCountsFromFleet(fleet, 0, 0),
+        judgeChip: fleet.totals?.judge_label || '',
+      }
+      return console.log(
+        renderWarRoom(view, {
+          showAll,
+          heatValues: [],
+          scroll: 0,
+          rows: Number.POSITIVE_INFINITY,
+          wide,
+          clock,
+          panelTotals: { ...fleet.totals, _live: true },
+          headerLine: renderWarHeader('live', clock, process.stdout.columns || 80, counts),
+        }),
+      )
     }
     case 'prune': {
       const repoId = resolveRepoId(cwd)
@@ -1185,8 +1242,94 @@ const main = async () => {
       const flags = process.argv.slice(3)
       const wantFleet = flags.includes('--fleet')
       const wantRepo = flags.includes('--repo')
+      const wantAuto = flags.includes('--auto')
       const takeover = flags.includes('--takeover')
+      const printOnly = flags.includes('--print-only')
+      const once = flags.includes('--once')
+      const hIdx = flags.indexOf('--harness')
+      const harnessFlag = hIdx >= 0 ? flags[hIdx + 1] : undefined
       const repoId = resolveRepoId(cwd)
+
+      if (sub === 'run') {
+        const cfg = readJudgeConfig(home)
+        const forceScope = wantFleet ? 'fleet' : wantRepo ? 'repo' : wantAuto ? 'auto' : cfg.scope || 'auto'
+        const scope = resolveJudgeScope(home, cwd, {
+          force: forceScope === 'auto' ? undefined : forceScope,
+        })
+        if (scope === 'repo' && !repoId)
+          return console.log('sage: not a git repo (need cwd for --repo scope)')
+        // Fleet still needs a repo to hang the session record on when possible.
+        const anchorRepo = repoId || resolveRepoId(cwd)
+        if (!anchorRepo && scope === 'fleet')
+          return console.log(
+            'sage: run from a git repo so the judge session can be recorded (fleet brief is still desk-wide)',
+          )
+        const harness = resolveHarness(cfg, harnessFlag || cfg.harness)
+        let sid = resolveSelfSid(home, anchorRepo) || process.env.SAGE_SELF_SID
+        if (!sid || !readRecord(home, anchorRepo, sid)) {
+          sid = `judge-${randomUUID().slice(0, 8)}`
+        }
+        if (printOnly) {
+          return console.log(
+            printOnlyKit({ scope, harness, sid, repoId: anchorRepo }),
+          )
+        }
+        if (harness.missing) {
+          console.log(
+            `sage: harness "${harness.name}" not found on PATH\n` +
+              `  try: sage judge run --harness none\n` +
+              `  or:  sage judge run --print-only`,
+          )
+          process.exit(1)
+        }
+        if (harness.fallback) {
+          console.log(
+            'sage: no grok/claude on PATH — using fact-only keeper (--harness none)\n' +
+              '  install grok or claude, or set judge.commands in config.json',
+          )
+        }
+        const slot = ensureJudgeSlot(home, scope, anchorRepo, sid, { takeover })
+        if (!slot.ok) return console.log(slot.message)
+
+        if (harness.name === 'none' || harness.fallback) {
+          console.log(`sage: judge run · scope=${scope} · harness=none · sid=${sid}`)
+          seedJudgeSession(home, anchorRepo, sid, cwd, scope)
+          await runNoneKeeper(home, scope, anchorRepo, sid, cwd, {
+            once,
+            seconds: once ? 1 : 3600,
+          })
+          if (once) {
+            /* leave role for grace window */
+          }
+          return
+        }
+
+        const spawned = spawnHarnessJudge(home, {
+          scope,
+          repoId: anchorRepo,
+          sid,
+          cwd,
+          harness,
+          takeover,
+        })
+        if (!spawned) return
+        if (spawned.mode === 'none') {
+          await runNoneKeeper(home, scope, anchorRepo, sid, cwd, { once, seconds: once ? 1 : 3600 })
+          return
+        }
+        // Wait for child; parent stays alive so we could re-seed — harness is the agent.
+        await new Promise((resolve) => {
+          spawned.child.on('exit', (code) => {
+            console.log(`sage: judge harness exited (${code ?? '?'}) — brief may stay for grace`)
+            resolve()
+          })
+          spawned.child.on('error', (err) => {
+            console.error(`sage: failed to start ${harness.name}: ${err.message}`)
+            resolve()
+          })
+        })
+        return
+      }
 
       if (sub === 'on') {
         if (!wantFleet && !wantRepo)

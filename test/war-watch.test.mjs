@@ -14,7 +14,7 @@ test('war over a pipe is a single static render (no alt-screen, exits)', () => {
     encoding: 'utf8',
     timeout: 5000,
   })
-  assert.match(out, /SAGE WAR ROOM/)
+  assert.match(out, /SAGE WAR/)
   assert.ok(!out.includes('\x1b[?1049h')) // did not enter alt-screen
   assert.ok(!out.includes('\x1b[?25l')) // did not hide cursor
 })

@@ -46,7 +46,7 @@ test('war (piped, non-TTY) renders one static frame, no alt-screen', () => {
   const home = mkTmp('sage-wars-')
   seed(home, 'alpha-aaaa1111', 'w', { branch: 'main', updated_at: new Date().toISOString(), last_tool_at: new Date().toISOString() })
   const out = run(['war'], home)
-  assert.match(out, /SAGE WAR ROOM/)
+  assert.match(out, /SAGE WAR/)
   assert.ok(!out.includes('\x1b[?1049h')) // no alternate screen
   assert.ok(!out.includes('\x1b[?25l')) // cursor never hidden
 })

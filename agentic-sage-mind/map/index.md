@@ -34,7 +34,7 @@ _none_
 
 ## Ledger
 
-- specs: 14 (approved 3 · planned 11)
+- specs: 15 (approved 4 · planned 11)
 - plans: 3 (done 1 · ready 2)
 - reports: 2 (? 2)
 - decisions: 1 (accepted 1)
@@ -43,6 +43,7 @@ _none_
 
 - [[2026-07-23-live-judge-session-design]]
 - [[2026-07-23-live-judge-session]]
+- [[2026-07-23-judge-run-and-war-chrome-design]]
 - [[2026-07-23-docs-recollection-health-design]]
 - [[2026-07-23-docs-recollection-health]]
 - [[2026-07-17-sage-ui-design]]
@@ -50,4 +51,3 @@ _none_
 - [[2026-07-13-war-ruled-columns-design]]
 - [[2026-07-13-war-manage-mode-design]]
 - [[2026-07-13-grok45-quality-revise-design]]
-- [[2026-07-12-trust-hardening-design]]

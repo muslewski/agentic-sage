@@ -15,15 +15,40 @@ You can also open a **live judge** pane — a normal agent session that watches 
 - Several parallel agents on one desk and you want a standing narrative (“who’s hot, what collides”).
 - Dogfooding multi-session coordination without a human staring at `sage war` full-time.
 
-## Quick start
+## Quick start (recommended)
 
 ```bash
-# Dedicated pane / session
+# One command — auto scope (fleet if multi-repo desk, else this repo),
+# auto harness (grok → claude → fact-only keeper):
+sage judge run
+
+# Force scope / harness:
+sage judge run --fleet --harness grok
+sage judge run --repo --harness none --once   # fact brief, no LLM
+sage judge run --print-only                   # paste kit only
+```
+
+Config (optional) in `~/.claude/agentic-sage/config.json`:
+
+```json
+{
+  "enabled": true,
+  "judge": {
+    "harness": "auto",
+    "scope": "auto",
+    "commands": { "grok": "grok", "claude": "claude" }
+  }
+}
+```
+
+### Manual pane (skill loop)
+
+```bash
 sage judge on --fleet          # desk altitude
 # or: sage judge on --repo     # this repo only
 
 # Load skill sage-judge, then loop:
-sage war --json                # sense
+sage war --json
 sage judge publish <<'EOF'
 {
   "summary": "one-line desk state",
@@ -35,10 +60,14 @@ sage judge publish <<'EOF'
   ]
 }
 EOF
-# sleep 30–60s, repeat
 
-sage judge off                 # clean exit
+sage judge off
 ```
+
+### War dashboard
+
+When a judge is live (or a brief is in grace), `sage war` shows a **⚖** chip in the
+header and a judge line on the FLEET panel.
 
 Workers:
 

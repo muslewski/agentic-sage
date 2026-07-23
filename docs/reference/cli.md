@@ -44,12 +44,15 @@ Optional Claude/Grok pane that reasons and writes continuous briefs. Core stays 
 
 | Command | Purpose |
 |---------|---------|
+| `sage judge run […]` | **Easy start** — auto scope + harness spawn (or fact-only keeper) |
 | `sage judge on --fleet\|--repo [--takeover]` | Mark this session as live judge |
 | `sage judge off` | Clear role; mark brief stale |
 | `sage judge publish` | Stdin JSON → atomic brief write |
 | `sage judge status` / `show` | Freshness + print brief |
 
-Consult verbs layer fresh briefs after facts (repo then fleet). After judge exit, briefs stay attachable for ~30s **grace**. Skill: `sage-judge`. Recipe: [Live judge](../recipes/live-judge.md).
+`judge run` flags: `--auto|--fleet|--repo`, `--harness auto|grok|claude|none`, `--once`, `--takeover`, `--print-only`.
+
+Consult verbs layer fresh briefs after facts (repo then fleet). After judge exit, briefs stay attachable for ~30s **grace**. War shows a **⚖** chip when a judge/brief is active. Skill: `sage-judge`. Recipe: [Live judge](../recipes/live-judge.md).
 
 ## Statusline
 
