@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.0...agentic-sage-v1.2.0) (2026-07-23)
+
+
+### Features
+
+* live judge continuous briefs (v1.2.0) ([ad94666](https://github.com/muslewski/agentic-sage/commit/ad94666f84566f51d4a3218c14ba2b85a184d97c))
+* sage judge run + war ⚖ chrome for live judges ([b5f2e7a](https://github.com/muslewski/agentic-sage/commit/b5f2e7a3970b8ca1eb55f44794fe8bb9b7bf34f9))
+
 ## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
 
 ### Features
