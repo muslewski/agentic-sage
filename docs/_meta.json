@@ -24,6 +24,7 @@
         { "title": "Dogfood", "href": "recipes/dogfood.md" },
         { "title": "Statusline", "href": "recipes/statusline.md" }
       ]
-    }
+    },
+    { "title": "Works with", "href": "works-with.md" }
   ]
 }

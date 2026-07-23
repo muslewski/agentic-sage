@@ -11,6 +11,7 @@ order: 0
 |--------|----------------|
 | [Multi-harness (Claude + Grok)](./multi-harness.md) | One desk, two CLIs, one judge |
 | [Dogfood layout](./dogfood.md) | How the maintainer fleet runs SAGE |
-| [Statusline](./statusline.md) | Segment in Claude / tmux |
+| [Statusline](./statusline.md) | Segment in Claude / tmux (+ oracle / herald context) |
+| [Works with](../works-with.md) | Fleet map: herald, oracle, atlas, armory, ferry |
 
 Something missing? Open a Discussion or PR under `docs/recipes/`.

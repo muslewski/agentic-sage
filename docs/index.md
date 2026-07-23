@@ -21,6 +21,7 @@ Site: [sage.muslewski.com](https://sage.muslewski.com) · npm: [`agentic-sage`](
 | [Configuration](./reference/configuration.md) | Scope, storage, env |
 | [Adapters](./reference/adapters.md) | Optional project enrichment |
 | [Recipes](./recipes/index.md) | Multi-harness, dogfood, statusline |
+| [Works with](./works-with.md) | Fleet siblings (herald, oracle, atlas, armory, ferry) |
 
 ## Doctrine (short)
 

@@ -30,7 +30,8 @@
     "postinstall": "node scripts/postinstall.mjs",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "docs:check": "node ../docs-kit/bin/docs-kit.mjs check docs/"
+    "docs:check": "node ../docs-kit/bin/docs-kit.mjs check docs/",
+    "docs:health": "node ../docs-kit/bin/docs-kit.mjs health docs/"
   },
   "author": "Mateusz Mu\u015blewski <10kento10@gmail.com>",
   "license": "MIT",
