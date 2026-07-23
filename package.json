@@ -1,6 +1,6 @@
 {
   "name": "agentic-sage",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) \u2014 board, territory checks, merge briefings.",
   "bin": {

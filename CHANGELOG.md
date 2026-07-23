@@ -194,6 +194,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [1.1.1] — 2026-07-23
+
+### Added
+
+- **Public product documentation** under `docs/` (docs-kit frontmatter, sidebar `_meta.json`, `docs:check` / `docs:health`)
+- **`docs/works-with.md`** — fleet sibling map with honest interop edges
+- **Contextual fleet mentions** in feature docs where integrations are real
+- **Recollection soft-nudge** for docs health (memory-atlas `atlas-recollection` + docs-kit)
+
+See [`docs/index.md`](docs/index.md) for the documentation hub.
+
 ## [0.1.0] — 2026-06-30
 
 ### Added
