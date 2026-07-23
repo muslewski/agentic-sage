@@ -22,7 +22,8 @@
         { "title": "Recipes index", "href": "recipes/index.md" },
         { "title": "Multi-harness", "href": "recipes/multi-harness.md" },
         { "title": "Dogfood", "href": "recipes/dogfood.md" },
-        { "title": "Statusline", "href": "recipes/statusline.md" }
+        { "title": "Statusline", "href": "recipes/statusline.md" },
+        { "title": "Live judge", "href": "recipes/live-judge.md" }
       ]
     },
     { "title": "Works with", "href": "works-with.md" }

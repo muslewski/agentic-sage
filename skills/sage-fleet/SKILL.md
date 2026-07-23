@@ -20,6 +20,15 @@ SAGE is optional infra, never a hard dependency. Never block yourself because it
 SAGE advises; it does not arbitrate. Two live sessions on the same code → **surface to the human**.
 Do not guess who wins.
 
+## Live judge briefs (optional)
+
+If a **live judge** session is online, consult output may append layered sections
+(`── live judge · repo …` / `── live judge · fleet …`). Treat those as **advisory
+narrative**. Deterministic lines (clear / contested / RISK bars) remain
+**authoritative** for path overlap. If a brief contradicts CLI facts → **trust CLI**
+and surface the contradiction to the human. Never wait for a judge; no brief =
+proceed as always. Use `--no-brief` when you want facts only.
+
 ## Four touchpoints (do them)
 
 ### 1. Work-start — claim before you write

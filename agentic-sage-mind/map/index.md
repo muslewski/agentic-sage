@@ -8,9 +8,9 @@
 | cli | seeded | seeded | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, init, doctor, and other fleet-judge verbs over lib/*. |
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
 | install-wiring | seeded | seeded | Install and teardown — `install.mjs`, `sage init` wizard, conservative settings.json / Grok hook merge (`wiring`), harness profiles, postinstall, verify-fleet script, and surgical `uninstall/`. |
-| judge-surface | seeded | seeded | Read-side fleet judge — board roster, cross-repo fleet/repos HUD, territory/why-diverged/merge-brief collision checks, git numstat signals, backlog claim rows, asking stamps, doctor/control, and optional PreToolUse guard policy. |
+| judge-surface | seeded | seeded | Read-side fleet judge — board roster, cross-repo fleet/repos HUD, territory/why-diverged/merge-brief collision checks, git numstat signals, backlog claim rows, asking stamps, optional live-judge brief attach, doctor/control, and optional PreToolUse guard policy. |
 | session-store | seeded | seeded | Per-repo session record store, storage-root resolution, repo-id identity, enable flags, liveness/provenance, handoff sidecars, and prune — the persistence layer under `~/.claude/agentic-sage` (or project markers). |
-| skills-templates | seeded | seeded | Agent-facing distribution surface — `sage-fleet` and `sage-doctor` skills plus CLAUDE/GROK/statusline paste snippets that teach sessions when to consult the fleet judge without baking protocol into every CLAUDE.md. |
+| skills-templates | seeded | seeded | Agent-facing distribution surface — `sage-fleet`, `sage-judge`, and `sage-doctor` skills plus CLAUDE/GROK/statusline paste snippets that teach sessions when to consult the fleet judge without baking protocol into every CLAUDE.md. |
 | war-room | seeded | seeded | Full-screen `sage war` cockpit — warroom layout, faces/clash memory, keyboard/mouse nav, hot-float panes, color paint, spinners, and tmux pane mapping for live multi-repo session oversight. |
 
 ## ⚠ Verification gaps
@@ -34,4 +34,20 @@ _none_
 
 ## Ledger
 
-- reports: 1 (? 1)
+- specs: 14 (approved 3 · planned 11)
+- plans: 3 (done 1 · ready 2)
+- reports: 2 (? 2)
+- decisions: 1 (accepted 1)
+
+### Recent
+
+- [[2026-07-23-live-judge-session-design]]
+- [[2026-07-23-live-judge-session]]
+- [[2026-07-23-docs-recollection-health-design]]
+- [[2026-07-23-docs-recollection-health]]
+- [[2026-07-17-sage-ui-design]]
+- [[2026-07-14-war-faces-live-clash-memory-design]]
+- [[2026-07-13-war-ruled-columns-design]]
+- [[2026-07-13-war-manage-mode-design]]
+- [[2026-07-13-grok45-quality-revise-design]]
+- [[2026-07-12-trust-hardening-design]]

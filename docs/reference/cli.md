@@ -33,9 +33,23 @@ Run `sage --help` / `sage <verb> --help` for the live surface. Below is the prod
 
 | Command | Purpose |
 |---------|---------|
-| `sage guard` | Guard / claim-related checks (see help) |
-| `sage backlog` | Backlog coordination helpers when enabled |
-| `sage link` / `sage unlink` | Wiring helpers |
+| `sage territory` / `why-diverged` / `merge-brief` | Collision facts for workers |
+| `sage claim` / `sage backlog` | Register intent / backlog rows |
+| `sage guard` | Contested-path hard stop (default OFF) |
+| `sage link` / `sage unlink` | Manual link_state helpers |
+
+## Live judge (optional)
+
+Optional Claude/Grok pane that reasons and writes continuous briefs. Core stays passive — no LLM in Node.
+
+| Command | Purpose |
+|---------|---------|
+| `sage judge on --fleet\|--repo [--takeover]` | Mark this session as live judge |
+| `sage judge off` | Clear role; mark brief stale |
+| `sage judge publish` | Stdin JSON → atomic brief write |
+| `sage judge status` / `show` | Freshness + print brief |
+
+Consult verbs layer fresh briefs after facts (repo then fleet). After judge exit, briefs stay attachable for ~30s **grace**. Skill: `sage-judge`. Recipe: [Live judge](../recipes/live-judge.md).
 
 ## Statusline
 

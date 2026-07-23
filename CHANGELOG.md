@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
+
+### Features
+
+* **judge:** optional live judge sessions publish continuous store-native briefs (`sage judge on/off/status/show/publish`)
+* **brief:** worker consult verbs layer fresh repo + fleet briefs after deterministic facts (`--no-brief` to skip)
+* **brief:** 30s post-exit **grace** window so burst publishes still attach when the judge process is gone; `· grace` chip in render
+* **collision:** sessions with `role=judge` excluded from territory / merge-brief / HEAT peers
+* **skill:** `sage-judge` skill loop; `sage-fleet` notes brief authority vs CLI facts
+* **schema:** `sage.brief`, session `role`/`judge_scope`, fleet/war `briefs` + `totals.judges`
+
+### Docs
+
+* recipe [Live judge](docs/recipes/live-judge.md); CLI + fleet-judge concept updates
+
 ## [1.1.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.0.0...agentic-sage-v1.1.0) (2026-07-20)
 
 

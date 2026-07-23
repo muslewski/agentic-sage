@@ -81,6 +81,20 @@ import { globalConfig, sessionFile } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
 import { backlogStatus, renderBacklog } from '../lib/backlog.mjs'
 import { paint } from '../lib/color.mjs'
+import {
+  loadAttachableBriefs,
+  attachBriefText,
+  readBriefFile,
+  writeBriefFile,
+  normalizeBrief,
+  markBriefStale,
+  briefPathFor,
+  slotHolder,
+  isBriefFresh,
+  isBriefInGrace,
+  renderBriefLayers,
+  DEFAULT_TTL_MS,
+} from '../lib/brief.mjs'
 
 // Colorize all string output at the single print chokepoint. paint() is a
 // no-op when piped / NO_COLOR, so captured output (tests, pipes) stays plain.
@@ -108,7 +122,12 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   where                this repo's resolved scope, storage dir, and matched rule
   enable | disable     per-repo enable override (independent of global on/off)
   doctor               validate dirs / hook / settings / token-forecast
-  statusline           the "Asking Sage" status-bar segment (empty unless consulting)`
+  statusline           the "Asking Sage" status-bar segment (empty unless consulting)
+  judge on --fleet|--repo [--takeover]  register THIS session as live judge
+  judge off            clear judge role; stale own brief
+  judge status         live judges + brief ages
+  judge show [--fleet|--repo]  print fresh brief text
+  judge publish        stdin JSON → atomic brief write (skill loop)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
 // repo with no adapter → the agnostic P1–P4 path).
@@ -889,6 +908,26 @@ const main = async () => {
     }
   }
 
+  const noBrief = process.argv.includes('--no-brief')
+  const withBriefs = (factText, repoId) => {
+    if (noBrief || !repoId) return factText
+    try {
+      const now = Date.now()
+      const briefs = loadAttachableBriefs(home, repoId, { now, noBrief })
+      return attachBriefText(factText, briefs, { now, home })
+    } catch {
+      return factText
+    }
+  }
+  const briefsEnvelope = (repoId) => {
+    if (noBrief || !repoId) return { repo: null, fleet: null }
+    try {
+      return loadAttachableBriefs(home, repoId, { now: Date.now(), noBrief })
+    } catch {
+      return { repo: null, fleet: null }
+    }
+  }
+
   switch (cmd) {
     case 'board': {
       const repoId = resolveRepoId(cwd)
@@ -984,6 +1023,7 @@ const main = async () => {
           repo_id: repoId,
           self_sid: resolveSelfSid(home, repoId) || null,
           sessions: collectSessions(home, repoId, now),
+          briefs: briefsEnvelope(repoId),
         }))
       }
       const selfSid = resolveSelfSid(home, repoId) || undefined
@@ -1004,11 +1044,13 @@ const main = async () => {
         asking,
         contested: contestedCount(sessions.filter((s) => s.liveness !== 'dead' && s.liveness !== 'closed')),
       })
-      if (hud) return console.log(`sage: ${hud}`)
-      // Back-compat empty: still surface nearest-neighbour line when HUD is empty
-      // but fleetLine has content (should not happen), else clear empty-state.
-      const line = fleetLine(sessions, { selfSid })
-      return console.log(line ? `sage: ${line}` : 'sage: no other sessions')
+      const base = hud
+        ? `sage: ${hud}`
+        : (() => {
+            const line = fleetLine(sessions, { selfSid })
+            return line ? `sage: ${line}` : 'sage: no other sessions'
+          })()
+      return console.log(withBriefs(base, repoId))
     }
     case 'territory': {
       const repoId = resolveRepoId(cwd)
@@ -1020,7 +1062,7 @@ const main = async () => {
       const overlaps = territory(home, repoId, queries, { now, selfSid })
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       if (adapter) for (const o of overlaps) o.zone = zoneOf(adapter, ctx, o.hit)
-      return console.log(renderTerritory(overlaps, { queries }))
+      return console.log(withBriefs(renderTerritory(overlaps, { queries }), repoId))
     }
     case 'why-diverged': {
       const repoId = resolveRepoId(cwd)
@@ -1037,7 +1079,7 @@ const main = async () => {
       }
       const { ctx, adapter } = await adapterCtx(home, repoId, cwd)
       if (adapter) for (const t of touches) t.zone = zoneOf(adapter, ctx, a1)
-      return console.log(renderWhyDiverged(touches, { file: a1 }))
+      return console.log(withBriefs(renderWhyDiverged(touches, { file: a1 }), repoId))
     }
     case 'merge-brief': {
       const repoId = resolveRepoId(cwd)
@@ -1055,7 +1097,7 @@ const main = async () => {
         })
         if (drilled) return
       }
-      return console.log(renderMergeBrief(contested, { repoId }))
+      return console.log(withBriefs(renderMergeBrief(contested, { repoId }), repoId))
     }
     case 'repos': {
       const showAll = process.argv.slice(3).includes('--all')
@@ -1076,6 +1118,13 @@ const main = async () => {
       const wide = flags.includes('--wide') || flags.includes('-w')
       const fleet = collectFleet(home, now)
       if (json) {
+        let fleetBrief = null
+        try {
+          const b = loadAttachableBriefs(home, null, { now: Date.now() })
+          fleetBrief = b.fleet
+        } catch {
+          /* ignore */
+        }
         return console.log(
           JSON.stringify({
             schema: 1,
@@ -1083,6 +1132,7 @@ const main = async () => {
             generated_at: new Date().toISOString(),
             repos: fleet.repos.map((r) => ({ repo_id: r.repoId, sessions: r.sessions })),
             totals: fleet.totals,
+            briefs: { fleet: fleetBrief, repo: null },
           }),
         )
       }
@@ -1130,6 +1180,176 @@ const main = async () => {
         : unlinkSession(home, repoId, a1)
       return console.log(`sage: ${cmd === 'link' ? `linked ${a1} (${a2 || 'linked'})` : `unlinked ${a1}`}`)
     }
+    case 'judge': {
+      const sub = a1 || 'status'
+      const flags = process.argv.slice(3)
+      const wantFleet = flags.includes('--fleet')
+      const wantRepo = flags.includes('--repo')
+      const takeover = flags.includes('--takeover')
+      const repoId = resolveRepoId(cwd)
+
+      if (sub === 'on') {
+        if (!wantFleet && !wantRepo)
+          return console.log('usage: sage judge on --fleet | --repo [--takeover]')
+        if (wantFleet && wantRepo)
+          return console.log('sage: pick one scope — --fleet or --repo')
+        if (!repoId) return console.log('sage: not a git repo (judge session needs a cwd record)')
+        const scope = wantFleet ? 'fleet' : 'repo'
+        const sid = resolveSelfSid(home, repoId)
+        if (!sid)
+          return console.log(
+            'sage: cannot resolve the current session — run inside an enabled session, or set SAGE_SELF_SID',
+          )
+        if (/[/\\]|\.\./.test(sid)) return console.log('sage: refusing an unsafe SAGE_SELF_SID')
+        if (!readRecord(home, repoId, sid))
+          return console.log(`sage: no open record for ${sid} here — start from a live SAGE session`)
+        const holder = slotHolder(home, scope, repoId, { now: Date.now() })
+        if (holder && holder.judge_sid !== sid) {
+          if (!takeover) {
+            return console.log(
+              `sage: ${scope} judge slot held by ${holder.judge_sid} — re-run with --takeover to steal`,
+            )
+          }
+          markBriefStale(home, scope, scope === 'repo' ? repoId : null)
+        }
+        const rec = readRecord(home, repoId, sid) || {}
+        mergeRecord(home, repoId, sid, {
+          role: 'judge',
+          judge_scope: scope,
+          judge_at: new Date(now).toISOString(),
+          updated_at: new Date(now).toISOString(),
+        })
+        const file = briefPathFor(home, scope, repoId)
+        console.log(
+          `sage: judge online (${scope}) · sid ${sid}\n` +
+            `  brief path: ${file}\n` +
+            `  → load sage-judge skill, poll fleet, sage judge publish`,
+        )
+        return
+      }
+
+      if (sub === 'off') {
+        if (!repoId) return console.log('sage: not a git repo')
+        const sid = resolveSelfSid(home, repoId)
+        if (!sid)
+          return console.log(
+            'sage: cannot resolve the current session — set SAGE_SELF_SID or run inside a live session',
+          )
+        const rec = readRecord(home, repoId, sid)
+        if (!rec) return console.log(`sage: no open record for ${sid}`)
+        const scope = rec.judge_scope === 'fleet' ? 'fleet' : rec.role === 'judge' ? 'repo' : null
+        // Clear role fields (merge is shallow; empty string ends isJudge checks)
+        mergeRecord(home, repoId, sid, {
+          role: '',
+          judge_scope: '',
+          judge_at: '',
+          updated_at: new Date(now).toISOString(),
+        })
+        if (scope) markBriefStale(home, scope, scope === 'repo' ? repoId : null)
+        else {
+          markBriefStale(home, 'fleet', null)
+          markBriefStale(home, 'repo', repoId)
+        }
+        return console.log(`sage: judge offline · ${sid}`)
+      }
+
+      if (sub === 'show') {
+        const scope = wantFleet ? 'fleet' : wantRepo ? 'repo' : repoId ? 'repo' : 'fleet'
+        if (scope === 'repo' && !repoId) return console.log('sage: not a git repo')
+        const file = briefPathFor(home, scope, repoId)
+        const b = readBriefFile(file)
+        if (!b || !isBriefFresh(b, { now: Date.now(), home }))
+          return console.log(`sage: no fresh ${scope} brief`)
+        const text = renderBriefLayers(
+          scope === 'fleet' ? { fleet: b, repo: null } : { repo: b, fleet: null },
+          { now: Date.now(), home },
+        )
+        return console.log(text || `sage: no fresh ${scope} brief`)
+      }
+
+      if (sub === 'publish') {
+        if (!repoId) return console.log('sage: not a git repo')
+        const sid = resolveSelfSid(home, repoId)
+        if (!sid)
+          return console.log(
+            'sage: cannot resolve the current session — set SAGE_SELF_SID',
+          )
+        const rec = readRecord(home, repoId, sid)
+        if (!rec || rec.role !== 'judge')
+          return console.log('sage: this session is not a judge — run sage judge on first')
+        const scope = rec.judge_scope === 'fleet' ? 'fleet' : 'repo'
+        let raw = ''
+        try {
+          raw = await readStdinWithDeadline(3000)
+        } catch {
+          raw = ''
+        }
+        if (!String(raw || '').trim())
+          return console.log('usage: sage judge publish  < brief.json   (stdin)')
+        let parsed
+        try {
+          parsed = JSON.parse(raw)
+        } catch {
+          console.error('sage: invalid JSON on stdin')
+          process.exit(1)
+        }
+        const brief = normalizeBrief(
+          {
+            ...parsed,
+            scope,
+            repo_id: scope === 'repo' ? repoId : null,
+            judge_sid: sid,
+            judge_repo_id: repoId,
+            judge_pid: rec.pid ?? null,
+            status: 'active',
+            updated_at: new Date().toISOString(),
+            ttl_ms: parsed.ttl_ms ?? DEFAULT_TTL_MS,
+          },
+          { now: Date.now() },
+        )
+        if (!brief.summary && !brief.analysis) {
+          console.error('sage: brief needs summary or analysis')
+          process.exit(1)
+        }
+        const file = briefPathFor(home, scope, repoId)
+        writeBriefFile(file, brief)
+        return console.log(`sage: published ${scope} brief → ${file}`)
+      }
+
+      // status (default)
+      {
+        const lines = ['SAGE judge status']
+        const nowSt = Date.now()
+        const labelFresh = (b) => {
+          if (!isBriefFresh(b, { now: nowSt, home })) return 'stale/offline'
+          if (isBriefInGrace(b, { now: nowSt, home })) return 'FRESH (grace)'
+          return 'FRESH'
+        }
+        const fb = readBriefFile(briefPathFor(home, 'fleet', null))
+        if (fb) {
+          lines.push(
+            `  fleet: ${labelFresh(fb)} · sid ${fb.judge_sid || '—'} · ${fb.updated_at || ''}`,
+          )
+          if (fb.summary) lines.push(`         ${fb.summary}`)
+        } else lines.push('  fleet: (no brief)')
+        if (repoId) {
+          const rb = readBriefFile(briefPathFor(home, 'repo', repoId))
+          if (rb) {
+            lines.push(
+              `  repo:  ${labelFresh(rb)} · sid ${rb.judge_sid || '—'} · ${rb.updated_at || ''}`,
+            )
+            if (rb.summary) lines.push(`         ${rb.summary}`)
+          } else lines.push('  repo:  (no brief)')
+          const self = resolveSelfSid(home, repoId)
+          if (self) {
+            const r = readRecord(home, repoId, self)
+            if (r?.role === 'judge')
+              lines.push(`  self:  judge (${r.judge_scope || 'repo'}) · ${self}`)
+          }
+        } else lines.push('  repo:  (not in a git repo)')
+        return console.log(lines.join('\n'))
+      }
+    }
     case 'claim': {
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
@@ -1143,6 +1363,11 @@ const main = async () => {
       if (/[/\\]|\.\./.test(sid)) return console.log('sage: refusing an unsafe SAGE_SELF_SID')
       if (!readRecord(home, repoId, sid))
         return console.log(`sage: no open record for ${sid} here — claim from the session that owns it`)
+      {
+        const rec = readRecord(home, repoId, sid)
+        if (rec?.role === 'judge')
+          return console.log('sage: judge sessions do not claim product territory — sage judge off first')
+      }
       mergeRecord(home, repoId, sid, {
         claimed_globs: globs,
         link_state: 'linked',

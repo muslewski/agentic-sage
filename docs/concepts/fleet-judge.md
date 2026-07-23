@@ -45,6 +45,13 @@ See README § “Universal core vs your project” and [`CONVENTIONS.md`](../../
 
 Agent session protocol: skill `skills/sage-fleet/SKILL.md` after install.
 
+## Optional live judge pane
+
+A dedicated Claude/Grok session can run `sage judge on` and publish continuous
+**briefs** (narrative only). Workers still trust CLI contested/clear as authority;
+briefs layer after facts when fresh (including a short post-exit grace window).
+See recipe [Live judge](../recipes/live-judge.md) and skill `sage-judge`.
+
 ## Related
 
 - [Getting started](../getting-started.md)

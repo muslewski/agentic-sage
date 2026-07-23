@@ -50,10 +50,42 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 | `handoff_bucket` / `handoff_age` | string | derived at read time (always present): bucket is `none`\|`fresh`\|`aging`\|`stale`; age is `—` or e.g. `3m` |
 | `claimed_globs` | string[] | via `sage claim` (absent until claimed) |
 | `claimed_row` | string | via `sage backlog claim` (absent until claimed) |
+| `role` | string\|undefined | `"judge"` when this session is a live judge (`sage judge on`); empty/absent = worker |
+| `judge_scope` | string\|undefined | `"fleet"` \| `"repo"` while judging |
+| `judge_at` | string\|undefined | ISO-8601 when role was set |
 | `row` | string | adapter-resolved backlog row (board enrichment only; absent with no adapter or on fleet) |
 | `tmux` | string | tmux pane id (board enrichment, pid-based; absent when no match or on fleet) |
 
-**Live-only collision surface.** `sage territory`, `sage why-diverged`, and `sage merge-brief` consider only sessions whose `liveness` is `working` \| `idle` \| `stalled`. Dead/closed history is storage — it must not cry wolf.
+**Live-only collision surface.** `sage territory`, `sage why-diverged`, and `sage merge-brief` consider only sessions whose `liveness` is `working` \| `idle` \| `stalled`. Dead/closed history is storage — it must not cry wolf. Sessions with `role === "judge"` are also excluded from collision peers (they still appear on board/war).
+
+### `briefs` on consult envelopes (additive)
+
+`sage fleet --json` (and optionally board/war) may include:
+
+```json
+"briefs": {
+  "repo": { /* sage.brief or null */ },
+  "fleet": { /* sage.brief or null */ }
+}
+```
+
+### `sage.brief` (kind)
+
+Written by `sage judge publish` under `<sageHome>/briefs/fleet.json` or
+`<repoDataDir>/brief.json`. Fields: `schema`, `kind:"sage.brief"`, `scope`,
+`repo_id`, `judge_sid`, `judge_repo_id`, `judge_pid`, `updated_at`, `status`,
+`ttl_ms`, optional `grace_ms`, `inputs`, `summary`, `analysis`, `hotspots`,
+`advice`, `confidence`.
+
+**Freshness:** attach while `status===active` and age ≤ `ttl_ms` (default 120s)
+**and** either the judge session is still live (`role=judge` + alive pid), **or**
+age ≤ grace (default **30s**, overridable via brief `grace_ms`). Grace covers
+burst publish / crash so workers still see the last narrative briefly after the
+judge pane exits. Slot exclusivity for `sage judge on` requires a **live** judge
+only (grace alone does not hold the slot). Consumers treat briefs as advisory;
+ignore unknown fields.
+
+`totals.judges` on `sage.war` counts live sessions with `role === "judge"`.
 
 ## Examples
 
@@ -127,7 +159,8 @@ Cross-repo roll-up — the seed of the Hermes machine layer.
     "contested": 0,
     "compacting": 0,
     "human": 0,
-    "nested": 0
+    "nested": 0,
+    "judges": 0
   }
 }
 ```

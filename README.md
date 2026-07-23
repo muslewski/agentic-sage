@@ -107,6 +107,7 @@ A repo with **no adapter is first-class.** Scaffold one with `sage adapter init`
 |---|---|---|---|---|
 | `sage` CLI + emitter hook | the judge: records sessions, answers `board`/`territory`/… | universal | **required** | `install.mjs` + `sage on` |
 | `sage-fleet` skill + CLAUDE pointer | sessions coordinate themselves (claim, merge-brief, why-diverged) | universal | recommended | paste `templates/CLAUDE.snippet.md` |
+| `sage-judge` skill | optional live pane: continuous fleet/repo briefs for workers | universal | optional | auto-linked; `sage judge on` |
 | `sage-doctor` skill (`/sage-doctor`) | one-command config-validity check | universal | recommended | auto-linked by `install.mjs` |
 | Adapter (`.agentic-sage/adapter.mjs`) | names *your* rows + zones on the board | your project | optional | `sage adapter init` |
 | Backlog coordination | who-holds-which-row + `.md` drift, without owning the file | needs an adapter | optional | adapter's `backlogRows` + `sage backlog` |
