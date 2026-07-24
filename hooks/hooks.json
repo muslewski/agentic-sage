@@ -1,0 +1,74 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${GROK_PLUGIN_ROOT}/hooks/agentic-sage-emit.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

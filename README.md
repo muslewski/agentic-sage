@@ -200,16 +200,26 @@ sage init                    # wizard, or --global/--project — see AGENTS.md f
 sage on                      # enable globally (default OFF)
 ```
 
-**Option 2 — Claude Code marketplace:**
+**Option 2 — Grok Build plugin** (skills + session hooks in the Plugins UI):
+
+```bash
+# After this package is listed on xAI Official, install from /marketplace.
+# Until then, install from the repo (trusted):
+grok plugin install muslewski/agentic-sage --trust
+# also need the CLI for board/territory/judge:
+npm install -g agentic-sage && sage on
+```
+
+**Option 3 — Claude Code marketplace:**
 
 ```
 /plugin marketplace add muslewski/agentic-sage
 /plugin install
 ```
 
-Skills (`sage-fleet`, `sage-doctor`) are linked; no further setup needed for skill-only
-use. To use the `sage` CLI verbs (`board`, `territory`, …) also run the global npm
-install above.
+Skills (`sage-fleet`, `sage-judge`, `sage-doctor`) ship with the Grok/Claude plugin and
+are also linked by `sage init`. To use the `sage` CLI verbs (`board`, `territory`,
+`judge`, `about`, …) run the global npm install above and `sage on`.
 
 **Option 3 — git clone (for contributors / local development):**
 

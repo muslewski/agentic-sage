@@ -17,6 +17,8 @@
     "uninstall",
     "install.mjs",
     "scripts",
+    ".grok-plugin",
+    ".claude-plugin",
     "AGENTS.md",
     "SETUP.md",
     "ADAPTERS.md",

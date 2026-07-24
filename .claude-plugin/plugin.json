@@ -1,7 +1,7 @@
 {
   "name": "agentic-sage",
   "version": "0.2.1",
-  "description": "Passive fleet judge for parallel Claude Code sessions — sage-fleet coordination skill + sage-doctor install validator.",
+  "description": "Passive fleet judge for parallel AI coding sessions (Claude Code, Grok Build, etc.) — sage-fleet, sage-judge, sage-doctor skills + session emitter hooks.",
   "author": {
     "name": "Mateusz Muślewski",
     "url": "https://github.com/muslewski"
