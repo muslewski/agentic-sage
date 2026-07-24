@@ -119,6 +119,18 @@ skills**, current repo. SAGE being OFF is reported as healthy, never an error.
 
 Each tier is independent — add only what you want.
 
+### ⚖ Live judge pane (**NEW**)
+
+Layer 1 (CLI facts) is enough for collision awareness. Layer 2 is one passive watcher that
+publishes briefs so the same CLI verbs get **more precise** answers:
+
+```bash
+sage judge run          # auto scope + harness; elevates the desk
+# see docs/recipes/live-judge.md
+```
+
+Workers still trust contested/clear from the CLI; briefs layer when fresh. No second API.
+
 ### 🔧 tmux fleet pane
 
 `install.mjs` offers a `bind j` → `display-popup` running `sage board` (the live fleet view).

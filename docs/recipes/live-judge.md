@@ -1,19 +1,28 @@
 ---
 title: "Live judge session"
-description: "Optional Claude/Grok pane that publishes continuous fleet/repo briefs for workers."
+description: "NEW — optional living passive judge; elevates CLI facts with continuous fleet/repo briefs."
 section: recipes
 order: 40
 ---
 
 # Live judge session
 
-SAGE’s universal core is a **passive sensor** (board, territory, merge-brief).  
-You can also open a **live judge** pane — a normal agent session that watches the fleet, reasons, and publishes short advisory briefs. Workers still get deterministic CLI facts first; briefs layer on when fresh.
+**NEW** — optional elevation of the fleet sensor into a **living passive judge**.
+
+SAGE’s universal core is a **passive sensor** (board, territory, merge-brief). After install + `sage on`, every worker session already coordinates through the CLI.
+
+You can also open a **live judge** pane — a normal agent session that watches the fleet, reasons, and publishes short advisory briefs into the same store. Workers still get deterministic CLI facts first; briefs layer on when fresh. One convention:
+
+```text
+install + sage on  →  CLI awareness works (layer 1)
+sage judge run     →  CLI + living judge (layer 2 — better answers, same verbs)
+```
 
 ## When to use it
 
 - Several parallel agents on one desk and you want a standing narrative (“who’s hot, what collides”).
 - Dogfooding multi-session coordination without a human staring at `sage war` full-time.
+- You already use `territory` / `merge-brief` and want more precise cross-session advice without a second protocol.
 
 ## Quick start (recommended)
 

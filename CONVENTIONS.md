@@ -13,6 +13,11 @@ something true to judge. SAGE stays **passive** — it watches and answers; thes
 *controller's* side of the contract. Everything here is opt-in: with SAGE off (the default), none
 of it runs.
 
+**Two-layer communication (product convention):** install + enable → workers already use the CLI
+for cross-session facts. Optionally run **`sage judge run`** so one passive agent pane publishes
+briefs into the same store — same verbs, living narrative. See README § “Two layers” and
+[`docs/recipes/live-judge.md`](./docs/recipes/live-judge.md).
+
 > **This is an example controller setup — mine, not a requirement.** The specifics below (worktrees
 > under `.claude/worktrees`, a [superpowers](https://github.com/obra/superpowers)-style harness, an
 > autopilot loop) are how *one* adopter drives SAGE. The universal core knows nothing about them.

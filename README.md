@@ -23,6 +23,9 @@
   </a>
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat" alt="MIT license">
   <img src="https://img.shields.io/badge/node-%3E%3D20-blue?style=flat" alt="Node >=20">
+  <a href="#two-layers--cli-facts--live-judge">
+    <img src="https://img.shields.io/badge/NEW-live%20judge-ff69b4?style=flat" alt="NEW live judge">
+  </a>
 </p>
 
 <p align="center"><img src="./assets/demo-war.gif" width="720" alt="sage war demo"></p>
@@ -39,6 +42,39 @@ answers two questions cheaply:
 
 One judge per repo. Zero dependencies, Node ≥ 20, `node --test`.
 
+<a id="two-layers--cli-facts--live-judge"></a>
+
+## Two layers — CLI facts + live judge
+
+SAGE is a **session-communication system**, not only a CLI status dump. Two layers stack:
+
+| Layer | What you get | When |
+|-------|----------------|------|
+| **1 · Sensor (always after install + `sage on`)** | Deterministic facts: `board`, `war`, `territory`, `merge-brief`, `why-diverged`, claims | Every worker session can call the CLI / skills — no extra pane |
+| **2 · Live judge (optional, NEW)** | A **passive agent session** that watches the fleet and publishes short **briefs** (narrative + per-audience advice) into the same store workers already read | One command: **`sage judge run`** |
+
+**Convention (easy default):**
+
+```text
+install + sage on  →  sessions already coordinate via CLI (layer 1)
+sage judge run     →  same desk, but CLI answers get a living judge on top (layer 2)
+```
+
+Workers still treat **CLI contested/clear as authority**. Briefs layer *after* facts when fresh (including a short grace window after the judge pane exits). No second protocol to learn — `sage territory` / `merge-brief` just get smarter when a judge is live.
+
+```bash
+# Layer 1 only — already enough for collision awareness
+sage board
+sage territory 'src/**'
+
+# Layer 2 — one passive watcher pane for the whole desk (or this repo)
+sage judge run                  # auto scope + harness (grok → claude → fact-only)
+# sage judge run --fleet        # force desk-wide
+# sage judge run --harness none # fact-only keeper, no LLM
+```
+
+Recipe: **[Live judge](./docs/recipes/live-judge.md)** · skill `sage-judge` · concept [Fleet judge](./docs/concepts/fleet-judge.md).
+
 ## Quickstart
 
 ```bash
@@ -46,6 +82,8 @@ npm install -g agentic-sage
 sage init               # interactive wizard — 4 questions, safe defaults: global + OFF
 sage on                 # opt in (skip if you enabled during the wizard)
 sage doctor             # ✓/✗ per check
+# optional elevation:
+sage judge run          # living passive judge for this desk/repo
 ```
 
 `sage init` asks **scope** (global vs this-project-only), **harness**, **storage**, and
@@ -107,7 +145,7 @@ A repo with **no adapter is first-class.** Scaffold one with `sage adapter init`
 |---|---|---|---|---|
 | `sage` CLI + emitter hook | the judge: records sessions, answers `board`/`territory`/… | universal | **required** | `install.mjs` + `sage on` |
 | `sage-fleet` skill + CLAUDE pointer | sessions coordinate themselves (claim, merge-brief, why-diverged) | universal | recommended | paste `templates/CLAUDE.snippet.md` |
-| `sage-judge` skill | optional live pane: continuous fleet/repo briefs for workers | universal | optional | auto-linked; `sage judge on` |
+| `sage-judge` skill + `sage judge run` | **NEW** live passive judge: continuous fleet/repo briefs layered on CLI facts | universal | optional | auto-linked; `sage judge run` (or `judge on`) |
 | `sage-doctor` skill (`/sage-doctor`) | one-command config-validity check | universal | recommended | auto-linked by `install.mjs` |
 | Adapter (`.agentic-sage/adapter.mjs`) | names *your* rows + zones on the board | your project | optional | `sage adapter init` |
 | Backlog coordination | who-holds-which-row + `.md` drift, without owning the file | needs an adapter | optional | adapter's `backlogRows` + `sage backlog` |

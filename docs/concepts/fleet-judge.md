@@ -45,9 +45,20 @@ See README § “Universal core vs your project” and [`CONVENTIONS.md`](../../
 
 Agent session protocol: skill `skills/sage-fleet/SKILL.md` after install.
 
+## Two-layer communication (convention)
+
+| Layer | Role | Operator action |
+|-------|------|-----------------|
+| **Sensor / CLI** | Deterministic cross-session facts | Install + `sage on` — workers call CLI/skills |
+| **Live judge** | Passive agent pane that *reasons* and publishes briefs | `sage judge run` (or `judge on` + skill loop) |
+
+**Easy path:** after install, sessions already get cross-session context through the CLI. When you run **`sage judge run`**, the same verbs workers already use gain a **living** judge — more precise narrative and per-audience advice, without a second API. Facts stay authoritative; briefs are additive when fresh.
+
+This is how SAGE moves from “CLI for awareness” to a **session-communication system**: shared store + opt-in watcher that speaks the same language as every worker.
+
 ## Optional live judge pane
 
-A dedicated Claude/Grok session can run `sage judge on` and publish continuous
+A dedicated Claude/Grok session can run `sage judge run` / `sage judge on` and publish continuous
 **briefs** (narrative only). Workers still trust CLI contested/clear as authority;
 briefs layer after facts when fresh (including a short post-exit grace window).
 See recipe [Live judge](../recipes/live-judge.md) and skill `sage-judge`.
