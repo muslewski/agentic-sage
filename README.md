@@ -233,13 +233,26 @@ npx skills add muslewski/agentic-sage --all
 
 **Option 5 — Cursor:**
 
-Manifest `.cursor-plugin/plugin.json` — install from GitHub path / Cursor marketplace when listed.
+Manifest `.cursor-plugin/plugin.json` — publisher form + GitHub repo listing.
 
-Skills (`sage-fleet`, `sage-judge`, `sage-doctor`) ship with Grok/Claude/Cursor plugins and
-skills.sh. To use the `sage` CLI verbs (`board`, `territory`, `judge`, `about`, …)
-run the global npm install above and `sage on`.
+**Option 6 — Codex (ChatGPT Work / Codex CLI):**
 
-Full matrix: [docs/distribution.md](./docs/distribution.md).
+```bash
+codex plugin marketplace add muslewski/agentic-sage
+# then /plugins → install agentic-sage
+# Official directory: https://platform.openai.com/plugins (Skills only ZIP)
+```
+
+**Option 7 — Gemini CLI:**
+
+```bash
+gemini skills install https://github.com/muslewski/agentic-sage.git --path skills --consent
+```
+
+Skills (`sage-fleet`, `sage-judge`, `sage-doctor`) ship with Grok/Claude/Cursor/Codex plugins and
+skills.sh. CLI verbs still need npm + `sage on`.
+
+Full matrix + directory listings: [docs/distribution.md](./docs/distribution.md).
 
 **Option 3 — git clone (for contributors / local development):**
 

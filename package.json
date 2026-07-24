@@ -20,6 +20,8 @@
     ".grok-plugin",
     ".claude-plugin",
     ".cursor-plugin",
+    ".codex-plugin",
+    ".agents",
     "docs",
     "AGENTS.md",
     "SETUP.md",

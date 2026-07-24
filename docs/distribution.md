@@ -1,102 +1,132 @@
 ---
 title: "Distribution — plugins & skills"
-description: "Where agentic-sage is published: npm CLI, Grok/Claude/Cursor plugins, skills.sh, and how to install each."
+description: "Where agentic-sage is published: npm, Grok, Claude, Cursor, Codex, Gemini, skills.sh, and directory listings."
 section: recipes
 order: 90
 ---
 
 # Distribution — plugins & skills
 
-SAGE has two install layers. Do not mix them up:
+SAGE has two install layers:
 
 | Layer | What you get | Required for |
 |-------|----------------|--------------|
 | **npm CLI** | `sage` binary, store, judge | `board`, `territory`, `merge-brief`, `judge`, `about` |
-| **Harness plugin / skills** | Agent learns *when* to call sage | Discoverability in Grok / Claude / Cursor / skills.sh |
+| **Harness plugin / skills** | Agent learns *when* to call sage | Discoverability in each UI |
 
-Full research (fleet memory): `work-kb` report  
-`work-kb-mind/reports/2026-07-24-agent-plugin-skill-marketplaces.md`
+Fleet research (full directory map):  
+`work-kb` → `work-kb-mind/reports/2026-07-24-agent-plugin-skill-marketplaces.md`
 
 ## npm (always)
 
 ```bash
 npm install -g agentic-sage
-sage init    # optional wizard / hooks
-sage on      # enable globally (default off)
+sage init
+sage on
 ```
 
 ## Grok Build
 
 ```bash
-# Official marketplace (after xAI PR merges):
-#   /marketplace → agentic-sage → install
-
-# Direct from GitHub (works now):
 grok plugin install muslewski/agentic-sage --trust
+# Official catalog after merge: /marketplace → agentic-sage
 ```
 
-Manifest: `.grok-plugin/plugin.json` · hooks: `hooks/hooks.json`  
-Marketplace PR: https://github.com/xai-org/plugin-marketplace/pull/140
+- Manifest: `.grok-plugin/plugin.json` · hooks: `hooks/hooks.json`  
+- PR: https://github.com/xai-org/plugin-marketplace/pull/140  
 
 ## Claude Code
-
-**Self-hosted marketplace (works now):**
 
 ```text
 /plugin marketplace add muslewski/agentic-sage
 /plugin install agentic-sage@agentic-sage
 ```
 
-**Community marketplace (submit once):**
-
-1. Open https://clau.de/plugin-directory-submission  
-2. Point at `https://github.com/muslewski/agentic-sage`  
-3. After approval, users:
-
-```bash
-claude plugin marketplace add anthropics/claude-plugins-community
-claude plugin install agentic-sage@claude-community
-```
-
-Manifest: `.claude-plugin/plugin.json`
+Community form (submitted): Console  
+https://platform.claude.com/plugins/submit  
+→ after approval: `@claude-community`
 
 ## Cursor
 
-```bash
-# Local / git install when Cursor supports path install:
-# add-plugin → GitHub muslewski/agentic-sage
-# Or copy/link skills from ./skills into Cursor’s skill paths
+```text
+Publisher form: https://cursor.com/marketplace/publish
+Repo: https://github.com/muslewski/agentic-sage
 ```
 
-Manifest: `.cursor-plugin/plugin.json` · skills: `./skills/`  
-Public Cursor Marketplace: submit via Cursor’s Create Plugin / marketplace flow when ready.
+Manifest: `.cursor-plugin/plugin.json` · logo: `assets/logo.svg`
 
-## skills.sh (cross-agent SKILL.md)
+## Codex (ChatGPT Work / Codex CLI)
+
+**Git install (works without OpenAI review):**
 
 ```bash
-# List skills in this repo
-npx skills add muslewski/agentic-sage -l
+codex plugin marketplace add muslewski/agentic-sage
+# then: /plugins → enable agentic-sage
+npm i -g agentic-sage && sage on
+```
 
-# Install all skills for all detected agents
+**Official Plugins Directory (form):**
+
+1. Package ready: `.codex-plugin/plugin.json` + `skills/` + `PRIVACY.md`  
+2. OpenAI org with **Apps Management → Write** + verified identity  
+3. **https://platform.openai.com/plugins** → Create → **Skills only** → ZIP + 5 pos / 3 neg tests → Submit  
+
+Docs: https://learn.chatgpt.com/docs/submit-plugins  
+
+**Community (optional, same day):**
+
+- https://www.codex-marketplace.com/submit  
+- PR [awesome-codex-plugins](https://github.com/hashgraph-online/awesome-codex-plugins) (scanner score ≥ 80)
+
+Manifest: `.codex-plugin/plugin.json` · marketplace: `.agents/plugins/marketplace.json`
+
+## Gemini CLI
+
+```bash
+gemini skills install https://github.com/muslewski/agentic-sage.git --path skills --consent
+# verify: /skills list
+npm i -g agentic-sage && sage on
+```
+
+Guide: [gemini-cli-setup.md](./gemini-cli-setup.md) · snippet: `templates/GEMINI.snippet.md`  
+No Gemini skill-store form — GitHub + install is enough.
+
+## skills.sh (all agents)
+
+```bash
 npx skills add muslewski/agentic-sage --all
-
-# Or pick one (global):
-npx skills add muslewski/agentic-sage --skill sage-fleet -g
-npx skills add muslewski/agentic-sage --skill sage-judge -g
-npx skills add muslewski/agentic-sage --skill sage-doctor -g
+# targeted:
+npx skills add muslewski/agentic-sage --skill sage-fleet -a claude-code -a cursor -a codex -a gemini-cli -g -y
 ```
 
-Directory: https://www.skills.sh/ · Spec: https://agentskills.io/specification
+https://www.skills.sh/
 
-## Codex / Gemini (Tier 2)
+## Directory listings (discovery, not harness install)
 
-- **Codex:** plugin browser `/plugins`; skill paths via skills.sh or Codex skill catalog.  
-- **Gemini CLI:** `gemini skills install https://github.com/muslewski/agentic-sage.git` (skills only).
+| Site | Submit | Notes |
+|------|--------|-------|
+| [agentskill.sh/submit](https://agentskill.sh/submit) | GitHub import | Multi-agent skill marketplace |
+| [skillsdirectory.com/submit](https://www.skillsdirectory.com/submit) | Form + security scan | Skills |
+| [agenticskills.io/submit](https://agenticskills.io/submit) | Form ~48h review | Skills + multi-platform |
+| [pluginmarketplace.ai/submit](https://pluginmarketplace.ai/submit) | Form | Claude-oriented |
+| [codex-marketplace.com/submit](https://www.codex-marketplace.com/submit) | GitHub | After `.codex-plugin` |
+| [buildwithclaude.com](https://buildwithclaude.com/) | PR to davepoon/buildwithclaude | Claude discovery |
+| [hol.org/registry/plugins](https://hol.org/registry/plugins) | Scanner + awesome PR | Codex trust |
+| MCP registries (Smithery, mcp.so, Glama, Pulse) | **Skip** | SAGE is not an MCP server |
 
 ## Pin discipline
 
-When shipping a release that marketplaces pin by SHA (Grok Official, Claude community):
+After releases that marketplaces pin by SHA (Grok Official, Claude community):
 
-1. Tag / push `main`  
+1. Push `main`  
 2. `git rev-parse HEAD`  
-3. Bump marketplace catalog pin (or re-submit form)  
+3. Bump catalog pin / re-publish  
+
+## Mental model
+
+```text
+CLI (npm) ──► truth: store, board, judge
+Plugins   ──► skills + hooks in one harness UI
+skills.sh ──► SKILL.md on 70+ agents
+Directories ──► SEO / browse (forms or auto-index)
+```
