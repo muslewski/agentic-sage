@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- release-please will maintain this file after v0.1.0 is published -->
 
+## Unreleased
+
+### Features
+
+* **about:** `sage about --tmux <session> [--json]` — facts + judge one-liners for ferry navigation
+* **brief:** `session_lines` auto-filled by fact `sage judge run` / `buildFactBrief`
+
 ## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
 
 ### Features

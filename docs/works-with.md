@@ -15,7 +15,7 @@ SAGE is the **fleet judge**. Sibling tools cover other slices of the same desk. 
 | **token-oracle** | Offline token/cap forecasts. SAGE can point `tokenForecastPath` at an oracle (or legacy) forecast feed for optional statusline / board context — see [statusline recipe](./recipes/statusline.md). | [oracle.muslewski.com](https://oracle.muslewski.com) · [npm](https://www.npmjs.com/package/token-oracle) |
 | **memory-atlas** | Code-verified architecture vaults. This repo’s understanding lives in `agentic-sage-mind/` (Atlas); public guides live in `docs/`. Recollection keeps both honest. | [atlas.muslewski.com](https://atlas.muslewski.com) · [npm](https://www.npmjs.com/package/memory-atlas) |
 | **llm-armory** | Named executor loadouts (advisor → Grok children). Sessions armory spawns are still **judged**, not orchestrated, by SAGE when hooks are on. | [armory.muslewski.com](https://armory.muslewski.com) · [npm](https://www.npmjs.com/package/llm-armory) |
-| **mossferry** | Remote tmux/mosh “ferry” to the machine where your fleet actually runs. SAGE lives on the **app host** (often Manjaro); ferry is how you get there from a laptop. | [mossferry.muslewski.com](https://mossferry.muslewski.com) · [npm](https://www.npmjs.com/package/mossferry) |
+| **mossferry** | Remote tmux/mosh “ferry” to the machine where your fleet actually runs. **Optional wire:** ferry calls `sage about --tmux` for picker preview one-liners and can spawn **`sage judge run`** via ⚖ new judge… when sage is on PATH (`FERRY_SAGE=auto` on the ferry side). Fact judge run auto-fills brief `session_lines`. | [mossferry.muslewski.com](https://mossferry.muslewski.com) · [npm](https://www.npmjs.com/package/mossferry) |
 
 ## Rules for authors
 
