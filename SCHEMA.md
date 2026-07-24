@@ -75,7 +75,29 @@ Written by `sage judge publish` under `<sageHome>/briefs/fleet.json` or
 `<repoDataDir>/brief.json`. Fields: `schema`, `kind:"sage.brief"`, `scope`,
 `repo_id`, `judge_sid`, `judge_repo_id`, `judge_pid`, `updated_at`, `status`,
 `ttl_ms`, optional `grace_ms`, `inputs`, `summary`, `analysis`, `hotspots`,
-`advice`, `confidence`.
+`session_lines`, `advice`, `confidence`.
+
+**`session_lines`** (optional array): auto-filled by fact `sage judge run` and
+optional on publish — `{ session_id, tmux?, text }` one-liners for navigation
+consumers (e.g. mossferry picker). Max 80 entries; `text` ≤ 200 chars.
+
+### `sage.about` (kind)
+
+`sage about --tmux <session> [--json]` — compact annotation for a tmux session
+name (ferry field 1). Always exit 0; `found:false` when unmatched.
+
+| Field | Type | Notes |
+|---|---|---|
+| `schema` | number | `1` |
+| `kind` | string | `"sage.about"` |
+| `tmux` | string | query session name |
+| `found` | boolean | match? |
+| `facts` | string | war-row style one-liner (derived) |
+| `judge` | string | from fresh brief `session_lines` or `""` |
+| `role` | string | `worker` \| `judge` \| `""` |
+| `liveness` | string | derived liveness or `""` |
+| `session_id` | string | matched harness id or `""` |
+| `repo_id` | string\|null | matched repo id |
 
 **Freshness:** attach while `status===active` and age ≤ `ttl_ms` (default 120s)
 **and** either the judge session is still live (`role=judge` + alive pid), **or**
