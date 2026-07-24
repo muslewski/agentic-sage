@@ -65,7 +65,12 @@ import { selectableIndices, moveSelection, selectedModelIndex, ensureVisible, ma
 import { floatHot } from '../lib/hotfloat.mjs'
 import { parseMouseEvents, MOUSE_ENABLE, MOUSE_DISABLE } from '../lib/mouse.mjs'
 import { tmuxPanes, paneForPid } from '../lib/tmux.mjs'
-import { aboutTmux, renderAbout } from '../lib/about.mjs'
+import {
+  aboutTmux,
+  renderAbout,
+  buildSessionLines,
+  stampSessionLineFingerprints,
+} from '../lib/about.mjs'
 import { readStdinWithDeadline } from '../lib/stdin.mjs'
 import {
   readGuard,
@@ -1460,9 +1465,29 @@ const main = async () => {
           console.error('sage: invalid JSON on stdin')
           process.exit(1)
         }
+        // Topic-aware session_lines: if the model omitted them, fill from live
+        // fleet so about/ferry never keep ghost topics after a pivot. If provided,
+        // stamp missing fingerprints from current records.
+        let session_lines = parsed.session_lines
+        try {
+          const fleet = collectFleet(home, Date.now())
+          const panes = tmuxPanes()
+          if (!Array.isArray(session_lines) || session_lines.length === 0) {
+            session_lines = buildSessionLines(fleet, {
+              panes,
+              scope,
+              repoId: scope === 'repo' ? repoId : null,
+            })
+          } else {
+            session_lines = stampSessionLineFingerprints(session_lines, fleet, { panes })
+          }
+        } catch {
+          /* keep parsed session_lines as-is */
+        }
         const brief = normalizeBrief(
           {
             ...parsed,
+            session_lines,
             scope,
             repo_id: scope === 'repo' ? repoId : null,
             judge_sid: sid,
@@ -1480,7 +1505,12 @@ const main = async () => {
         }
         const file = briefPathFor(home, scope, repoId)
         writeBriefFile(file, brief)
-        return console.log(`sage: published ${scope} brief → ${file}`)
+        return console.log(
+          `sage: published ${scope} brief → ${file}` +
+            (brief.session_lines?.length
+              ? ` · ${brief.session_lines.length} session_lines`
+              : ''),
+        )
       }
 
       // status (default)

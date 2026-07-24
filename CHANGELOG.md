@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **about:** `sage about --tmux <session> [--json]` — facts + judge one-liners for ferry navigation
 * **brief:** `session_lines` auto-filled by fact `sage judge run` / `buildFactBrief`
+* **topic awareness:** `session_lines[].fingerprint` (branch|window|claims); `about` hides ⚖ when topic pivots or when judge text is a facts clone; `judge publish` auto-fills or stamps fingerprints so lines stay relevant
 
 ## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
 

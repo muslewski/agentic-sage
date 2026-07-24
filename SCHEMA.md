@@ -78,8 +78,11 @@ Written by `sage judge publish` under `<sageHome>/briefs/fleet.json` or
 `session_lines`, `advice`, `confidence`.
 
 **`session_lines`** (optional array): auto-filled by fact `sage judge run` and
-optional on publish — `{ session_id, tmux?, text }` one-liners for navigation
-consumers (e.g. mossferry picker). Max 80 entries; `text` ≤ 200 chars.
+on `judge publish` (if omitted, CLI fills from live fleet). Each entry:
+`{ session_id, tmux?, text, fingerprint? }`.  
+`fingerprint` = topic signal `branch|window_name|claimed_row|sorted claimed_globs`.  
+`sage about` **drops** a line when live fingerprint ≠ stored (topic pivot) or when
+`text` equals the live facts line (pure clone — no ⚖ chrome). Max 80; `text` ≤ 200.
 
 ### `sage.about` (kind)
 
@@ -92,12 +95,13 @@ name (ferry field 1). Always exit 0; `found:false` when unmatched.
 | `kind` | string | `"sage.about"` |
 | `tmux` | string | query session name |
 | `found` | boolean | match? |
-| `facts` | string | war-row style one-liner (derived) |
-| `judge` | string | from fresh brief `session_lines` or `""` |
+| `facts` | string | war-row style one-liner (derived **live** from record) |
+| `judge` | string | from attachable brief `session_lines` if topic-relevant, else `""` |
 | `role` | string | `worker` \| `judge` \| `""` |
 | `liveness` | string | derived liveness or `""` |
 | `session_id` | string | matched harness id or `""` |
 | `repo_id` | string\|null | matched repo id |
+| `fingerprint` | string | live topic fingerprint for this session |
 
 **Freshness:** attach while `status===active` and age ≤ `ttl_ms` (default 120s)
 **and** either the judge session is still live (`role=judge` + alive pid), **or**

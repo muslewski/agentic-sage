@@ -36,15 +36,23 @@ Every ~30–60s until the human stops you:
    sage war --json
    sage fleet --json          # when focused on one repo
    sage merge-brief           # optional depth on hot repos
+   # Optional: spot-check a pane the human cares about
+   # sage about --tmux <session-name> --json
    ```
-2. **Reason** (in this chat): who is live, contested paths, dual claims, compacting storms, stale intent. Prefer evidence from CLI/JSON over invented intent.
-3. **Publish** (no model inside sage — you write the JSON):
+2. **Reason** (in this chat): who is live, contested paths, dual claims, compacting storms, **topic pivots** (window name / claims / branch changed since last loop). Prefer evidence from CLI/JSON over invented intent.
+3. **Publish** (no model inside sage — you write the JSON).  
+   **Always include `session_lines`** — one short line per live **worker** (not judges). Rebuild every cycle from war/board. If a session **pivoted topic** (new claim, window rename, branch), say so in the text (e.g. `Pivoted → payments API (was auth)`).  
+   If you omit `session_lines`, the CLI auto-fills fact baselines (fingerprints only) — better than ghosts, worse than your narrative.
    ```bash
    sage judge publish <<'EOF'
    {
      "summary": "one line desk state",
      "analysis": "short multi-paragraph advisory prose",
      "confidence": "medium",
+     "session_lines": [
+       { "session_id": "<sid>", "tmux": "<tmux-session>", "text": "what this worker is about right now" },
+       { "session_id": "<sid2>", "tmux": "<tmux2>", "text": "Pivoted → X (was Y) · watch collision with …" }
+     ],
      "hotspots": [
        { "repo_id": null, "paths": ["src/foo/**"], "sessions": [], "note": "why" }
      ],
@@ -56,6 +64,7 @@ Every ~30–60s until the human stops you:
    }
    EOF
    ```
+   Fingerprints are stamped by the CLI from live records — you do not need to invent them.
 4. Sleep / wait, then repeat.
 
 ## Hard rules
