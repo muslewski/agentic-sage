@@ -19,6 +19,8 @@
     "scripts",
     ".grok-plugin",
     ".claude-plugin",
+    ".cursor-plugin",
+    "docs",
     "AGENTS.md",
     "SETUP.md",
     "ADAPTERS.md",

@@ -214,12 +214,32 @@ npm install -g agentic-sage && sage on
 
 ```
 /plugin marketplace add muslewski/agentic-sage
-/plugin install
+/plugin install agentic-sage@agentic-sage
 ```
 
-Skills (`sage-fleet`, `sage-judge`, `sage-doctor`) ship with the Grok/Claude plugin and
-are also linked by `sage init`. To use the `sage` CLI verbs (`board`, `territory`,
-`judge`, `about`, …) run the global npm install above and `sage on`.
+Community catalog (after form approval at clau.de/plugin-directory-submission):
+
+```
+/plugin marketplace add anthropics/claude-plugins-community
+/plugin install agentic-sage@claude-community
+```
+
+**Option 4 — skills.sh (any agent that uses SKILL.md):**
+
+```bash
+npx skills add muslewski/agentic-sage --all
+# or: --skill sage-fleet|sage-judge|sage-doctor
+```
+
+**Option 5 — Cursor:**
+
+Manifest `.cursor-plugin/plugin.json` — install from GitHub path / Cursor marketplace when listed.
+
+Skills (`sage-fleet`, `sage-judge`, `sage-doctor`) ship with Grok/Claude/Cursor plugins and
+skills.sh. To use the `sage` CLI verbs (`board`, `territory`, `judge`, `about`, …)
+run the global npm install above and `sage on`.
+
+Full matrix: [docs/distribution.md](./docs/distribution.md).
 
 **Option 3 — git clone (for contributors / local development):**
 
