@@ -31,3 +31,7 @@ agentic-sage is a local CLI that reads git history and writes to agent config di
 
 Out of scope: issues in Node.js / Python / the OS, third-party CLIs this tool
 launches, or GitHub Actions runners themselves.
+
+## Local secrets
+
+Do not commit `.env` files. This repo ships a gitleaks pre-commit hook (`.pre-commit-config.yaml`). Install with `pre-commit install` if you use pre-commit; otherwise run `gitleaks detect` before push.
