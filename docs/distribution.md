@@ -93,13 +93,32 @@ No Gemini skill-store form — GitHub + install is enough.
 
 ## skills.sh (all agents)
 
+**Live index (no form — auto from GitHub):**  
+https://www.skills.sh/muslewski/agentic-sage  
+→ `sage-fleet` · `sage-judge` · `sage-doctor`
+
+**Recommended (sage only, multi-agent, global):**
+
 ```bash
-npx skills add muslewski/agentic-sage --all
-# targeted:
-npx skills add muslewski/agentic-sage --skill sage-fleet -a claude-code -a cursor -a codex -a gemini-cli -g -y
+npx skills add muslewski/agentic-sage \
+  --skill sage-fleet --skill sage-judge --skill sage-doctor \
+  -a claude-code -a cursor -a codex -a gemini-cli -g -y
 ```
 
-https://www.skills.sh/
+Then still run the CLI layer:
+
+```bash
+npm install -g agentic-sage && sage on
+```
+
+| Flag | Effect |
+|------|--------|
+| `--skill sage-*` | Install only fleet/judge/doctor |
+| `-g` | User-global `~/.agents/skills/` |
+| `-a …` | Wire named agents (Claude Code gets symlinks) |
+| `--all` | **Avoid** — also pulls vendored Atlas skills under `.claude/skills/` (not product surface) |
+
+List without installing: `npx skills add muslewski/agentic-sage -l`
 
 ## Directory listings (discovery, not harness install)
 

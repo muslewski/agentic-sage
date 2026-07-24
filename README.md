@@ -227,9 +227,13 @@ Community catalog (after form approval at clau.de/plugin-directory-submission):
 **Option 4 — skills.sh (any agent that uses SKILL.md):**
 
 ```bash
-npx skills add muslewski/agentic-sage --all
-# or: --skill sage-fleet|sage-judge|sage-doctor
+# Recommended — sage product skills only (do not use --all: it also pulls Atlas helpers)
+npx skills add muslewski/agentic-sage \
+  --skill sage-fleet --skill sage-judge --skill sage-doctor \
+  -a claude-code -a cursor -a codex -a gemini-cli -g -y
 ```
+
+Index: https://www.skills.sh/muslewski/agentic-sage
 
 **Option 5 — Cursor:**
 

@@ -22,12 +22,12 @@ gemini skills install https://github.com/muslewski/agentic-sage.git --path skill
 gemini skills install https://github.com/muslewski/agentic-sage.git --path skills --scope workspace --consent
 ```
 
-Cross-agent (skills.sh):
+Cross-agent (skills.sh) — prefer sage product skills only (avoid `--all`; it also pulls Atlas helpers under `.claude/skills/`):
 
 ```bash
-npx skills add muslewski/agentic-sage --skill sage-fleet -a gemini-cli -g
-# or all skills / all agents:
-npx skills add muslewski/agentic-sage --all
+npx skills add muslewski/agentic-sage \
+  --skill sage-fleet --skill sage-judge --skill sage-doctor \
+  -a gemini-cli -g -y
 ```
 
 ## CLI (required for board / territory / judge)
