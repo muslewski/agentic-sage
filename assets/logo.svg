@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Agentic SAGE">
+  <!-- solid plate (marketplace wants background) -->
+  <rect width="512" height="512" rx="96" fill="#0d1117"/>
+  <!-- outer ring -->
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#3fb950" stroke-width="20"/>
+  <!-- inner ring -->
+  <circle cx="256" cy="256" r="112" fill="none" stroke="#238636" stroke-width="12" opacity="0.85"/>
+  <!-- balance / judge bar -->
+  <rect x="148" y="248" width="216" height="16" rx="8" fill="#3fb950"/>
+  <!-- fulcrum -->
+  <path d="M256 200 L280 248 L232 248 Z" fill="#56d364"/>
+  <!-- scale pans -->
+  <path d="M176 264 Q176 300 208 300 Q240 300 240 264" fill="none" stroke="#8b949e" stroke-width="10" stroke-linecap="round"/>
+  <path d="M272 264 Q272 300 304 300 Q336 300 336 264" fill="none" stroke="#8b949e" stroke-width="10" stroke-linecap="round"/>
+  <!-- wordmark S -->
+  <text x="256" y="400" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="56" font-weight="700" fill="#e6edf3">SAGE</text>
+</svg>

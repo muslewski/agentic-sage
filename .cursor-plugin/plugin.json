@@ -10,6 +10,7 @@
   "homepage": "https://sage.muslewski.com/",
   "repository": "https://github.com/muslewski/agentic-sage",
   "license": "MIT",
+  "logo": "./assets/logo.svg",
   "keywords": [
     "sage",
     "agentic-sage",
