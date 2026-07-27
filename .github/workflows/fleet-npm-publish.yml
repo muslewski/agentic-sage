@@ -107,12 +107,14 @@ jobs:
           }
 
           publish_one memory-atlas
+          # Companion presentation plane (optional peer of memory-atlas)
+          publish_one memory-atlas/packages/memory-atlas-visuals
           publish_one status-herald
           publish_one llm-armory
           publish_one mossferry
           publish_one token-oracle/npm
 
           echo "--- verify ---"
-          for pkg in memory-atlas status-herald llm-armory mossferry token-oracle; do
+          for pkg in memory-atlas memory-atlas-visuals status-herald llm-armory mossferry token-oracle; do
             npm view "$pkg" name version bin homepage 2>/dev/null || echo "MISSING $pkg"
           done
