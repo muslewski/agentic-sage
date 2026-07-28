@@ -70,6 +70,6 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",
-    "memory-atlas": "^0.5.2"
+    "memory-atlas": "0.5.3"
   }
 }
