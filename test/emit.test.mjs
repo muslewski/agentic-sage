@@ -12,6 +12,7 @@ import { lastToolFile } from '../lib/throttle.mjs'
 import { MARKER_DIR, registryPath } from '../lib/roots.mjs'
 import { readRecord } from '../lib/store.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
+import { stampWired, packageVersion } from '../lib/install-state.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'agentic-sage-emit.mjs')
 
@@ -204,6 +205,73 @@ test('SessionStart brief: silent when solo, when disabled, and on non-SessionSta
   seedOther(home2, resolveRepoId(repo2), { session_id: 'other', branch: 'feat-o', touched_globs: ['a.ts'], liveness: 'idle', updated_at: '2026-06-28T12:00:00Z', pid: process.pid })
   assert.equal(emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo2 }, home2).trim(), '')
 })
+
+test('SessionStart soft: preferred offline alone (≤2 lines)', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true, judge: { desired: 'preferred' } })
+  stampWired(home, packageVersion())
+  const repo = mkGitRepo()
+  const out = emit({ hook_event_name: 'SessionStart', session_id: 'solo', cwd: repo }, home)
+  const lines = out.split('\n').filter(Boolean)
+  assert.equal(lines.length, 1)
+  assert.match(lines[0], /live judge preferred · offline/)
+})
+
+test('SessionStart soft: wired lag alone when solo + optional judge', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  stampWired(home, '0.0.1')
+  const repo = mkGitRepo()
+  const out = emit({ hook_event_name: 'SessionStart', session_id: 'solo', cwd: repo }, home)
+  const lines = out.split('\n').filter(Boolean)
+  assert.equal(lines.length, 1, out)
+  assert.match(lines[0], /wired 0\.0\.1/)
+  assert.match(lines[0], /sage init --repair/)
+})
+
+test('SessionStart soft: preferred + fleet cap at 2 (drops freshness)', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true, judge: { desired: 'preferred' } })
+  stampWired(home, '0.0.1')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedOther(home, id, {
+    session_id: 'other',
+    branch: 'feat-other',
+    touched_globs: ['src/x.ts'],
+    liveness: 'idle',
+    updated_at: '2026-06-28T12:00:00Z',
+    pid: process.pid,
+  })
+  const out = emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  const lines = out.split('\n').filter(Boolean)
+  assert.equal(lines.length, 2, out)
+  assert.match(lines[0], /live judge preferred · offline/)
+  assert.match(lines[1], /live · nearest feat-other/)
+  assert.doesNotMatch(out, /wired 0\.0\.1/)
+})
+
+test('SessionStart soft: fleet + wired lag when preferred silent', () => {
+  const home = mkTmp('sage-h-')
+  writeGlobalConfig(home, { enabled: true })
+  stampWired(home, '0.0.1')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedOther(home, id, {
+    session_id: 'other',
+    branch: 'feat-other',
+    touched_globs: ['src/x.ts'],
+    liveness: 'idle',
+    updated_at: '2026-06-28T12:00:00Z',
+    pid: process.pid,
+  })
+  const out = emit({ hook_event_name: 'SessionStart', session_id: 's1', cwd: repo, source: 'startup' }, home)
+  const lines = out.split('\n').filter(Boolean)
+  assert.equal(lines.length, 2, out)
+  assert.match(lines[0], /live · nearest feat-other/)
+  assert.match(lines[1], /wired 0\.0\.1/)
+})
+
 
 // ---- P7 PreToolUse guard ----
 

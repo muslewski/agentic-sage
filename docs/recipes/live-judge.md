@@ -55,6 +55,10 @@ Public default is **optional** (CLI-only is fine — no offline noise). For a de
 ```
 
 Or: `node scripts/fleet-wire-preferred-judge.mjs` (optional `--telemetry`).
+Full desk wire: `node scripts/fleet-desk-wire.mjs` (`fleet-wire-desk.mjs` alias).
+
+**predev:** `"predev": "atlas gate"` on Atlas repos — do **not** force `sage gate` into predev.
+Dual soft check: `node scripts/desk-gate.mjs` (fail-open if tools missing).
 
 When preferred and offline, SessionStart / `sage doctor` / `sage gate` print a **soft**
 line (`live judge preferred · offline — run: sage judge run`). Exit code stays 0 —
