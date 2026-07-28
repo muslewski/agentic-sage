@@ -1351,7 +1351,12 @@ const main = async () => {
         // Wait for child; parent stays alive so we could re-seed — harness is the agent.
         await new Promise((resolve) => {
           spawned.child.on('exit', (code) => {
-            console.log(`sage: judge harness exited (${code ?? '?'}) — brief may stay for grace`)
+            console.log(
+              `sage: judge harness exited (${code ?? '?'}) — brief may stay for grace\n` +
+                `  if the TUI was empty: upgrade agentic-sage (judge must pass the initial prompt argv)\n` +
+                `  fact-only without LLM: sage judge run --fleet --harness none\n` +
+                `  re-open: sage judge run --fleet --takeover`,
+            )
             resolve()
           })
           spawned.child.on('error', (err) => {

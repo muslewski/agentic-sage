@@ -8,6 +8,8 @@ import {
   publishFactBrief,
   summarizeJudgeChrome,
   seedJudgeSession,
+  buildHarnessArgv,
+  judgePromptText,
 } from '../lib/judge-run.mjs'
 import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
@@ -37,6 +39,30 @@ describe('resolveHarness', () => {
     )
     // may find real grok on machine — if so name is grok; if not none
     assert.ok(h.name === 'none' || h.name === 'grok' || h.name === 'claude')
+  })
+})
+
+describe('buildHarnessArgv', () => {
+  it('passes interactive initial PROMPT for grok (not --prompt-file)', () => {
+    const prompt = judgePromptText('fleet')
+    const argv = buildHarnessArgv({ name: 'grok', args: [] }, { prompt })
+    assert.equal(argv.length, 1)
+    assert.ok(argv[0].includes('live fleet judge'))
+    assert.ok(argv[0].includes('sage judge publish'))
+    assert.ok(!argv.some((a) => a === '--prompt-file' || a === '-p' || a === '--single'))
+  })
+  it('prepends config args then prompt for claude', () => {
+    const argv = buildHarnessArgv(
+      { name: 'claude', args: ['--permission-mode', 'acceptEdits'] },
+      { prompt: 'be the judge' },
+    )
+    assert.deepEqual(argv.slice(0, 2), ['--permission-mode', 'acceptEdits'])
+    assert.equal(argv[argv.length - 1], 'be the judge')
+  })
+  it('empty prompt returns only config args', () => {
+    assert.deepEqual(buildHarnessArgv({ name: 'grok', args: ['--minimal'] }, { prompt: '' }), [
+      '--minimal',
+    ])
   })
 })
 
