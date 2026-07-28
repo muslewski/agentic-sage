@@ -115,6 +115,40 @@ skills**, current repo. SAGE being OFF is reported as healthy, never an error.
 
 ---
 
+
+## Update
+
+```bash
+npm install -g agentic-sage@latest
+sage init --repair     # re-stamp wired version + refresh hooks/skills
+sage gate              # soft: package lag + preferred-judge offline
+sage doctor
+```
+
+`sage gate` never blocks coding by default. Preferred live-judge offline is a **soft**
+nudge only (`judge.desired: "preferred"` in `~/.claude/agentic-sage/config.json`).
+
+## Preferred live judge (optional desk)
+
+```bash
+# one-liner for a desk that wants a living judge:
+node scripts/fleet-wire-preferred-judge.mjs --telemetry
+# or edit config:
+# { "enabled": true, "judge": { "desired": "preferred" } }
+sage judge run --fleet
+```
+
+CLI-only users leave `desired` unset/`optional` — no offline noise.
+
+## Pair with memory-atlas (past + present)
+
+| Tool | Superpower | Install |
+|------|------------|---------|
+| **memory-atlas** | The **past** — verified architecture vault | `npm i -D memory-atlas` per repo |
+| **agentic-sage** | The **present** — parallel session fleet | `npm i -g agentic-sage` once |
+
+Soft gates: `atlas gate` (predev) · `sage gate` (global / SessionStart). Neither hard-blocks by default.
+
 ## Optional
 
 Each tier is independent — add only what you want.

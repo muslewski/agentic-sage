@@ -1,3 +1,7 @@
+<!-- sage-fleet-pointer -->
+**Parallel sessions** — other agent sessions may run concurrently. Before claiming work or opening a PR, use the `sage-fleet` skill (collision check → claim → merge brief). SAGE off/absent ⇒ silent no-op.
+<!-- /sage-fleet-pointer -->
+
 # AGENTS.md — setting up SAGE (for the agent doing it)
 
 You're reading this because someone cloned **agentic-sage** and asked you (an AI coding agent such as Grok Build CLI or Claude Code) to

@@ -13,6 +13,7 @@ order: 0
 | [Dogfood layout](./dogfood.md) | How the maintainer fleet runs SAGE |
 | [Statusline](./statusline.md) | Segment in Claude / tmux (+ oracle / herald context) |
 | [Live judge](./live-judge.md) | Optional agent pane: continuous briefs for workers |
+| [Desk fleet](./desk-fleet.md) | Multi-repo desk in ~10 minutes (SAGE + optional Atlas) |
 | [Works with](../works-with.md) | Fleet map: herald, oracle, atlas, armory, ferry |
 
 Something missing? Open a Discussion or PR under `docs/recipes/`.
