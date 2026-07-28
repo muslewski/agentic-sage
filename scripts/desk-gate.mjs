@@ -1,66 +1,163 @@
 #!/usr/bin/env node
 /**
- * Soft dual gate for a product repo desk: past (atlas) + present (sage).
+ * OSS-friendly dual desk gate — soft `atlas gate` + soft `sage gate`.
  *
- * - If cwd has atlas.config.json and `atlas` is on PATH → run `atlas gate`
- * - If `sage` is on PATH → run `sage gate`
- * - Missing tools: skip (fail-open)
- * - Default: exit 0 even with soft warnings
- * - `--strict`: exit 1 if either child exits non-zero
+ * Soft (never hard-depends on either tool):
+ *   - if `atlas` is resolvable (PATH or local node_modules/.bin) AND
+ *     `atlas.config.json` is in cwd or an ancestor → spawn `atlas gate`
+ *   - if `sage` is resolvable → spawn `sage gate`
+ *   - neither present → exit 0 (fail-open)
+ *
+ * Exit codes:
+ *   - default: always 0 (child findings print; never block dev)
+ *   - `--strict`: exit 1 only when a *present* gate returns non-zero
+ *
+ * Consumer predev recommendation (see SETUP.md):
+ *   "predev": "atlas gate"     // vault freshness when you use Atlas
+ *   sage is global SessionStart + preferred — not required in predev
+ *
+ * Optional one process for both without `|| true` tricks:
+ *   "predev": "node path/to/agentic-sage/scripts/desk-gate.mjs"
  *
  * Usage:
  *   node scripts/desk-gate.mjs
  *   node scripts/desk-gate.mjs --strict
- *   # or after global install: add to package.json predev when both tools exist
+ *   npm run desk-gate
  */
-import { spawnSync } from 'node:child_process'
+import { spawnSync, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-const strict = process.argv.includes('--strict')
-const cwd = process.cwd()
-
-function which(cmd) {
-  const r = spawnSync('sh', ['-c', `command -v ${JSON.stringify(cmd)}`], {
-    encoding: 'utf8',
-  })
-  return r.status === 0 ? String(r.stdout || '').trim() : ''
+/** @param {string} cmd @returns {string | null} */
+export function which(cmd) {
+  try {
+    const out = execFileSync('sh', ['-c', `command -v ${JSON.stringify(cmd)}`], {
+      encoding: 'utf8',
+    }).trim()
+    return out || null
+  } catch {
+    return null
+  }
 }
 
-function run(bin, args) {
-  const r = spawnSync(bin, args, {
-    cwd,
-    encoding: 'utf8',
-    env: process.env,
-    timeout: 60_000,
-  })
-  if (r.stdout) process.stdout.write(r.stdout)
-  if (r.stderr) process.stderr.write(r.stderr)
-  return r.status ?? 1
+/**
+ * PATH first, then cwd (and parents) node_modules/.bin/<cmd>.
+ * @param {string} cmd
+ * @param {string} cwd
+ * @returns {string | null}
+ */
+export function resolveBin(cmd, cwd) {
+  const onPath = which(cmd)
+  if (onPath) return onPath
+  let dir = path.resolve(cwd)
+  for (;;) {
+    const local = path.join(dir, 'node_modules', '.bin', cmd)
+    if (fs.existsSync(local)) return local
+    const parent = path.dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
 }
 
-let code = 0
-const atlasCfg = path.join(cwd, 'atlas.config.json')
-const hasAtlas = fs.existsSync(atlasCfg)
-const atlasBin = which('atlas')
-const sageBin = which('sage')
-
-if (hasAtlas && atlasBin) {
-  const c = run(atlasBin, strict ? ['gate', '--strict'] : ['gate'])
-  if (c !== 0) code = c
-} else if (hasAtlas && !atlasBin) {
-  process.stdout.write('desk-gate: atlas.config.json present but atlas not on PATH (skip)\n')
+/**
+ * Walk cwd → parents for atlas.config.json.
+ * @param {string} start
+ * @returns {string | null}
+ */
+export function findAtlasConfigDir(start) {
+  let dir = path.resolve(start)
+  for (;;) {
+    if (fs.existsSync(path.join(dir, 'atlas.config.json'))) return dir
+    const parent = path.dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
 }
 
-if (sageBin) {
-  const c = run(sageBin, strict ? ['gate', '--strict'] : ['gate'])
-  if (c !== 0) code = c
-} else {
-  process.stdout.write('desk-gate: sage not on PATH (skip) — npm i -g agentic-sage\n')
+/**
+ * @param {string[]} argv
+ * @param {{
+ *   cwd?: string,
+ *   stdout?: { write: Function },
+ *   stderr?: { write: Function },
+ *   which?: (cmd: string) => string | null,
+ *   spawn?: typeof spawnSync,
+ *   env?: NodeJS.ProcessEnv,
+ * }} [opts]
+ * @returns {number}
+ */
+export function runDeskGate(argv = [], opts = {}) {
+  const cwd = opts.cwd ?? process.cwd()
+  const stdout = opts.stdout ?? process.stdout
+  const stderr = opts.stderr ?? process.stderr
+  const resolve = (cmd) => {
+    if (opts.which) return opts.which(cmd)
+    return resolveBin(cmd, cwd)
+  }
+  const spawn = opts.spawn ?? spawnSync
+  const env = opts.env ?? process.env
+  const strict = Array.isArray(argv) && argv.includes('--strict')
+  const childExtra = strict ? ['--strict'] : []
+
+  let ran = 0
+  let failed = 0
+
+  const run = (bin, args, label) => {
+    ran++
+    const r = spawn(bin, args, {
+      cwd,
+      env,
+      encoding: 'utf8',
+      timeout: 60_000,
+      stdio: opts.stdout || opts.stderr ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    })
+    if (opts.stdout || opts.stderr) {
+      if (r.stdout) stdout.write(String(r.stdout))
+      if (r.stderr) stderr.write(String(r.stderr))
+    }
+    if (r.error) {
+      stdout.write(`desk-gate: skip ${label} (${r.error.code || r.error.message})\n`)
+      ran--
+      return
+    }
+    const code = r.status ?? 1
+    if (code !== 0) {
+      failed++
+      if (strict) stderr.write(`desk-gate: ${label} exited ${code}\n`)
+    }
+  }
+
+  const atlasDir = findAtlasConfigDir(cwd)
+  const atlasBin = resolve('atlas')
+  if (atlasBin && atlasDir) {
+    run(atlasBin, ['gate', ...childExtra], 'atlas gate')
+  }
+
+  const sageBin = resolve('sage')
+  if (sageBin) {
+    run(sageBin, ['gate', ...childExtra], 'sage gate')
+  }
+
+  if (ran === 0) {
+    stdout.write('desk-gate: no desk tools ran (ok — install atlas and/or sage when ready)\n')
+    return 0
+  }
+
+  if (strict && failed > 0) {
+    stderr.write(`desk-gate: fail (strict) — ${failed}/${ran} gate(s) non-zero\n`)
+    return 1
+  }
+
+  if (failed === 0) {
+    stdout.write('desk-gate: ok\n')
+  }
+  return 0
 }
 
-if (!hasAtlas && !sageBin) {
-  process.stdout.write('desk-gate: nothing to check\n')
-}
+const isMain =
+  process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
 
-process.exit(strict ? code : 0)
+if (isMain) {
+  process.exit(runDeskGate(process.argv.slice(2)))
+}

@@ -47,7 +47,9 @@
     "mind:build": "atlas build",
     "//sage-gate": "global only — sage gate (preferred judge) is machine-level; not chained into predev. run: sage gate",
     "desk:gate": "node scripts/desk-gate.mjs",
-    "fleet:desk": "node scripts/fleet-desk-wire.mjs"
+    "fleet:desk": "node scripts/fleet-desk-wire.mjs",
+    "desk-gate": "node scripts/desk-gate.mjs",
+    "fleet-wire-desk": "node scripts/fleet-wire-desk.mjs"
   },
   "author": "Mateusz Muślewski <10kento10@gmail.com>",
   "license": "MIT",
