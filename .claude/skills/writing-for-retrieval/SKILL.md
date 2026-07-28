@@ -31,3 +31,10 @@ surface, not for a cover-to-cover reader.
 
 Write the note as if the only thing a future agent will ever see is the
 `summary` plus one matched section — because that's usually true.
+
+## Bootstrap vs edit
+
+- **Empty vault / first zones:** use the **atlas-seed** skill (codebase partition
+  into 4–8 `seeded` cards). Then apply this skill's summary rules while writing.
+- **Ongoing edits:** stay here + **atlas-recollection** after real work.
+
