@@ -2,7 +2,7 @@
   "name": "agentic-sage",
   "version": "1.2.0",
   "type": "module",
-  "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) \u2014 board, territory, merge briefings, optional live-judge briefs.",
+  "description": "Passive fleet judge for parallel AI coding agent sessions (Claude Code, Grok Build CLI, etc.) — board, territory, merge briefings, optional live-judge briefs.",
   "bin": {
     "sage": "./bin/sage",
     "agentic-sage": "./bin/sage"
@@ -37,9 +37,16 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "docs:check": "node ../docs-kit/bin/docs-kit.mjs check docs/",
-    "docs:health": "node ../docs-kit/bin/docs-kit.mjs health docs/"
+    "docs:health": "node ../docs-kit/bin/docs-kit.mjs health docs/",
+    "atlas": "atlas",
+    "atlas:gate": "atlas gate",
+    "atlas:doctor": "atlas doctor",
+    "atlas:wire": "atlas wire all",
+    "predev": "atlas gate",
+    "mind:check": "atlas check",
+    "mind:build": "atlas build"
   },
-  "author": "Mateusz Mu\u015blewski <10kento10@gmail.com>",
+  "author": "Mateusz Muślewski <10kento10@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -62,6 +69,7 @@
     "multi-agent"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1"
+    "@biomejs/biome": "^2.5.1",
+    "memory-atlas": "^0.5.2"
   }
 }

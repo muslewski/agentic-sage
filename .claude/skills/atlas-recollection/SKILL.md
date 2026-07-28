@@ -45,6 +45,48 @@ pass. Run this checklist before ending the session:
 
   If the script is missing, skip. Do not invent a separate work-kb ceremony.
 
+- [ ] **Docs soft-nudge (public product docs).** When the repo has a public
+  `docs/` tree (fleet **docs-kit** contract: frontmatter + optional
+  `_meta.json`):
+
+  1. Run mechanical health (prefer docs-kit; never invent a second checker):
+
+     ```bash
+     # if sibling checkout exists:
+     node ../docs-kit/bin/docs-kit.mjs health docs/
+     # or once published:
+     npx @muslewski/docs-kit health docs/
+     # or package script:
+     npm run docs:health   # if defined
+     ```
+
+     Soft: **do not** block ending the session solely because health printed
+     WARN lines. **Do** fix FAIL frontmatter when you touch docs in this change.
+     Exit non-zero from `check`/`health` for missing title/description is a
+     real docs bug — fix or open a debt note.
+
+  2. **Relevance pass** (agent judgment on this session’s diff):
+     - Touched user-facing surface? (`bin/`, public CLI help, hooks, install,
+       config keys, statusline/bar/UX copy)
+     - New/changed command or flag missing from `docs/reference/*`?
+     - New real interop with a sibling package (herald, oracle, atlas, armory,
+       ferry, sage)? → mention it **in the feature page** where the feature is
+       documented (contextual sentence + link), and update `docs/works-with.md`
+       if that edge is new/removed.
+     - Tests-only / pure internal / mind-only → **docs N/A** with one-line reason.
+
+  3. Prefer **surgical** doc edits in the **same commit** as the code when
+     relevant. Never auto-rewrite whole guides. Never invent integrations.
+
+  4. Always include a **Docs** line in the finish report:
+
+     ```text
+     ## Recollection
+     - zones: <slugs stamped or none>
+     - docs: ok | ok with warnings | FAIL | N/A (<reason>)
+     - docs actions: updated <paths> | none
+     ```
+
 ## Rules that aren't optional
 
 - A `seeded` zone card only flips to `status: active` via a
