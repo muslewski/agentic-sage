@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.3.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.2.0...agentic-sage-v1.3.0) (2026-07-28)
+
 ### Features
 
 * **fleet-follow:** `judge.desired` `optional`|`preferred` in global config — preferred soft-warns when live judge / fresh brief missing (SessionStart, doctor, `sage gate`); never hard-fails
+* **cli:** `sage judge desired [preferred|optional]` — set or show the desk preference
 * **gate:** `sage gate [--strict]` — install freshness (wired version stamp + npm latest TTL) + preferred-offline soft line; `--strict` fails freshness only
 * **telemetry:** local debug JSONL (`sage telemetry status|report|dump|clear|on|off`); default OFF; enable via `SAGE_TELEMETRY=1` or `~/.config/agentic-sage/config.json`
 * **wire:** stamps `state.json` `wiredVersion` on successful `wireAll` / `wireProject`
@@ -25,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **docs/distribution.md** — multi-harness install matrix (Grok, Claude, skills.sh, Cursor, Codex, Gemini)
 * **Codex plugin:** `.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json`
 * **Gemini:** `docs/gemini-cli-setup.md` + `templates/GEMINI.snippet.md`
+
+### Docs
+
+* 5-minute install + update path in README and SETUP (`npm i -g agentic-sage@latest`, `sage init --repair`)
 
 ## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
 

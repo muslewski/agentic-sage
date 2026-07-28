@@ -29,12 +29,39 @@ config we use ourselves — copy it for a proven setup.
 
 ---
 
+## 5-minute install
+
+```bash
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # wire Claude + Grok; enable judging
+# or: sage init … then sage on
+
+sage judge desired preferred   # optional desk preference (soft offline warns)
+# sage judge desired optional  # default — no offline-judge noise
+
+sage gate                      # soft install freshness + preferred offline
+sage doctor
+sage judge run                 # optional living passive judge
+```
+
+## Update path
+
+```bash
+npm i -g agentic-sage@latest && sage init --repair
+sage gate
+```
+
+`sage gate` never blocks coding by default. Preferred live-judge offline is a **soft**
+nudge only. `sage init --repair` re-stamps `wiredVersion` and refreshes hooks/skills.
+
+---
+
 ## Required
 
 ### 1. Install
 
 ```bash
-npm install -g agentic-sage
+npm i -g agentic-sage@latest
 ```
 
 Zero dependencies, Node ≥ 20. **From source instead?**
@@ -60,7 +87,7 @@ Native Grok hook wiring example: see templates/ or docs for ~/.grok/hooks/*.json
 Non-interactive flags (agents, CI, scripting) — full reference in [`AGENTS.md`](./AGENTS.md):
 
 ```bash
-sage init --global [--enable]
+sage init --global [--harness claude|grok|both] [--enable]
 sage init --project [--path <dir>] [--storage repo-root|sibling|agent-home] [--yes] [--enable]
 sage init --repair      # re-assert wiring + perform the safe legacy-state-dir rename
 sage init --show        # full breakdown: scope, storage, rule matched, enablement

@@ -75,16 +75,32 @@ sage judge run                  # auto scope + harness (grok → claude → fact
 
 Recipe: **[Live judge](./docs/recipes/live-judge.md)** · skill `sage-judge` · concept [Fleet judge](./docs/concepts/fleet-judge.md).
 
-## Quickstart
+## 5-minute install
 
 ```bash
-npm install -g agentic-sage
-sage init               # interactive wizard — 4 questions, safe defaults: global + OFF
-sage on                 # opt in (skip if you enabled during the wizard)
-sage doctor             # ✓/✗ per check
-# optional elevation:
-sage judge run          # living passive judge for this desk/repo
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # wire Claude+Grok; enable now
+# or: sage init … then sage on
+
+sage judge desired preferred   # optional: soft offline warns when live judge missing
+# sage judge desired optional  # product default — CLI facts only, no offline noise
+
+sage gate                      # soft: install freshness + preferred-judge offline
+sage doctor                    # ✓/✗ per check
+sage judge run                 # optional living mind (layer 2)
 ```
+
+## Update path
+
+```bash
+npm i -g agentic-sage@latest && sage init --repair
+sage gate
+```
+
+`sage init --repair` re-stamps the wired version and refreshes hooks/skills. Prefer `@latest`
+so you do not stick on an older global bin.
+
+---
 
 `sage init` asks **scope** (global vs this-project-only), **harness**, **storage**, and
 **enable now** — defaulting to global + built-in storage + **OFF** at every step. No TTY
@@ -195,9 +211,9 @@ which rule matched for the current repo.
 **Option 1 — global npm (recommended):**
 
 ```bash
-npm install -g agentic-sage
-sage init                    # wizard, or --global/--project — see AGENTS.md for flags
-sage on                      # enable globally (default OFF)
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # or wizard: sage init then sage on
+sage gate && sage doctor
 ```
 
 **Option 2 — Grok Build plugin** (skills + session hooks in the Plugins UI):
