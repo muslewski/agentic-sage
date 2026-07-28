@@ -29,12 +29,39 @@ config we use ourselves — copy it for a proven setup.
 
 ---
 
+## 5-minute install
+
+```bash
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # wire Claude + Grok; enable judging
+# or: sage init … then sage on
+
+sage judge desired preferred   # optional desk preference (soft offline warns)
+# sage judge desired optional  # default — no offline-judge noise
+
+sage gate                      # soft install freshness + preferred offline
+sage doctor
+sage judge run                 # optional living passive judge
+```
+
+## Update path
+
+```bash
+npm i -g agentic-sage@latest && sage init --repair
+sage gate
+```
+
+`sage gate` never blocks coding by default. Preferred live-judge offline is a **soft**
+nudge only. `sage init --repair` re-stamps `wiredVersion` and refreshes hooks/skills.
+
+---
+
 ## Required
 
 ### 1. Install
 
 ```bash
-npm install -g agentic-sage
+npm i -g agentic-sage@latest
 ```
 
 Zero dependencies, Node ≥ 20. **From source instead?**
@@ -60,7 +87,7 @@ Native Grok hook wiring example: see templates/ or docs for ~/.grok/hooks/*.json
 Non-interactive flags (agents, CI, scripting) — full reference in [`AGENTS.md`](./AGENTS.md):
 
 ```bash
-sage init --global [--enable]
+sage init --global [--harness claude|grok|both] [--enable]
 sage init --project [--path <dir>] [--storage repo-root|sibling|agent-home] [--yes] [--enable]
 sage init --repair      # re-assert wiring + perform the safe legacy-state-dir rename
 sage init --show        # full breakdown: scope, storage, rule matched, enablement
@@ -119,7 +146,11 @@ skills**, current repo. SAGE being OFF is reported as healthy, never an error.
 ## Update
 
 ```bash
-npm install -g agentic-sage@latest
+npm i -g agentic-sage@latest && sage init --repair
+# then:
+sage gate
+sage doctor
+# (repair path)
 sage init --repair     # re-stamp wired version + refresh hooks/skills
 sage gate              # soft: package lag + preferred-judge offline
 sage doctor
@@ -131,14 +162,12 @@ nudge only (`judge.desired: "preferred"` in `~/.claude/agentic-sage/config.json`
 ## Preferred live judge (optional desk)
 
 ```bash
-# one-liner for a desk that wants a living judge:
-node scripts/fleet-wire-preferred-judge.mjs --telemetry
-# or edit config:
-# { "enabled": true, "judge": { "desired": "preferred" } }
+sage judge desired preferred          # soft offline warns (SessionStart / doctor / gate)
+# or: node scripts/fleet-wire-preferred-judge.mjs --telemetry
 sage judge run --fleet
 ```
 
-CLI-only users leave `desired` unset/`optional` — no offline noise.
+CLI-only users leave `desired` optional (default) — no offline noise.
 
 ## Pair with memory-atlas (past + present)
 
@@ -148,6 +177,34 @@ CLI-only users leave `desired` unset/`optional` — no offline noise.
 | **agentic-sage** | The **present** — parallel session fleet | `npm i -g agentic-sage` once |
 
 Soft gates: `atlas gate` (predev) · `sage gate` (global / SessionStart). Neither hard-blocks by default.
+
+### Consumer `predev` (recommended)
+
+```json
+{
+  "scripts": {
+    "predev": "atlas gate",
+    "atlas:gate": "atlas gate"
+  }
+}
+```
+
+**Do not** put `atlas gate && sage gate || true` in predev — `|| true` masks real failures,
+and soft gates already exit 0 for advisory findings. SAGE soft lines belong on **SessionStart**
++ `judge.desired: "preferred"` (or `sage judge desired preferred`), not in every package's predev.
+
+**Optional dual runner** (fail-open if tools missing; `--strict` only fails present gates):
+
+```bash
+node path/to/agentic-sage/scripts/desk-gate.mjs
+# or from this repo: npm run desk-gate
+```
+
+**Fleet one-shot** (preferred judge + adapters + CLAUDE/AGENTS pointers + predev wiring):
+
+```bash
+node scripts/fleet-desk-wire.mjs [--dry-run]   # also: fleet-wire-desk.mjs alias
+```
 
 ## Optional
 

@@ -7,6 +7,8 @@ import { globalConfig, sageHome, fleetBriefFile, sessionsDir } from '../lib/path
 import { atomicWriteJson } from '../lib/store.mjs'
 import {
   readJudgeDesired,
+  readJudgeDesiredFromHome,
+  writeJudgeDesired,
   evaluateJudgeDesire,
   isJudgeDesireSatisfied,
   preferredOfflineLine,
@@ -88,4 +90,14 @@ test('warnIfOffline false silences preferred warn', () => {
     judge: { desired: 'preferred', warnIfOffline: false },
   })
   assert.equal(evaluateJudgeDesire(home).shouldWarn, false)
+})
+
+test('writeJudgeDesired persists preferred|optional', () => {
+  const home = mkTmp('sage-jd-w-')
+  fs.mkdirSync(sageHome(home), { recursive: true })
+  writeJudgeDesired(home, 'preferred')
+  assert.equal(readJudgeDesiredFromHome(home).desired, 'preferred')
+  writeJudgeDesired(home, 'optional')
+  assert.equal(readJudgeDesiredFromHome(home).desired, 'optional')
+  assert.throws(() => writeJudgeDesired(home, 'always'), /preferred\|optional/)
 })

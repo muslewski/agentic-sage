@@ -75,15 +75,28 @@ sage judge run                  # auto scope + harness (grok → claude → fact
 
 Recipe: **[Live judge](./docs/recipes/live-judge.md)** · skill `sage-judge` · concept [Fleet judge](./docs/concepts/fleet-judge.md).
 
-## Quickstart
+**Desk gate (optional):** Atlas repos use `"predev": "atlas gate"`. SAGE soft-checks via SessionStart / `sage gate` when preferred — not forced into predev. Dual soft runner: [`scripts/desk-gate.mjs`](./scripts/desk-gate.mjs).
+
+## 5-minute install
 
 ```bash
-npm install -g agentic-sage
-sage init               # interactive wizard — 4 questions, safe defaults: global + OFF
-sage on                 # opt in (skip if you enabled during the wizard)
-sage doctor             # ✓/✗ per check
-# optional elevation:
-sage judge run          # living passive judge for this desk/repo
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # wire Claude+Grok; enable now
+# or: sage init … then sage on
+
+sage judge desired preferred   # optional: soft offline warns when live judge missing
+# sage judge desired optional  # product default — CLI facts only, no offline noise
+
+sage gate                      # soft: install freshness + preferred-judge offline
+sage doctor                    # ✓/✗ per check
+sage judge run                 # optional living mind (layer 2)
+```
+
+## Update path
+
+```bash
+npm i -g agentic-sage@latest && sage init --repair
+sage gate
 ```
 
 `sage init` asks **scope** (global vs this-project-only), **harness**, **storage**, and
@@ -163,7 +176,7 @@ abort on malformed JSON · never auto-enable; Grok reads this by default via com
 
 | Hook event | What SAGE does on it |
 |---|---|
-| `SessionStart` | record/refresh this session; the one optional one-line fleet brief |
+| `SessionStart` | record/refresh this session; up to **2** soft inject lines (preferred offline > fleet peers > wired lag) |
 | `UserPromptSubmit` | refresh liveness/timestamp |
 | `PostToolUse` | refresh liveness timestamp (throttled to ~1/30 s) |
 | `Stop` | last-turn-fresh record (survives `/clear`) |
@@ -195,9 +208,9 @@ which rule matched for the current repo.
 **Option 1 — global npm (recommended):**
 
 ```bash
-npm install -g agentic-sage
-sage init                    # wizard, or --global/--project — see AGENTS.md for flags
-sage on                      # enable globally (default OFF)
+npm i -g agentic-sage@latest
+sage init --global --harness both --enable   # or wizard: sage init then sage on
+sage gate && sage doctor
 ```
 
 **Option 2 — Grok Build plugin** (skills + session hooks in the Plugins UI):

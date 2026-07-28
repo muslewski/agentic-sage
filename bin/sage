@@ -150,6 +150,7 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   judge publish        stdin JSON → atomic brief write (skill loop)
   judge run [--auto|--fleet|--repo] [--harness auto|grok|claude|none]
             [--once] [--takeover] [--print-only]  start live judge (easy path)
+  judge desired [preferred|optional]  desk preference (soft offline warns when preferred)
   about --tmux <session> [--json]   facts + judge one-liner for a tmux session (ferry)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
@@ -1512,6 +1513,27 @@ const main = async () => {
             (brief.session_lines?.length
               ? ` · ${brief.session_lines.length} session_lines`
               : ''),
+        )
+      }
+
+      if (sub === 'desired') {
+        const { readJudgeDesiredFromHome, writeJudgeDesired } = await import(
+          '../lib/judge-desired.mjs'
+        )
+        const mode = a2
+        if (!mode) {
+          const p = readJudgeDesiredFromHome(home)
+          return console.log(`sage judge.desired=${p.desired}`)
+        }
+        if (mode !== 'preferred' && mode !== 'optional') {
+          return console.log('usage: sage judge desired [preferred|optional]')
+        }
+        writeJudgeDesired(home, mode)
+        return console.log(
+          `sage: judge.desired=${mode}` +
+            (mode === 'preferred'
+              ? ' · soft offline warns on SessionStart / doctor / gate'
+              : ' · CLI facts only; no offline-judge noise'),
         )
       }
 
