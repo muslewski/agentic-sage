@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 * **emit:** SessionStart soft lines cap at 2 — preferred offline > fleet peers > wired lag (`state.json` vs package); no registry probe; fail-open
+## [1.3.1](https://github.com/muslewski/agentic-sage/compare/v1.3.0...v1.3.1) (2026-07-28)
+
+### Bug Fixes
+
+* **judge:** pass interactive initial PROMPT to grok/claude on `sage judge run` (empty TUI / instant exit)
+
 ## [1.3.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.2.0...agentic-sage-v1.3.0) (2026-07-28)### Features
 * **desk-gate:** resolve PATH + local `node_modules/.bin`; walk ancestors for `atlas.config.json`; quiet fail-open when tools missing; export `runDeskGate` for tests; `--strict` only fails present gates
 * **fleet-wire-desk:** alias script → `fleet-desk-wire.mjs` (preferred judge + adapters + pointers + predev)
