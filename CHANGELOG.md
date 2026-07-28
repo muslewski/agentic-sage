@@ -9,18 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-<<<<<<< HEAD
-=======
 ### Features
-
 * **desk-gate:** resolve PATH + local `node_modules/.bin`; walk ancestors for `atlas.config.json`; quiet fail-open when tools missing; export `runDeskGate` for tests; `--strict` only fails present gates
 * **fleet-wire-desk:** alias script → `fleet-desk-wire.mjs` (preferred judge + adapters + pointers + predev)
-
-
-## [1.3.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.2.0...agentic-sage-v1.3.0) (2026-07-28)
-
->>>>>>> dd67a14 (feat(desk): OSS dual desk-gate + fleet-wire-desk alias)
-### Features
+## [1.3.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.2.0...agentic-sage-v1.3.0) (2026-07-28)### Features
 
 * **fleet-follow:** `judge.desired` `optional`|`preferred` in global config — preferred soft-warns when live judge / fresh brief missing (SessionStart, doctor, `sage gate`); never hard-fails
 * **gate:** `sage gate [--strict]` — install freshness (wired version stamp + npm latest TTL) + preferred-offline soft line; `--strict` fails freshness only
