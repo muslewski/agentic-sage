@@ -24,6 +24,7 @@ import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
 import { evaluateJudgeDesire, preferredOfflineLine } from '../lib/judge-desired.mjs'
+import { packageVersion, readInstallState } from '../lib/install-state.mjs'
 import {
   tmuxPanes,
   paneForPid,
@@ -242,9 +243,22 @@ const main = async () => {
       if (brief) fs.writeSync(1, `sage: ${brief}\n`)
       // Fleet-follow: soft preferred-offline nudge (always exit 0; optional desire silent).
       try {
+        // Cap SessionStart inject to 2 lines: preferred offline > fleet lag (fleet line already above).
+        let lines = 0
+        if (brief) lines++
         const desire = evaluateJudgeDesire(home, { now, repoId })
-        if (desire.shouldWarn) {
+        if (desire.shouldWarn && lines < 2) {
           fs.writeSync(1, `sage: ${preferredOfflineLine()}\n`)
+          lines++
+        } else if (lines < 2) {
+          const st = readInstallState(home)
+          const ver = packageVersion()
+          if (st?.wiredVersion && st.wiredVersion !== ver) {
+            fs.writeSync(
+              1,
+              `sage: update — installed ${ver}, wired ${st.wiredVersion} — run: sage init --repair\n`,
+            )
+          }
         }
       } catch {
         /* fail-open */

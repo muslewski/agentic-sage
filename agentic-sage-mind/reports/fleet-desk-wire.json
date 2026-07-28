@@ -1,0 +1,597 @@
+{
+  "at": "2026-07-28T13:24:44.738Z",
+  "dryRun": false,
+  "reposRoot": "/home/kento/Repositories",
+  "sageRoot": "/home/kento/Repositories/agentic-sage",
+  "targets": [
+    "7-liceum-bydgoszcz",
+    "agentic-sage",
+    "agentic-sage-site",
+    "delieta",
+    "eve",
+    "eventizer",
+    "fleet-marketing-sites",
+    "fleet-site-ships",
+    "green-ui-kit",
+    "grzybniety",
+    "hermes",
+    "llm-armory",
+    "memory-atlas",
+    "mossferry",
+    "muslewski",
+    "muslewski-v3",
+    "nightshift-glow-studio",
+    "ogrody-kryscar",
+    "personal-knowledge-base",
+    "pol-med-v4",
+    "scentloop",
+    "status-herald",
+    "stream-engine",
+    "syndcast",
+    "token-oracle",
+    "work-kb",
+    "yours-fairy-tale"
+  ],
+  "steps": {
+    "preferredJudge": {
+      "status": 0,
+      "error": null
+    },
+    "dropAdapters": {
+      "status": 0,
+      "error": null
+    },
+    "pointers": [
+      {
+        "name": "7-liceum-bydgoszcz",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/7-liceum-bydgoszcz/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/7-liceum-bydgoszcz/AGENTS.md"
+        }
+      },
+      {
+        "name": "agentic-sage",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/agentic-sage/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/agentic-sage/AGENTS.md"
+        }
+      },
+      {
+        "name": "agentic-sage-site",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/agentic-sage-site/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/agentic-sage-site/AGENTS.md"
+        }
+      },
+      {
+        "name": "delieta",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/delieta/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/delieta/AGENTS.md"
+        }
+      },
+      {
+        "name": "eve",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/eve/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/eve/AGENTS.md"
+        }
+      },
+      {
+        "name": "eventizer",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/eventizer/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/eventizer/AGENTS.md"
+        }
+      },
+      {
+        "name": "fleet-marketing-sites",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/fleet-marketing-sites/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/fleet-marketing-sites/AGENTS.md"
+        }
+      },
+      {
+        "name": "fleet-site-ships",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/fleet-site-ships/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/fleet-site-ships/AGENTS.md"
+        }
+      },
+      {
+        "name": "green-ui-kit",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/green-ui-kit/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/green-ui-kit/AGENTS.md"
+        }
+      },
+      {
+        "name": "grzybniety",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/grzybniety/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/grzybniety/AGENTS.md"
+        }
+      },
+      {
+        "name": "hermes",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/hermes/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/hermes/AGENTS.md"
+        }
+      },
+      {
+        "name": "llm-armory",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/llm-armory/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/llm-armory/AGENTS.md"
+        }
+      },
+      {
+        "name": "memory-atlas",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/memory-atlas/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/memory-atlas/AGENTS.md"
+        }
+      },
+      {
+        "name": "mossferry",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/mossferry/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/mossferry/AGENTS.md"
+        }
+      },
+      {
+        "name": "muslewski",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/muslewski/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/muslewski/AGENTS.md"
+        }
+      },
+      {
+        "name": "muslewski-v3",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/muslewski-v3/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/muslewski-v3/AGENTS.md"
+        }
+      },
+      {
+        "name": "nightshift-glow-studio",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/nightshift-glow-studio/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/nightshift-glow-studio/AGENTS.md"
+        }
+      },
+      {
+        "name": "ogrody-kryscar",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/ogrody-kryscar/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/ogrody-kryscar/AGENTS.md"
+        }
+      },
+      {
+        "name": "personal-knowledge-base",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/personal-knowledge-base/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/personal-knowledge-base/AGENTS.md"
+        }
+      },
+      {
+        "name": "pol-med-v4",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/pol-med-v4/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/pol-med-v4/AGENTS.md"
+        }
+      },
+      {
+        "name": "scentloop",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/scentloop/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/scentloop/AGENTS.md"
+        }
+      },
+      {
+        "name": "status-herald",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/status-herald/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/status-herald/AGENTS.md"
+        }
+      },
+      {
+        "name": "stream-engine",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/stream-engine/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/stream-engine/AGENTS.md"
+        }
+      },
+      {
+        "name": "syndcast",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/syndcast/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/syndcast/AGENTS.md"
+        }
+      },
+      {
+        "name": "token-oracle",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/token-oracle/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/token-oracle/AGENTS.md"
+        }
+      },
+      {
+        "name": "work-kb",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/work-kb/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/work-kb/AGENTS.md"
+        }
+      },
+      {
+        "name": "yours-fairy-tale",
+        "claude": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/yours-fairy-tale/CLAUDE.md"
+        },
+        "agents": {
+          "action": "skip",
+          "path": "/home/kento/Repositories/yours-fairy-tale/AGENTS.md"
+        }
+      }
+    ],
+    "predev": [
+      {
+        "name": "7-liceum-bydgoszcz",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "agentic-sage",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "agentic-sage-site",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate && node scripts/build-docs.mjs",
+        "before": "atlas gate && node scripts/build-docs.mjs"
+      },
+      {
+        "name": "delieta",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "eve",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "eventizer",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "fleet-marketing-sites",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "fleet-site-ships",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "green-ui-kit",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "grzybniety",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "hermes",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "llm-armory",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "memory-atlas",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "mossferry",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "muslewski",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "muslewski-v3",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "nightshift-glow-studio",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "ogrody-kryscar",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "personal-knowledge-base",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "pol-med-v4",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "scentloop",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "status-herald",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "stream-engine",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "syndcast",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "token-oracle",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "work-kb",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      },
+      {
+        "name": "yours-fairy-tale",
+        "action": "wrote",
+        "changes": [
+          "add //sage-gate note"
+        ],
+        "predev": "atlas gate",
+        "before": "atlas gate"
+      }
+    ]
+  },
+  "summary": {
+    "preferredJudgeOk": true,
+    "dropAdaptersOk": true,
+    "pointersWrote": 0,
+    "pointersSkipped": 27,
+    "predevWrote": 27,
+    "predevSkipped": 0
+  }
+}

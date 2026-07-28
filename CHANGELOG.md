@@ -26,6 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **Codex plugin:** `.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json`
 * **Gemini:** `docs/gemini-cli-setup.md` + `templates/GEMINI.snippet.md`
 
+## [1.3.0](https://github.com/muslewski/agentic-sage/compare/v1.2.0...v1.3.0) (2026-07-28)
+
+### Features
+
+* **fleet-follow:** `judge.desired` optional|preferred — soft offline warns (SessionStart, doctor, `sage gate`); never hard-fail coding
+* **gate:** `sage gate [--strict]` — install freshness (wired stamp + npm latest) + preferred soft line
+* **telemetry:** local debug JSONL (`sage telemetry *`); default OFF
+* **desk:** `scripts/desk-gate.mjs` dual atlas+sage soft gate; `scripts/fleet-desk-wire.mjs` one-shot desk adopt
+* **fleet scripts:** preferred judge, atlas adapter drop, CLAUDE/AGENTS pointers
+* **SessionStart:** preferred offline + soft install lag (max 2 inject lines)
+* **docs:** SETUP update path + pair with memory-atlas (past + present)
+
+### Fixes
+
+* **doctor:** live judge row reflects preferred/satisfied; atlas vault without adapter soft hint
+
 ## [1.2.0](https://github.com/muslewski/agentic-sage/compare/agentic-sage-v1.1.1...agentic-sage-v1.2.0) (2026-07-23)
 
 ### Features

@@ -1,3 +1,7 @@
+<!-- sage-fleet-pointer -->
+**Parallel sessions** — other agent sessions may run concurrently. Before claiming work or opening a PR, use the `sage-fleet` skill (collision check → claim → merge brief). SAGE off/absent ⇒ silent no-op.
+<!-- /sage-fleet-pointer -->
+
 <!-- atlas:onramp v0.1 -->
 ### Working with the Atlas (`agentic-sage-mind/`)
 
