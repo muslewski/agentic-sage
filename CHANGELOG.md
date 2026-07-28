@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+* **fleet-follow:** `judge.desired` `optional`|`preferred` in global config — preferred soft-warns when live judge / fresh brief missing (SessionStart, doctor, `sage gate`); never hard-fails
+* **gate:** `sage gate [--strict]` — install freshness (wired version stamp + npm latest TTL) + preferred-offline soft line; `--strict` fails freshness only
+* **telemetry:** local debug JSONL (`sage telemetry status|report|dump|clear|on|off`); default OFF; enable via `SAGE_TELEMETRY=1` or `~/.config/agentic-sage/config.json`
+* **wire:** stamps `state.json` `wiredVersion` on successful `wireAll` / `wireProject`
+* **scripts:** `fleet-wire-preferred-judge.mjs`, `fleet-drop-atlas-adapter.mjs`
+* **doctor:** live judge row reflects desired/satisfied; atlas vault without adapter soft hint
 * **about:** `sage about --tmux <session> [--json]` — facts + judge one-liners for ferry navigation
 * **brief:** `session_lines` auto-filled by fact `sage judge run` / `buildFactBrief`
 * **topic awareness:** `session_lines[].fingerprint` (branch|window|claims); `about` hides ⚖ when topic pivots or when judge text is a facts clone; `judge publish` auto-fills or stamps fingerprints so lines stay relevant

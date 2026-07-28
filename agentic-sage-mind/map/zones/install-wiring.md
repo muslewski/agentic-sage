@@ -1,10 +1,10 @@
 ---
 type: zone
-summary: "Install and teardown — `install.mjs`, `sage init` wizard, conservative settings.json / Grok hook merge (`wiring`), harness profiles, postinstall, verify-fleet script, and surgical `uninstall/`."
-tags: [install, wiring, init]
+summary: "Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter scripts, verify-fleet, uninstall."
+tags: [install, wiring, init, fleet]
 status: seeded
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-28
 verifiedAt: unverified
 owns:
   routes: []
@@ -15,6 +15,7 @@ owns:
     - "lib/wiring.mjs"
     - "lib/init.mjs"
     - "lib/harness.mjs"
+    - "lib/install-state.mjs"
     - "scripts/**"
   tools: []
 depends: []
@@ -26,7 +27,7 @@ sources: []
 
 ## What this is
 
-How SAGE attaches to a machine or repo: symlink emitter, merge seven lifecycle hooks into Claude settings (backup once, skip-if-present, abort on malformed JSON), optional Grok hook file, skill symlinks, tmux `bind j` popup, interactive/non-interactive init (scope × storage × enable), repair/rename of legacy `~/.claude/sage`, and reversible uninstall.
+How SAGE attaches to a machine or repo: symlink emitter, merge seven lifecycle hooks into Claude settings (backup once, skip-if-present, abort on malformed JSON), optional Grok hook file, skill symlinks, tmux `bind j` popup, interactive/non-interactive init (scope × storage × enable), repair/rename of legacy `~/.claude/sage`, and reversible uninstall. Successful `wireAll`/`wireProject` stamps `~/.claude/agentic-sage/state.json` `wiredVersion` for package-freshness Tier A. Fleet helpers: `scripts/fleet-wire-preferred-judge.mjs`, `scripts/fleet-drop-atlas-adapter.mjs`.
 
 ## Anchors
 

@@ -140,6 +140,8 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   where                this repo's resolved scope, storage dir, and matched rule
   enable | disable     per-repo enable override (independent of global on/off)
   doctor               validate dirs / hook / settings / token-forecast
+  gate [--strict]      soft install freshness + preferred-judge offline warn
+  telemetry …          status|report|dump|clear|on|off (local debug; default OFF)
   statusline           the "Asking Sage" status-bar segment (empty unless consulting)
   judge on --fleet|--repo [--takeover]  register THIS session as live judge
   judge off            clear judge role; stale own brief
@@ -1896,6 +1898,35 @@ const main = async () => {
       const who = path.basename(mainRoot || cwd)
       return console.log(`sage: ${label} for ${who} (scope: ${info.scope})`)
     }
+    case 'gate': {
+      const { runGate } = await import('../lib/gate.mjs')
+      const code = runGate(process.argv.slice(3), { home, cwd })
+      process.exitCode = code
+      return
+    }
+    case 'telemetry': {
+      const tel = await import('../lib/telemetry.mjs')
+      const sub = process.argv[3] || 'status'
+      if (sub === 'on') {
+        tel.writeMachineTelemetryConfig({ telemetry: { enabled: true } })
+        return console.log('sage telemetry: ON (machine config)')
+      }
+      if (sub === 'off') {
+        tel.writeMachineTelemetryConfig({ telemetry: { enabled: false } })
+        return console.log('sage telemetry: OFF')
+      }
+      if (sub === 'status') return console.log(tel.telemetryStatusLine())
+      if (sub === 'report') return console.log(tel.formatReport(tel.readEvents()).trimEnd())
+      if (sub === 'dump') {
+        for (const ev of tel.readEvents()) console.log(JSON.stringify(ev))
+        return
+      }
+      if (sub === 'clear') {
+        tel.clearEvents()
+        return console.log('sage telemetry: cleared events')
+      }
+      return console.log('usage: sage telemetry status|report|dump|clear|on|off')
+    }
     case 'doctor':
       return console.log(renderDoctor(doctor(home, cwd)))
     default:
@@ -1903,4 +1934,34 @@ const main = async () => {
   }
 }
 
-main().catch((e) => console.log(`sage: ${e && e.message ? e.message : 'error'}`))
+const _t0 = Date.now()
+const _cmd = process.argv[2] || ''
+main()
+  .catch((e) => console.log(`sage: ${e && e.message ? e.message : 'error'}`))
+  .finally(async () => {
+    try {
+      if (!_cmd || _cmd === 'telemetry' || _cmd === 'statusline') return
+      const { trackCommand } = await import('../lib/telemetry.mjs')
+      const { resolveRepoRoot } = await import('../lib/repo-id.mjs')
+      let judgeDesired = null
+      let judgeSatisfied = null
+      try {
+        const { evaluateJudgeDesire } = await import('../lib/judge-desired.mjs')
+        const { resolveRepoId } = await import('../lib/repo-id.mjs')
+        const ev = evaluateJudgeDesire(os.homedir(), { repoId: resolveRepoId(process.cwd()) })
+        judgeDesired = ev.desired
+        judgeSatisfied = ev.satisfied
+      } catch {}
+      trackCommand({
+        cmd: _cmd,
+        argv: process.argv.slice(3),
+        exit: typeof process.exitCode === 'number' ? process.exitCode : 0,
+        ms: Date.now() - _t0,
+        repoRoot: resolveRepoRoot(process.cwd()),
+        judgeDesired,
+        judgeSatisfied,
+      })
+    } catch {
+      /* fail-open */
+    }
+  })

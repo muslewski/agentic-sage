@@ -1,10 +1,10 @@
 ---
 type: zone
-summary: "Read-side fleet judge — board roster, cross-repo fleet/repos HUD, territory/why-diverged/merge-brief collision checks, git numstat signals, backlog claim rows, asking stamps, optional live-judge brief attach, doctor/control, and optional PreToolUse guard policy."
-tags: [board, territory, fleet, guard, live-judge]
+summary: "Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF."
+tags: [board, territory, fleet, guard, live-judge, preferred]
 status: seeded
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-28
 verifiedAt: unverified
 owns:
   routes: []
@@ -19,6 +19,11 @@ owns:
     - "lib/control.mjs"
     - "lib/guard.mjs"
     - "lib/brief.mjs"
+    - "lib/judge-desired.mjs"
+    - "lib/gate.mjs"
+    - "lib/package-freshness.mjs"
+    - "lib/install-state.mjs"
+    - "lib/telemetry.mjs"
   tools: []
 depends: []
 invariants: []
@@ -30,6 +35,8 @@ sources: []
 ## What this is
 
 Universal-core answers to "who is doing what" and "am I about to collide": collect/partition sessions, render board lines, fleet one-liners and repos atlas, glob-overlap territory, cross-branch why-diverged / merge-brief, git worktree signals, backlog row helpers, "Asking Sage" statusline stamps, doctor checks + on/off/link control, the default-OFF guard path matcher (emitter enforces), and optional **live judge** continuous briefs (`lib/brief.mjs`, `sage judge *`) layered on consult output when a special session has published a fresh brief. Core stays deterministic; the live session is the optional reasoning mind.
+
+**Fleet-follow (2026-07-28):** `judge.desired` is `optional` (product default — no offline noise) or `preferred` (soft warn on SessionStart / doctor / `sage gate` when no live judge and no attachable brief). Preferred-offline never fails exit codes. `sage gate` also reports install freshness (wired stamp + npm latest).
 
 ## Anchors
 
