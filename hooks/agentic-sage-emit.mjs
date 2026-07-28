@@ -24,7 +24,8 @@ import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
 import { evaluateJudgeDesire, preferredOfflineLine } from '../lib/judge-desired.mjs'
-import { packageVersion, readInstallState } from '../lib/install-state.mjs'
+import { wiredLagSoftLine } from '../lib/package-freshness.mjs'
+import { selectSessionStartSoftLines } from '../lib/session-start-soft.mjs'
 import {
   tmuxPanes,
   paneForPid,
@@ -231,37 +232,34 @@ const main = async () => {
         source: payload.source || null,
         at,
       })
-      // The one sanctioned auto-injection (design §10.3): a one-line fleet brief.
-      // SessionStart-only, only when other sessions exist (never noise when solo).
-      // Inside main()'s try/catch (fail-open) and behind the enable gate above;
-      // core-only (no adapter load) to keep the hot path cheap. stdout on a
-      // SessionStart hook is injected as session context by Claude Code.
-      const brief = fleetLine(collectSessions(home, repoId, now), { selfSid: sid })
-      // Synchronous write, not a buffered stdout call: stdout on a hook is a
-      // pipe, and the trailing process.exit(0) could truncate a buffered
-      // write — same hardening as the guard's stderr.
-      if (brief) fs.writeSync(1, `sage: ${brief}\n`)
-      // Fleet-follow: soft preferred-offline nudge (always exit 0; optional desire silent).
+      // Soft SessionStart inject (OSS): at most 2 lines, fail-open.
+      // Priority: preferred offline > fleet peers > wired freshness (no npm registry).
+      // stdout is injected as session context; writeSync so exit(0) cannot truncate.
       try {
-        // Cap SessionStart inject to 2 lines: preferred offline > fleet lag (fleet line already above).
-        let lines = 0
-        if (brief) lines++
-        const desire = evaluateJudgeDesire(home, { now, repoId })
-        if (desire.shouldWarn && lines < 2) {
-          fs.writeSync(1, `sage: ${preferredOfflineLine()}\n`)
-          lines++
-        } else if (lines < 2) {
-          const st = readInstallState(home)
-          const ver = packageVersion()
-          if (st?.wiredVersion && st.wiredVersion !== ver) {
-            fs.writeSync(
-              1,
-              `sage: update — installed ${ver}, wired ${st.wiredVersion} — run: sage init --repair\n`,
-            )
-          }
+        let preferred = ''
+        try {
+          const desire = evaluateJudgeDesire(home, { now, repoId })
+          if (desire.shouldWarn) preferred = preferredOfflineLine()
+        } catch {
+          /* fail-open */
+        }
+        let fleet = ''
+        try {
+          fleet = fleetLine(collectSessions(home, repoId, now), { selfSid: sid }) || ''
+        } catch {
+          /* fail-open */
+        }
+        let freshness = ''
+        try {
+          freshness = wiredLagSoftLine(home) || ''
+        } catch {
+          /* fail-open */
+        }
+        for (const line of selectSessionStartSoftLines([preferred, fleet, freshness])) {
+          fs.writeSync(1, `${line}\n`)
         }
       } catch {
-        /* fail-open */
+        /* fail-open — never block SessionStart */
       }
       break
     }
