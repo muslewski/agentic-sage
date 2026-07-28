@@ -37,6 +37,34 @@ sage judge run --repo --harness none --once   # fact brief, no LLM
 sage judge run --print-only                   # paste kit only
 ```
 
+### Prefer live judge (fleet desk)
+
+Public default is **optional** (CLI-only is fine — no offline noise). For a desk that
+*wants* a living judge, set preference and keep soft warnings:
+
+```json
+{
+  "enabled": true,
+  "judge": {
+    "desired": "preferred",
+    "warnIfOffline": true,
+    "scope": "auto",
+    "harness": "auto"
+  }
+}
+```
+
+Or: `node scripts/fleet-wire-preferred-judge.mjs` (optional `--telemetry`).
+
+When preferred and offline, SessionStart / `sage doctor` / `sage gate` print a **soft**
+line (`live judge preferred · offline — run: sage judge run`). Exit code stays 0 —
+coding is never blocked. `sage gate --strict` fails only on install/freshness lag, never
+on preferred-offline.
+
+Check: `sage gate` · start mind: `sage judge run --fleet` (or `--harness none` for cheap fact briefs).
+
+### Launcher config
+
 Config (optional) in `~/.claude/agentic-sage/config.json`:
 
 ```json

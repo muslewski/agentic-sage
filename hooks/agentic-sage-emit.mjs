@@ -23,6 +23,7 @@ import { autoDump } from '../lib/handoff.mjs'
 import { isAlive } from '../lib/liveness.mjs'
 import { collectSessions } from '../lib/board.mjs'
 import { fleetLine } from '../lib/fleet.mjs'
+import { evaluateJudgeDesire, preferredOfflineLine } from '../lib/judge-desired.mjs'
 import {
   tmuxPanes,
   paneForPid,
@@ -239,6 +240,15 @@ const main = async () => {
       // pipe, and the trailing process.exit(0) could truncate a buffered
       // write — same hardening as the guard's stderr.
       if (brief) fs.writeSync(1, `sage: ${brief}\n`)
+      // Fleet-follow: soft preferred-offline nudge (always exit 0; optional desire silent).
+      try {
+        const desire = evaluateJudgeDesire(home, { now, repoId })
+        if (desire.shouldWarn) {
+          fs.writeSync(1, `sage: ${preferredOfflineLine()}\n`)
+        }
+      } catch {
+        /* fail-open */
+      }
       break
     }
 
