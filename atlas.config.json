@@ -76,5 +76,9 @@
     "tasks": [
       "gardening"
     ]
+  },
+  "telemetry": {
+    "enabled": true,
+    "level": "debug"
   }
 }
