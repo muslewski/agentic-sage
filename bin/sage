@@ -83,6 +83,7 @@ import {
 import { resolveSelfSid } from '../lib/self.mjs'
 import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
 import { registerSession, heartbeatSession, closeSession } from '../lib/register.mjs'
+import { rollupSessions } from '../lib/rollup.mjs'
 import { isEnabled } from '../lib/enabled.mjs'
 import { globalConfig, sessionFile } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
@@ -121,7 +122,7 @@ const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
-  board [--watch] [--wide|-w] [--all] [--json]  live-first roster; --all expands archive
+  board [--watch] [--wide|-w] [--all] [--flat] [--json]  live-first roster; --all expands archive
   register [--sid <id>] …               declare a session (C4 push; any launcher)
   war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
   fleet [--json]                         one-line nearest-neighbour summary
@@ -973,6 +974,7 @@ const main = async () => {
       const watch = flags.includes('--watch')
       const wide = flags.includes('--wide') || flags.includes('-w')
       const showAll = flags.includes('--all')
+      const flat = flags.includes('--flat')
       const json = flags.includes('--json')
       if (json && watch) {
         console.error('sage: --json and --watch are mutually exclusive')
@@ -986,6 +988,7 @@ const main = async () => {
             generated_at: new Date().toISOString(),
             repo_id: null,
             sessions: [],
+            groups: [],
           }))
         }
         return console.log("sage: not a git repo — try 'sage war' for the fleet view")
@@ -1003,12 +1006,17 @@ const main = async () => {
       }
       if (json) {
         const sessions = buildSessions()
+        // Machine consumers get the COMPLETE ungrouped list + a groups array
+        // they can ignore. Never send a lossy sessions list over --json.
+        const { live } = partitionSessions(sessions)
+        const groups = showAll || flat ? [] : rollupSessions(live).groups
         return console.log(JSON.stringify({
           schema: 1,
           kind: 'sage.board',
           generated_at: new Date().toISOString(),
           repo_id: repoId,
           sessions,
+          groups,
         }))
       }
       // render(sessions, frame): frame == null → static (no spinner). Data
@@ -1019,7 +1027,7 @@ const main = async () => {
         return Number.isFinite(c) && c >= 40 ? c : undefined
       }
       const render = (sessions, frame) => {
-        const text = renderBoard(sessions, { repoId, wide, all: showAll, cols: termCols() })
+        const text = renderBoard(sessions, { repoId, wide, all: showAll, flat, cols: termCols() })
         return frame == null ? text : spinnerize(text, sessions, frame)
       }
       // --watch animates, but only on a real TTY; piped/non-TTY → one static frame.
