@@ -3,6 +3,7 @@
 <!-- /sage-fleet-pointer -->
 
 # AGENTS.md — setting up SAGE (for the agent doing it)
+<!-- desk:ship=human-end-gate -->
 
 You're reading this because someone cloned **agentic-sage** and asked you (an AI coding agent such as Grok Build CLI or Claude Code) to
 **set it up for their repo**. This file is the runbook. It works *before* anything is installed —
