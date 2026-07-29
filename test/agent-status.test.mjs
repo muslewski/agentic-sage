@@ -8,6 +8,7 @@ import {
   agentStatusDir,
   readAgentStatusRecords,
   toSyntheticSession,
+  mergeSynthetic,
 } from '../lib/agent-status.mjs'
 
 const REC = {
@@ -101,4 +102,30 @@ test('toSyntheticSession tolerates a record with no pid', () => {
     repoId: 'work-abc12345',
   })
   assert.equal(s, null)
+})
+
+test('mergeSynthetic drops a synthetic row when a real record has the same pid', () => {
+  const real = [{ session_id: 'abc', pid: 111, touched_globs: ['src/a.ts'] }]
+  const syn = [
+    { session_id: 'armory:grok-pid111', pid: 111, synthetic: true },
+    { session_id: 'armory:grok-pid222', pid: 222, synthetic: true },
+  ]
+  const out = mergeSynthetic(real, syn)
+  assert.equal(out.length, 2)
+  assert.equal(out.filter((r) => r.pid === 111).length, 1)
+  assert.equal(out.find((r) => r.pid === 111).session_id, 'abc')
+  assert.equal(out.find((r) => r.pid === 222).synthetic, true)
+})
+
+test('mergeSynthetic is a no-op on empty synthetic input', () => {
+  const real = [{ session_id: 'abc', pid: 111 }]
+  assert.deepEqual(mergeSynthetic(real, []), real)
+})
+
+test('mergeSynthetic sorts newest updated_at first, matching collectSessions', () => {
+  const out = mergeSynthetic(
+    [{ session_id: 'a', pid: 1, updated_at: '2026-07-29T10:00:00.000Z' }],
+    [{ session_id: 'armory:b', pid: 2, updated_at: '2026-07-29T12:00:00.000Z', synthetic: true }],
+  )
+  assert.equal(out[0].session_id, 'armory:b')
 })
