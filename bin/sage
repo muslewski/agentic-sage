@@ -16,7 +16,7 @@ import {
   fzfLine,
   jumpHint,
 } from '../lib/board.mjs'
-import { planPrune } from '../lib/prune.mjs'
+import { planPrune, pruneAll } from '../lib/prune.mjs'
 import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
   setEnabled,
@@ -82,6 +82,8 @@ import {
 } from '../lib/guard.mjs'
 import { resolveSelfSid } from '../lib/self.mjs'
 import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
+import { registerSession, heartbeatSession, closeSession } from '../lib/register.mjs'
+import { rollupSessions } from '../lib/rollup.mjs'
 import { isEnabled } from '../lib/enabled.mjs'
 import { globalConfig, sessionFile } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
@@ -120,7 +122,8 @@ const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
-  board [--watch] [--wide|-w] [--all] [--json]  live-first roster; --all expands archive
+  board [--watch] [--wide|-w] [--all] [--flat] [--json]  live-first roster; --all expands archive
+  register [--sid <id>] …               declare a session (C4 push; any launcher)
   war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
@@ -150,6 +153,7 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   judge publish        stdin JSON → atomic brief write (skill loop)
   judge run [--auto|--fleet|--repo] [--harness auto|grok|claude|none]
             [--once] [--takeover] [--print-only]  start live judge (easy path)
+  prune [--all] [--older-than <d>] [--dry-run] [--yes] [--json]  drop old closed sessions
   about --tmux <session> [--json]   facts + judge one-liner for a tmux session (ferry)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
@@ -971,6 +975,7 @@ const main = async () => {
       const watch = flags.includes('--watch')
       const wide = flags.includes('--wide') || flags.includes('-w')
       const showAll = flags.includes('--all')
+      const flat = flags.includes('--flat')
       const json = flags.includes('--json')
       if (json && watch) {
         console.error('sage: --json and --watch are mutually exclusive')
@@ -984,6 +989,7 @@ const main = async () => {
             generated_at: new Date().toISOString(),
             repo_id: null,
             sessions: [],
+            groups: [],
           }))
         }
         return console.log("sage: not a git repo — try 'sage war' for the fleet view")
@@ -1001,12 +1007,17 @@ const main = async () => {
       }
       if (json) {
         const sessions = buildSessions()
+        // Machine consumers get the COMPLETE ungrouped list + a groups array
+        // they can ignore. Never send a lossy sessions list over --json.
+        const { live } = partitionSessions(sessions)
+        const groups = showAll || flat ? [] : rollupSessions(live).groups
         return console.log(JSON.stringify({
           schema: 1,
           kind: 'sage.board',
           generated_at: new Date().toISOString(),
           repo_id: repoId,
           sessions,
+          groups,
         }))
       }
       // render(sessions, frame): frame == null → static (no spinner). Data
@@ -1017,7 +1028,7 @@ const main = async () => {
         return Number.isFinite(c) && c >= 40 ? c : undefined
       }
       const render = (sessions, frame) => {
-        const text = renderBoard(sessions, { repoId, wide, all: showAll, cols: termCols() })
+        const text = renderBoard(sessions, { repoId, wide, all: showAll, flat, cols: termCols() })
         return frame == null ? text : spinnerize(text, sessions, frame)
       }
       // --watch animates, but only on a real TTY; piped/non-TTY → one static frame.
@@ -1210,11 +1221,35 @@ const main = async () => {
       )
     }
     case 'prune': {
+      const flags = process.argv.slice(3)
+      const all = flags.includes('--all')
+      const dryRun = flags.includes('--dry-run')
+      const json = flags.includes('--json')
+      // accept both --days (legacy) and --older-than (fleet-wide contract)
+      let days = 7
+      const dIdx = flags.indexOf('--days')
+      const oIdx = flags.indexOf('--older-than')
+      if (oIdx >= 0) days = Number(flags[oIdx + 1]) || 14
+      else if (dIdx >= 0) days = Number(flags[dIdx + 1]) || 7
+      else if (all) days = 14
+
+      if (all) {
+        const result = pruneAll(home, {
+          olderThanDays: days,
+          dryRun: dryRun || !flags.includes('--yes'),
+          now: Date.now(),
+        })
+        // default for --all is dry-run unless --yes (safety); --dry-run forces it
+        if (json) return console.log(JSON.stringify(result))
+        const mode = dryRun || !flags.includes('--yes') ? 'would prune' : 'pruned'
+        return console.log(
+          `sage: ${mode} fleet-wide — repos ${result.repos}, sessions ${result.sessions}, events ${result.events}, dirs ${result.dirs}` +
+            (dryRun || !flags.includes('--yes') ? ' (dry-run; pass --yes to delete)' : ''),
+        )
+      }
+
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
-      const flags = process.argv.slice(3)
-      const dIdx = flags.indexOf('--days')
-      const days = dIdx >= 0 ? Number(flags[dIdx + 1]) || 7 : 7
       const yes = flags.includes('--yes')
       const sessions = collectSessions(home, repoId, Date.now())
       const { remove } = planPrune(sessions, { days, now: Date.now() })
@@ -1553,6 +1588,73 @@ const main = async () => {
         } else lines.push('  repo:  (not in a git repo)')
         return console.log(lines.join('\n'))
       }
+    }
+    case 'register': {
+      // C4 push contract — any launcher declares a session without a harness
+      // hook. Soft-fail (not a repo, store error) → exit 0. Usage error → exit 2.
+      const flags = process.argv.slice(3)
+      const flag = (name) => {
+        const i = flags.indexOf(name)
+        if (i < 0) return undefined
+        const v = flags[i + 1]
+        if (v === undefined || v.startsWith('-')) return undefined
+        return v
+      }
+      const json = flags.includes('--json')
+      let sub = 'open'
+      if (a1 === 'heartbeat' || a1 === 'close') sub = a1
+      const sid = flag('--sid')
+      if (!sid) {
+        console.error(
+          'usage: sage register --sid <id> [--pid <n>] [--cwd <path>] [--parent <sid>] [--kind …] [--lane …] [--fleet-run …] [--corr …] [--by …] [--json]\n' +
+            '       sage register heartbeat --sid <id> [--cwd <path>] [--json]\n' +
+            '       sage register close --sid <id> [--cwd <path>] [--result ok|failed|partial] [--json]',
+        )
+        process.exit(2)
+      }
+      const regCwd = flag('--cwd') || cwd
+      let result
+      try {
+        if (sub === 'heartbeat') {
+          result = heartbeatSession({ home, sid, cwd: regCwd, now })
+        } else if (sub === 'close') {
+          result = closeSession({
+            home,
+            sid,
+            cwd: regCwd,
+            result: flag('--result'),
+            now,
+          })
+        } else {
+          const pidRaw = flag('--pid')
+          const pid = pidRaw !== undefined ? Number(pidRaw) : undefined
+          result = registerSession({
+            home,
+            sid,
+            pid: Number.isFinite(pid) ? pid : undefined,
+            cwd: regCwd,
+            kind: flag('--kind'),
+            by: flag('--by'),
+            lane: flag('--lane'),
+            fleet_run: flag('--fleet-run'),
+            corr: flag('--corr'),
+            parent: flag('--parent'),
+            now,
+          })
+        }
+      } catch (e) {
+        // TypeError on missing sid already handled; anything else is soft-fail
+        result = { ok: false, sid, reason: e?.message || String(e) }
+      }
+      if (json) {
+        console.log(JSON.stringify(result))
+      } else if (result.ok) {
+        const verb = sub === 'open' ? 'registered' : sub === 'heartbeat' ? 'heartbeat' : 'closed'
+        console.log(`sage: ${verb} ${sid}${result.repo_id ? ` on ${result.repo_id}` : ''}`)
+      } else {
+        console.log(`sage: register soft-fail — ${result.reason || 'unknown'}`)
+      }
+      process.exit(0)
     }
     case 'claim': {
       const repoId = resolveRepoId(cwd)

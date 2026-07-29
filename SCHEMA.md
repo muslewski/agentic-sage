@@ -17,7 +17,8 @@ unknown fields.
 | `generated_at` | string | ISO-8601 UTC (with milliseconds) |
 | `repo_id` | string\|null | `<basename>-<sha256-8>` of the main repo root; `null` outside a repo |
 | `self_sid` | string\|null | fleet only — the calling session id (when `resolveSelfSid` succeeds); otherwise `null` |
-| `sessions` | array | session objects (newest `updated_at` first) |
+| `sessions` | array | session objects (newest `updated_at` first). Always the **complete, ungrouped** list — machine consumers must never receive a lossy rollup here. |
+| `groups` | array\|undefined | board: LIVE rollup groups when row count exceeds the viewport budget. Each entry: `{ key, kind, label, count, live, dead, sample }`. Absent or `[]` when under budget / `--flat` / `--all`. |
 
 ## Session object
 
@@ -56,7 +57,17 @@ Fields written by the emitter/CLI; absent means never set for that session (no n
 | `row` | string | adapter-resolved backlog row (board enrichment only; absent with no adapter or on fleet) |
 | `tmux` | string | tmux pane id (board enrichment, pid-based; absent when no match or on fleet) |
 
+| `synthetic` | boolean\|undefined | `true` when the row came from a launcher's agent-status record rather than a sage session record. Lossy: no `branch`, no `touched_globs`, no claims. **Excluded from the collision surface** — see below. |
+| `agent_kind` | string\|undefined | `claude` \| `grok` \| `codex` \| other; the child CLI. |
+| `registered_by` | string\|undefined | the tool that declared this session (`llm-armory`, …). |
+| `lane` | string\|undefined | launcher-assigned lane/group name. |
+| `fleet_run` | string\|undefined | launcher-assigned run id; one value per fleet dispatch. |
+| `corr` | string\|undefined | contract C1 correlation id. |
+| `result_class` | string\|undefined | set by `sage register close` (`ok` \| `failed` \| `partial`). |
+
 **Live-only collision surface.** `sage territory`, `sage why-diverged`, and `sage merge-brief` consider only sessions whose `liveness` is `working` \| `idle` \| `stalled`. Dead/closed history is storage — it must not cry wolf. Sessions with `role === "judge"` are also excluded from collision peers (they still appear on board/war).
+
+**Synthetic rows are excluded from `sage territory`, `sage why-diverged`, and `sage merge-brief`.** They have no verified `touched_globs`, so including them would silently assert "this child touched nothing" — a false all-clear on the exact surface that exists to prevent collisions. A real sage record for the same process always wins over a synthetic row (pid precedence; never field-merge).
 
 ### `briefs` on consult envelopes (additive)
 
