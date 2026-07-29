@@ -82,6 +82,7 @@ import {
 } from '../lib/guard.mjs'
 import { resolveSelfSid } from '../lib/self.mjs'
 import { mergeRecord, readRecord, readJson } from '../lib/store.mjs'
+import { registerSession, heartbeatSession, closeSession } from '../lib/register.mjs'
 import { isEnabled } from '../lib/enabled.mjs'
 import { globalConfig, sessionFile } from '../lib/paths.mjs'
 import { markAsking, askingAgeMs, clearAsking } from '../lib/asking.mjs'
@@ -121,6 +122,7 @@ console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? pain
 
 const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
   board [--watch] [--wide|-w] [--all] [--json]  live-first roster; --all expands archive
+  register [--sid <id>] …               declare a session (C4 push; any launcher)
   war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
   fleet [--json]                         one-line nearest-neighbour summary
   territory <glob…>    who else claims/touches these paths (pre-flight)
@@ -1553,6 +1555,73 @@ const main = async () => {
         } else lines.push('  repo:  (not in a git repo)')
         return console.log(lines.join('\n'))
       }
+    }
+    case 'register': {
+      // C4 push contract — any launcher declares a session without a harness
+      // hook. Soft-fail (not a repo, store error) → exit 0. Usage error → exit 2.
+      const flags = process.argv.slice(3)
+      const flag = (name) => {
+        const i = flags.indexOf(name)
+        if (i < 0) return undefined
+        const v = flags[i + 1]
+        if (v === undefined || v.startsWith('-')) return undefined
+        return v
+      }
+      const json = flags.includes('--json')
+      let sub = 'open'
+      if (a1 === 'heartbeat' || a1 === 'close') sub = a1
+      const sid = flag('--sid')
+      if (!sid) {
+        console.error(
+          'usage: sage register --sid <id> [--pid <n>] [--cwd <path>] [--parent <sid>] [--kind …] [--lane …] [--fleet-run …] [--corr …] [--by …] [--json]\n' +
+            '       sage register heartbeat --sid <id> [--cwd <path>] [--json]\n' +
+            '       sage register close --sid <id> [--cwd <path>] [--result ok|failed|partial] [--json]',
+        )
+        process.exit(2)
+      }
+      const regCwd = flag('--cwd') || cwd
+      let result
+      try {
+        if (sub === 'heartbeat') {
+          result = heartbeatSession({ home, sid, cwd: regCwd, now })
+        } else if (sub === 'close') {
+          result = closeSession({
+            home,
+            sid,
+            cwd: regCwd,
+            result: flag('--result'),
+            now,
+          })
+        } else {
+          const pidRaw = flag('--pid')
+          const pid = pidRaw !== undefined ? Number(pidRaw) : undefined
+          result = registerSession({
+            home,
+            sid,
+            pid: Number.isFinite(pid) ? pid : undefined,
+            cwd: regCwd,
+            kind: flag('--kind'),
+            by: flag('--by'),
+            lane: flag('--lane'),
+            fleet_run: flag('--fleet-run'),
+            corr: flag('--corr'),
+            parent: flag('--parent'),
+            now,
+          })
+        }
+      } catch (e) {
+        // TypeError on missing sid already handled; anything else is soft-fail
+        result = { ok: false, sid, reason: e?.message || String(e) }
+      }
+      if (json) {
+        console.log(JSON.stringify(result))
+      } else if (result.ok) {
+        const verb = sub === 'open' ? 'registered' : sub === 'heartbeat' ? 'heartbeat' : 'closed'
+        console.log(`sage: ${verb} ${sid}${result.repo_id ? ` on ${result.repo_id}` : ''}`)
+      } else {
+        console.log(`sage: register soft-fail — ${result.reason || 'unknown'}`)
+      }
+      process.exit(0)
     }
     case 'claim': {
       const repoId = resolveRepoId(cwd)
