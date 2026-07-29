@@ -4,8 +4,8 @@ summary: "Read-side fleet judge — board/fleet/war/territory, optional live-jud
 tags: [board, territory, fleet, guard, live-judge, preferred]
 status: active
 created: 2026-07-21
-updated: 2026-07-29
-verifiedAt: 80b24e71
+updated: 2026-07-30
+verifiedAt: dbe48218
 owns:
   routes: []
   testids: []
@@ -25,6 +25,8 @@ owns:
     - "lib/telemetry.mjs"
     - "lib/fleet-devlog.mjs"
     - "test/fleet-devlog.test.mjs"
+    - "test/judge-desired.test.mjs"
+    - "test/gate.test.mjs"
   tools: []
 depends: []
 invariants: []
@@ -38,6 +40,8 @@ sources: []
 Universal-core answers to "who is doing what" and "am I about to collide": collect/partition sessions, render board lines, fleet one-liners and repos atlas, glob-overlap territory, cross-branch why-diverged / merge-brief, git worktree signals, backlog row helpers, "Asking Sage" statusline stamps, doctor checks + on/off/link control, the default-OFF guard path matcher (emitter enforces), and optional **live judge** continuous briefs (`lib/brief.mjs`, `sage judge *`) layered on consult output when a special session has published a fresh brief. Core stays deterministic; the live session is the optional reasoning mind.
 
 **Fleet-follow (2026-07-28):** `judge.desired` is `optional` (product default — no offline noise) or `preferred` (soft warn on SessionStart / doctor / `sage gate` when no live judge and no attachable brief). Preferred-offline never fails exit codes. `sage gate` also reports install freshness (wired stamp + npm latest).
+
+**Preferred probe cost (2026-07-30):** `hasLiveJudgeSession` walks every repo under sage home but always passes `noSynthetic: true` — judges are real `role=judge` emitter sessions, never Agent Status Provider rows. Merging agent-status on every repo re-resolved hundreds of launcher records and hung `sage gate` / SessionStart preferred-offline probes on busy machines. `isJudgeDesireSatisfied` checks attachable briefs first (O(1) file reads) before the multi-repo live-judge walk.
 
 ## Anchors
 
