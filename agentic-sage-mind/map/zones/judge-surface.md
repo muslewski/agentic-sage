@@ -2,10 +2,10 @@
 type: zone
 summary: "Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF."
 tags: [board, territory, fleet, guard, live-judge, preferred]
-status: seeded
+status: active
 created: 2026-07-21
-updated: 2026-07-28
-verifiedAt: unverified
+updated: 2026-07-29
+verifiedAt: 4b132798
 owns:
   routes: []
   testids: []
@@ -49,3 +49,12 @@ Prefer empty until verified. Product claim: live-only collision surface; dead/cl
 ## Lineage
 
 README "How it works" + SCHEMA.md envelope notes + lib headers, 2026-07-21 atlas-seed pass.
+
+## Synthetic sessions on the board (2026-07-29)
+
+`collectSessions` / `collectFleet` merge launcher-declared children from the
+Agent Status Provider. Synthetic rows appear on board/fleet/war for visibility
+but are **excluded** from territory, why-diverged, and merge-brief (no verified
+file ownership). LIVE rollup (`lib/rollup.mjs`) collapses by lane/parent past a
+viewport budget so 60–138 peers stay readable.
+

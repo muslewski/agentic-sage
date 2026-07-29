@@ -2,10 +2,10 @@
 type: zone
 summary: "Per-repo session record store, storage-root resolution, repo-id identity, enable flags, liveness/provenance, handoff sidecars, and prune — the persistence layer under `~/.claude/agentic-sage` (or project markers)."
 tags: [storage, sessions, identity]
-status: seeded
+status: active
 created: 2026-07-21
-updated: 2026-07-21
-verifiedAt: unverified
+updated: 2026-07-29
+verifiedAt: 4b132798
 owns:
   routes: []
   testids: []
@@ -44,3 +44,15 @@ Prefer empty until verified. Store comments claim atomic tmp+rename writes and f
 ## Lineage
 
 CONVENTIONS.md storage precedence (referenced by README), `lib/store.mjs` / `lib/roots.mjs` headers, SCHEMA.md session fields, 2026-07-21 atlas-seed pass.
+
+## Dual registration bridge (2026-07-29)
+
+- **Pull:** `lib/agent-status.mjs` reads Agent Status Provider records
+  (`$AGENT_STATUS_DIR` → `$XDG_RUNTIME_DIR/agent-status` →
+  `$HOME/.local/state/agent-status`) into **synthetic** session rows. Fail-open.
+- **Push:** `lib/register.mjs` + `sage register` writes real records via
+  `mergeRecord` (source `register`, managed_by `nested`). Soft-fail exits 0.
+- **Precedence:** real record wins on pid collision; never field-merge.
+- **Prune:** `pruneAll` walks every repo under sage home; dry-run default for
+  `--all` unless `--yes`.
+

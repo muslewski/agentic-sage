@@ -2,10 +2,10 @@
 type: zone
 summary: "The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, init, doctor, and other fleet-judge verbs over lib/*."
 tags: [cli, entrypoint]
-status: seeded
+status: active
 created: 2026-07-21
-updated: 2026-07-21
-verifiedAt: unverified
+updated: 2026-07-29
+verifiedAt: 4b132798
 owns:
   routes: []
   testids: []
@@ -34,3 +34,11 @@ Prefer empty until verified. Known product claims (from README): read-mostly; fa
 ## Lineage
 
 Inferred from package.json `bin`, README quickstart, and `bin/sage` switch dispatch on 2026-07-21 atlas-seed pass.
+
+## Fleet visibility verbs (2026-07-29)
+
+- `sage register` / `heartbeat` / `close` — C4 launcher push (see INTEROP.md).
+- `sage prune --all [--older-than N] [--dry-run] [--yes] [--json]` — fleet-wide.
+- `sage board --flat` — disable LIVE lane rollup; `--json` always keeps full
+  `sessions` plus optional top-level `groups`.
+
