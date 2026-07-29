@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { mkTmp, mkGitRepo } from './helpers.mjs'
+import { mkTmp, mkGitRepo, NODE, hermeticEnv } from './helpers.mjs'
 
 const BIN = fileURLToPath(new URL('../bin/sage', import.meta.url))
 
@@ -12,9 +12,9 @@ const BIN = fileURLToPath(new URL('../bin/sage', import.meta.url))
 test('board --watch over a pipe is a single static render (no alt-screen, exits)', () => {
   const home = mkTmp('sage-w-')
   const repo = mkGitRepo()
-  const out = execFileSync('node', [BIN, 'board', '--watch'], {
+  const out = execFileSync(NODE, [BIN, 'board', '--watch'], {
     cwd: repo,
-    env: { ...process.env, HOME: home, NO_COLOR: '1' },
+    env: hermeticEnv(home, { NO_COLOR: '1' }),
     encoding: 'utf8',
     timeout: 5000, // a hung watch loop would trip this; a one-shot returns at once
   })

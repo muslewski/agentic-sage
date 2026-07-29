@@ -4,13 +4,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { mkTmp } from './helpers.mjs'
+import { mkTmp, NODE, hermeticEnv } from './helpers.mjs'
 
 const INSTALL = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'install.mjs')
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop', 'PreCompact', 'PostCompact', 'SessionEnd', 'PreToolUse']
 
 const runInstall = (home) =>
-  execFileSync('node', [INSTALL], { encoding: 'utf8', env: { ...process.env, HOME: home } })
+  execFileSync(NODE, [INSTALL], { encoding: 'utf8', env: hermeticEnv(home) })
 
 test('seeds default-OFF config, symlinks the hook, wires all hook events (incl. PostCompact)', () => {
   const home = mkTmp('sage-h-')
@@ -85,7 +85,7 @@ test('symlinks the sage-fleet skill into ~/.claude/skills', () => {
 
 test('SAGE_SKIP_SKILL=1 skips the skill symlink', () => {
   const home = mkTmp('sage-h-')
-  execFileSync('node', [INSTALL], { encoding: 'utf8', env: { ...process.env, HOME: home, SAGE_SKIP_SKILL: '1' } })
+  execFileSync(NODE, [INSTALL], { encoding: 'utf8', env: hermeticEnv(home, { SAGE_SKIP_SKILL: '1' }) })
   assert.equal(fs.existsSync(path.join(home, '.claude', 'skills', 'sage-fleet')), false)
 })
 

@@ -11,25 +11,25 @@ import { addGuardPath, setGuardEnabled } from '../lib/guard.mjs'
 import { lastToolFile } from '../lib/throttle.mjs'
 import { MARKER_DIR, registryPath } from '../lib/roots.mjs'
 import { readRecord } from '../lib/store.mjs'
-import { mkTmp, mkGitRepo, writeGlobalConfig } from './helpers.mjs'
+import { mkTmp, mkGitRepo, writeGlobalConfig, NODE, hermeticEnv } from './helpers.mjs'
 import { stampWired, packageVersion } from '../lib/install-state.mjs'
 
 const EMIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'hooks', 'agentic-sage-emit.mjs')
 
 const emit = (payload, home) =>
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify(payload),
     encoding: 'utf8',
-    env: { ...process.env, HOME: home },
+    env: hermeticEnv(home),
   })
 
 // Non-throwing variant: capture status/stderr for the guard's exit-2 path.
 const emitRaw = (payload, home) => {
   try {
-    const stdout = execFileSync('node', [EMIT], {
+    const stdout = execFileSync(NODE, [EMIT], {
       input: JSON.stringify(payload),
       encoding: 'utf8',
-      env: { ...process.env, HOME: home },
+      env: hermeticEnv(home),
     })
     return { status: 0, stdout, stderr: '' }
   } catch (e) {
@@ -76,7 +76,7 @@ test('fail-open: malformed stdin exits 0 (does not throw)', () => {
   const home = mkTmp('sage-h-')
   writeGlobalConfig(home, { enabled: true })
   assert.doesNotThrow(() =>
-    execFileSync('node', [EMIT], {
+    execFileSync(NODE, [EMIT], {
       input: 'not json',
       encoding: 'utf8',
       env: { ...process.env, HOME: home },
@@ -98,7 +98,7 @@ test('PreCompact auto-dumps md+json and stamps the record', () => {
   const repo = mkGitRepo()
   const id = resolveRepoId(repo)
   const tmpDir = mkTmp('sage-dump-')
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
     encoding: 'utf8',
     env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
@@ -132,7 +132,7 @@ test('PreCompact sidecar prefix is the repo basename (portable, no project liter
   execFileSync('git', ['-C', repo, 'add', '-A'], { stdio: 'ignore' })
   execFileSync('git', ['-C', repo, 'commit', '-qm', 'init'], { stdio: 'ignore' })
   const tmpDir = mkTmp('sage-dump-')
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
     encoding: 'utf8',
     env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
@@ -150,7 +150,7 @@ test('PostCompact clears phase (and stamps activity); collect derives liveness w
   const id = resolveRepoId(repo)
   const { collectSessions } = await import('../lib/board.mjs')
   // Pre sets phase + handoff
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: repo }),
     encoding: 'utf8',
     env: { ...process.env, HOME: home },
@@ -162,7 +162,7 @@ test('PostCompact clears phase (and stamps activity); collect derives liveness w
   assert.equal(sessions[0].phase, 'compacting')
   assert.equal(sessions[0].liveness, 'working')
   // Post clears
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({ hook_event_name: 'PostCompact', session_id: 's1', cwd: repo }),
     encoding: 'utf8',
     env: { ...process.env, HOME: home },
@@ -355,7 +355,7 @@ test('PreCompact on a non-repo cwd writes nothing and does not throw', () => {
   const notRepo = mkTmp('sage-norepo-')
   const tmpDir = mkTmp('sage-dump-')
   assert.doesNotThrow(() =>
-    execFileSync('node', [EMIT], {
+    execFileSync(NODE, [EMIT], {
       input: JSON.stringify({ hook_event_name: 'PreCompact', session_id: 's1', cwd: notRepo }),
       encoding: 'utf8',
       env: { ...process.env, HOME: home, SAGE_TMPDIR: tmpDir },
@@ -454,7 +454,7 @@ test('SessionStart stores the derived trunk on the record', () => {
 test('emitter exits 0 even when stdin never closes (never-block backstop)', async () => {
   const home = mkTmp('sage-h-')
   writeGlobalConfig(home, { enabled: true })
-  const child = spawn('node', [EMIT], {
+  const child = spawn(NODE, [EMIT], {
     env: { ...process.env, HOME: home },
     stdio: ['pipe', 'ignore', 'ignore'],
   })
@@ -487,7 +487,7 @@ test('project scope: SessionStart works with global master OFF; record lands in 
   const repo = mkGitRepo()
   const markerDir = mkMarker(repo)
 
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({
       hook_event_name: 'SessionStart',
       session_id: 'p1',
@@ -510,7 +510,7 @@ test('--scope=project argv works identically to SAGE_SCOPE env', () => {
   const repo = mkGitRepo()
   const markerDir = mkMarker(repo)
 
-  execFileSync('node', [EMIT, '--scope=project'], {
+  execFileSync(NODE, [EMIT, '--scope=project'], {
     input: JSON.stringify({
       hook_event_name: 'SessionStart',
       session_id: 'p2',
@@ -533,7 +533,7 @@ test('double-fire defer: global hook exits without writing when the repo is proj
   const markerDir = mkMarker(repo)
 
   // No SAGE_SCOPE / --scope flag ⇒ this is the GLOBAL hook.
-  const out = execFileSync('node', [EMIT], {
+  const out = execFileSync(NODE, [EMIT], {
     input: JSON.stringify({
       hook_event_name: 'SessionStart',
       session_id: 'g9',
@@ -557,7 +557,7 @@ test('registry bootstrap: project-scope SessionStart indexes the repo (scope + d
   const id = resolveRepoId(repo)
   const markerDir = mkMarker(repo)
 
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({
       hook_event_name: 'SessionStart',
       session_id: 'p3',
@@ -578,7 +578,7 @@ test('fast path preserved: no global config, no scope flag ⇒ nothing created b
   const repo = mkGitRepo()
   const before = fs.readdirSync(home)
 
-  execFileSync('node', [EMIT], {
+  execFileSync(NODE, [EMIT], {
     input: JSON.stringify({
       hook_event_name: 'SessionStart',
       session_id: 's9',

@@ -4,16 +4,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { mkTmp } from './helpers.mjs'
+import { mkTmp, NODE, hermeticEnv } from './helpers.mjs'
 import { sessionsDir } from '../lib/paths.mjs'
 
 const BIN = fileURLToPath(new URL('../bin/sage', import.meta.url))
 // cwd defaults to a fresh non-git temp dir so `war`/`board` never accidentally
 // resolve THIS repo (the test runner's cwd is a git repo).
 const run = (args, home, cwd = mkTmp('sage-cwd-')) =>
-  execFileSync('node', [BIN, ...args], {
+  execFileSync(NODE, [BIN, ...args], {
     cwd,
-    env: { ...process.env, HOME: home, NO_COLOR: '1' },
+    env: hermeticEnv(home, { NO_COLOR: '1' }),
     encoding: 'utf8',
     timeout: 5000,
   })

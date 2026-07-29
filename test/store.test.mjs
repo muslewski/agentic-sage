@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { readRecord, writeRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
 import { eventsFile, sessionFile } from '../lib/paths.mjs'
-import { mkTmp } from './helpers.mjs'
+import { mkTmp, NODE } from './helpers.mjs'
 
 const pexecFile = promisify(execFile)
 
@@ -53,7 +53,7 @@ test('concurrent mergeRecord from N processes loses no fields', async () => {
     `for (let j = 0; j < ${M}; j++) mergeRecord('${home}', 'r', 's', { ['k_${w}_' + j]: 1 })\n`
   await Promise.all(
     Array.from({ length: N }, (_, w) =>
-      pexecFile('node', ['--input-type=module', '-e', script(w)]),
+      pexecFile(NODE, ['--input-type=module', '-e', script(w)]),
     ),
   )
   const rec = readRecord(home, 'r', 's')
@@ -73,7 +73,7 @@ test('concurrent appendEvent lines are all present and parseable', async () => {
     `for (let j = 0; j < ${M}; j++) appendEvent('${home}', 'r', { event: 'e', w: ${w}, j })\n`
   await Promise.all(
     Array.from({ length: N }, (_, w) =>
-      pexecFile('node', ['--input-type=module', '-e', script(w)]),
+      pexecFile(NODE, ['--input-type=module', '-e', script(w)]),
     ),
   )
   const lines = fs.readFileSync(eventsFile(home, 'r'), 'utf8').split('\n').filter(Boolean)

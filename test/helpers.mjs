@@ -1,7 +1,28 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
+
+// Absolute path to the interpreter running this suite. Never spawn bare "node"
+// under a hermetic HOME: desk PATH shims resolve via $HOME/.nvm and exit 127
+// when the temp home has no nvm install. process.execPath is portable (nvm,
+// system node, CI) and immune to HOME. Mossferry hit the same trap twice.
+export const NODE = process.execPath
+
+/** Env for CLI/emitter under a hermetic HOME (does not touch real user state). */
+export const hermeticEnv = (home, extra = {}) => ({
+  ...process.env,
+  HOME: home,
+  ...extra,
+})
+
+/** Spawn the suite interpreter with argv; prefer this over execFileSync('node', …). */
+export const runNode = (args, opts = {}) =>
+  execFileSync(NODE, args, { encoding: 'utf8', ...opts })
+
+export const spawnNode = (args, opts = {}) => spawn(NODE, args, opts)
+
+export const spawnNodeSync = (args, opts = {}) => spawnSync(NODE, args, opts)
 
 export const mkTmp = (prefix = 'sage-') => fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 

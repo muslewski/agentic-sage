@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { mkTmp, mkGitRepo, git } from './helpers.mjs'
+import { mkTmp, mkGitRepo, git, NODE, hermeticEnv } from './helpers.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { sessionsDir, globalConfig, sessionFile, repoDir } from '../lib/paths.mjs'
 import { readGuard } from '../lib/guard.mjs'
@@ -13,9 +13,9 @@ import { mergeRecord } from '../lib/store.mjs'
 
 const SAGE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'sage')
 const run = (args, home, cwd, extraEnv = {}) =>
-  execFileSync('node', [SAGE, ...args], {
+  execFileSync(NODE, [SAGE, ...args], {
     encoding: 'utf8',
-    env: { ...process.env, HOME: home, ...extraEnv },
+    env: hermeticEnv(home, extraEnv),
     cwd,
   })
 
@@ -275,9 +275,9 @@ test('statusline: empty when SAGE off, when absent, and on garbage stdin (fail-o
   assert.equal(run(['statusline', '--session', 's1', '--cwd', repo], home, repo), '') // SAGE off
   run(['on'], home, repo)
   assert.equal(run(['statusline', '--session', 'sX', '--cwd', repo], home, repo), '') // absent
-  const garbage = execFileSync('node', [SAGE, 'statusline'], {
+  const garbage = execFileSync(NODE, [SAGE, 'statusline'], {
     encoding: 'utf8',
-    env: { ...process.env, HOME: home },
+    env: hermeticEnv(home),
     cwd: repo,
     input: 'not json',
   })
@@ -294,9 +294,9 @@ test('statusline: reads session/cwd from a stdin JSON payload; honors config lab
   const cur = JSON.parse(fs.readFileSync(gc, 'utf8'))
   fs.writeFileSync(gc, JSON.stringify({ ...cur, statuslineLabel: '🧭 SAGE' })) // merge-preserve enabled
   markAsking(home, 's1', 'merge-brief')
-  const out = execFileSync('node', [SAGE, 'statusline'], {
+  const out = execFileSync(NODE, [SAGE, 'statusline'], {
     encoding: 'utf8',
-    env: { ...process.env, HOME: home },
+    env: hermeticEnv(home),
     cwd: repo,
     input: JSON.stringify({ session_id: 's1', cwd: repo }),
   })
