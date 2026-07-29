@@ -16,7 +16,7 @@ import {
   fzfLine,
   jumpHint,
 } from '../lib/board.mjs'
-import { planPrune } from '../lib/prune.mjs'
+import { planPrune, pruneAll } from '../lib/prune.mjs'
 import { SPINNER_FRAMES, SPINNER_INTERVAL_MS } from '../lib/spinner.mjs'
 import {
   setEnabled,
@@ -153,6 +153,7 @@ const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and oth
   judge publish        stdin JSON → atomic brief write (skill loop)
   judge run [--auto|--fleet|--repo] [--harness auto|grok|claude|none]
             [--once] [--takeover] [--print-only]  start live judge (easy path)
+  prune [--all] [--older-than <d>] [--dry-run] [--yes] [--json]  drop old closed sessions
   about --tmux <session> [--json]   facts + judge one-liner for a tmux session (ferry)`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
@@ -1220,11 +1221,35 @@ const main = async () => {
       )
     }
     case 'prune': {
+      const flags = process.argv.slice(3)
+      const all = flags.includes('--all')
+      const dryRun = flags.includes('--dry-run')
+      const json = flags.includes('--json')
+      // accept both --days (legacy) and --older-than (fleet-wide contract)
+      let days = 7
+      const dIdx = flags.indexOf('--days')
+      const oIdx = flags.indexOf('--older-than')
+      if (oIdx >= 0) days = Number(flags[oIdx + 1]) || 14
+      else if (dIdx >= 0) days = Number(flags[dIdx + 1]) || 7
+      else if (all) days = 14
+
+      if (all) {
+        const result = pruneAll(home, {
+          olderThanDays: days,
+          dryRun: dryRun || !flags.includes('--yes'),
+          now: Date.now(),
+        })
+        // default for --all is dry-run unless --yes (safety); --dry-run forces it
+        if (json) return console.log(JSON.stringify(result))
+        const mode = dryRun || !flags.includes('--yes') ? 'would prune' : 'pruned'
+        return console.log(
+          `sage: ${mode} fleet-wide — repos ${result.repos}, sessions ${result.sessions}, events ${result.events}, dirs ${result.dirs}` +
+            (dryRun || !flags.includes('--yes') ? ' (dry-run; pass --yes to delete)' : ''),
+        )
+      }
+
       const repoId = resolveRepoId(cwd)
       if (!repoId) return console.log('sage: not a git repo')
-      const flags = process.argv.slice(3)
-      const dIdx = flags.indexOf('--days')
-      const days = dIdx >= 0 ? Number(flags[dIdx + 1]) || 7 : 7
       const yes = flags.includes('--yes')
       const sessions = collectSessions(home, repoId, Date.now())
       const { remove } = planPrune(sessions, { days, now: Date.now() })
