@@ -2,10 +2,10 @@
 type: zone
 summary: "Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF."
 tags: [board, territory, fleet, guard, live-judge, preferred]
-status: seeded
+status: active
 created: 2026-07-21
-updated: 2026-07-28
-verifiedAt: unverified
+updated: 2026-07-29
+verifiedAt: b71038d0
 owns:
   routes: []
   testids: []
@@ -24,6 +24,8 @@ owns:
     - "lib/package-freshness.mjs"
     - "lib/install-state.mjs"
     - "lib/telemetry.mjs"
+    - "lib/fleet-devlog.mjs"
+    - "test/fleet-devlog.test.mjs"
   tools: []
 depends: []
 invariants: []
@@ -49,3 +51,12 @@ Prefer empty until verified. Product claim: live-only collision surface; dead/cl
 ## Lineage
 
 README "How it works" + SCHEMA.md envelope notes + lib headers, 2026-07-21 atlas-seed pass.
+
+## Fleet-devlog (W7)
+
+`lib/telemetry.mjs` also emits fleet-devlog v1 (vendored `lib/fleet-devlog.mjs`)
+to `$XDG_STATE_HOME/fleet-devlog/events.jsonl` when opted in — same
+`install_id` as the other fleet tools. Legacy `~/.cache/agentic-sage/events.jsonl`
+keeps its own install-id and `hashRepoRoot` scheme; fleet events use
+`resolveRepoId` (`basename-sha2568` of the main root).
+

@@ -7,8 +7,8 @@
 | adapters | seeded | seeded | Optional per-repo adapter contract — discovery/load of `.agentic-sage/adapter.mjs`, fail-closed-to-core enrichment (`ownsZone`/`claimedWork`/`backlogRows`), plus shipped `adapters/template.mjs` and worked-example `adapters/acme.mjs`. |
 | cli | seeded | seeded | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, init, doctor, and other fleet-judge verbs over lib/*. |
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
-| install-wiring | active | seeded | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter scripts, verify-fleet, uninstall. |
-| judge-surface | active | seeded | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF. |
+| install-wiring | seeded | seeded | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter + desk-gate + fleet-desk-wire scripts, verify-fleet, uninstall. |
+| judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF. |
 | session-store | seeded | seeded | Per-repo session record store, storage-root resolution, repo-id identity, enable flags, liveness/provenance, handoff sidecars, and prune — the persistence layer under `~/.claude/agentic-sage` (or project markers). |
 | skills-templates | seeded | seeded | Agent-facing distribution surface — `sage-fleet`, `sage-judge`, and `sage-doctor` skills plus CLAUDE/GROK/statusline paste snippets that teach sessions when to consult the fleet judge without baking protocol into every CLAUDE.md. |
 | war-room | seeded | seeded | Full-screen `sage war` cockpit — warroom layout, faces/clash memory, keyboard/mouse nav, hot-float panes, color paint, spinners, and tmux pane mapping for live multi-repo session oversight. |
@@ -19,11 +19,10 @@
 - zone cli: seeded — not yet verified (verifiedAt: unverified)
 - zone emitter: seeded — not yet verified (verifiedAt: unverified)
 - zone install-wiring: seeded — not yet verified (verifiedAt: unverified)
-- zone judge-surface: seeded — not yet verified (verifiedAt: unverified)
 - zone session-store: seeded — not yet verified (verifiedAt: unverified)
 - zone skills-templates: seeded — not yet verified (verifiedAt: unverified)
 - zone war-room: seeded — not yet verified (verifiedAt: unverified)
-- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only
+- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-fleet-devlog-dual-stream
 
 ## ⚠ Graph coherence
 
@@ -36,9 +35,9 @@ _none_
 ## Ledger
 
 - specs: 16 (approved 5 · planned 11)
-- plans: 4 (active 1 · done 1 · ready 2)
+- plans: 4 (done 2 · ready 2)
 - reports: 2 (? 2)
-- decisions: 2 (accepted 2)
+- decisions: 3 (accepted 3)
 
 ### Recent
 
