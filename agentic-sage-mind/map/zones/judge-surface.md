@@ -5,7 +5,7 @@ tags: [board, territory, fleet, guard, live-judge, preferred]
 status: active
 created: 2026-07-21
 updated: 2026-07-29
-verifiedAt: 4b132798
+verifiedAt: 80b24e71
 owns:
   routes: []
   testids: []
@@ -22,8 +22,9 @@ owns:
     - "lib/judge-desired.mjs"
     - "lib/gate.mjs"
     - "lib/package-freshness.mjs"
-    - "lib/install-state.mjs"
     - "lib/telemetry.mjs"
+    - "lib/fleet-devlog.mjs"
+    - "test/fleet-devlog.test.mjs"
   tools: []
 depends: []
 invariants: []
@@ -57,4 +58,12 @@ Agent Status Provider. Synthetic rows appear on board/fleet/war for visibility
 but are **excluded** from territory, why-diverged, and merge-brief (no verified
 file ownership). LIVE rollup (`lib/rollup.mjs`) collapses by lane/parent past a
 viewport budget so 60–138 peers stay readable.
+
+## Fleet-devlog (W7)
+
+`lib/telemetry.mjs` also emits fleet-devlog v1 (vendored `lib/fleet-devlog.mjs`)
+to `$XDG_STATE_HOME/fleet-devlog/events.jsonl` when opted in — same
+`install_id` as the other fleet tools. Legacy `~/.cache/agentic-sage/events.jsonl`
+keeps its own install-id and `hashRepoRoot` scheme; fleet events use
+`resolveRepoId` (`basename-sha2568` of the main root).
 

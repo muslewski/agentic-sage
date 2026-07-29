@@ -9,18 +9,19 @@
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
 | install-wiring | seeded | seeded | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter + desk-gate + fleet-desk-wire scripts, verify-fleet, uninstall. |
 | judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control, guard default-OFF. |
-| session-store | active | ok | Per-repo session record store, storage-root resolution, repo-id identity, enable flags, liveness/provenance, handoff sidecars, and prune — the persistence layer under `~/.claude/agentic-sage` (or project markers). |
+| session-store | active | ⚠ stale | Per-repo session record store, storage-root resolution, repo-id identity, enable flags, liveness/provenance, handoff sidecars, and prune — the persistence layer under `~/.claude/agentic-sage` (or project markers). |
 | skills-templates | seeded | seeded | Agent-facing distribution surface — `sage-fleet`, `sage-judge`, and `sage-doctor` skills plus CLAUDE/GROK/statusline paste snippets that teach sessions when to consult the fleet judge without baking protocol into every CLAUDE.md. |
 | war-room | seeded | seeded | Full-screen `sage war` cockpit — warroom layout, faces/clash memory, keyboard/mouse nav, hot-float panes, color paint, spinners, and tmux pane mapping for live multi-repo session oversight. |
 
 ## ⚠ Verification gaps
 
+- zone session-store: ⚠ stale — code changed since verifiedAt, review and re-stamp
 - zone adapters: seeded — not yet verified (verifiedAt: unverified)
 - zone emitter: seeded — not yet verified (verifiedAt: unverified)
 - zone install-wiring: seeded — not yet verified (verifiedAt: unverified)
 - zone skills-templates: seeded — not yet verified (verifiedAt: unverified)
 - zone war-room: seeded — not yet verified (verifiedAt: unverified)
-- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration
+- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream
 
 ## ⚠ Graph coherence
 
@@ -35,7 +36,7 @@ _none_
 - specs: 16 (approved 5 · planned 11)
 - plans: 4 (done 2 · ready 2)
 - reports: 2 (? 2)
-- decisions: 3 (accepted 3)
+- decisions: 4 (accepted 4)
 
 ### Recent
 
