@@ -7,8 +7,8 @@
 | adapters | seeded | seeded | Optional per-repo adapter contract — discovery/load of `.agentic-sage/adapter.mjs`, fail-closed-to-core enrichment (`ownsZone`/`claimedWork`/`backlogRows`), plus shipped `adapters/template.mjs` and worked-example `adapters/acme.mjs`. |
 | cli | active | ⚠ stale | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, register, init, doctor, gate, and other fleet-judge verbs over lib/*. |
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
-| install-wiring | seeded | seeded | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter + desk-gate + fleet-desk-wire scripts, verify-fleet, uninstall. |
-| judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default), guard default-OFF. |
+| install-wiring | active | ok | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, stabilize package root away from worktrees, fleet-wire scripts, verify-fleet, uninstall. |
+| judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default; user-scope wiring scan), guard default-OFF. |
 | session-store | active | ok | Per-repo session record store with path containment, storage-root resolution, repo-id/worktree identity, enable flags, liveness/provenance, handoff sidecars, and prune — under `~/.claude/agentic-sage` (or project markers). |
 | skills-templates | seeded | seeded | Agent-facing distribution surface — `sage-fleet`, `sage-judge`, and `sage-doctor` skills plus CLAUDE/GROK/statusline paste snippets that teach sessions when to consult the fleet judge without baking protocol into every CLAUDE.md. |
 | war-room | seeded | seeded | Full-screen `sage war` cockpit — warroom layout, faces/clash memory, keyboard/mouse nav, hot-float panes, color paint, spinners, and tmux pane mapping for live multi-repo session oversight. |
@@ -18,10 +18,9 @@
 - zone cli: ⚠ stale — code changed since verifiedAt, review and re-stamp
 - zone adapters: seeded — not yet verified (verifiedAt: unverified)
 - zone emitter: seeded — not yet verified (verifiedAt: unverified)
-- zone install-wiring: seeded — not yet verified (verifiedAt: unverified)
 - zone skills-templates: seeded — not yet verified (verifiedAt: unverified)
 - zone war-room: seeded — not yet verified (verifiedAt: unverified)
-- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-collapse-vendored-atlas-skills, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-init-repair-creates-storage-dir, 2026-07-30-preferred-probe-no-synthetic, 2026-07-30-territory-prefix-boundary
+- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-collapse-vendored-atlas-skills, 2026-07-30-doctor-reports-not-repairs, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-init-repair-creates-storage-dir, 2026-07-30-preferred-probe-no-synthetic, 2026-07-30-territory-prefix-boundary
 
 ## ⚠ Graph coherence
 
@@ -36,7 +35,7 @@ _none_
 - specs: 16 (approved 5 · planned 11)
 - plans: 4 (done 2 · ready 2)
 - reports: 2 (? 2)
-- decisions: 10 (accepted 9 · active 1)
+- decisions: 11 (accepted 10 · active 1)
 
 ### Recent
 
