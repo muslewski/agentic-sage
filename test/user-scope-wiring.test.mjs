@@ -37,6 +37,34 @@ test('extractCommandPaths pulls quoted absolute paths', () => {
   ])
 })
 
+test('extractCommandPaths ignores JSON permission-decision command bodies', () => {
+  const cmd =
+    '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Prefer firecrawl /path"}}'
+  assert.deepEqual(extractCommandPaths(cmd), [])
+})
+
+test('settings nvm-pinned node interpreter is not a latent finding', () => {
+  const home = mkTmp('sage-usw-')
+  const claude = seedClaude(home)
+  const nodePath = path.join(home, '.nvm', 'versions', 'node', 'v24.18.0', 'bin', 'node')
+  fs.mkdirSync(path.dirname(nodePath), { recursive: true })
+  fs.writeFileSync(nodePath, '#!/bin/sh\n')
+  const hook = path.join(home, '.claude', 'hooks', 'agentic-sage-emit.mjs')
+  fs.writeFileSync(hook, '// ok\n')
+  const settings = {
+    hooks: {
+      Stop: [{ hooks: [{ type: 'command', command: `"${nodePath}" "${hook}"` }] }],
+    },
+  }
+  fs.writeFileSync(path.join(claude, 'settings.json'), JSON.stringify(settings))
+  const { findings } = inspectUserScopeWiring(home)
+  assert.equal(
+    findings.some((f) => f.kind === 'nvm-pinned'),
+    false,
+    'interpreter nvm pin is noise; only package/script targets count',
+  )
+})
+
 test('fail-open: no .claude → clean skip note', () => {
   const home = mkTmp('sage-usw-')
   const { findings, note } = inspectUserScopeWiring(home)
