@@ -11,21 +11,29 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { sageHome, legacySageHome } from '../lib/paths.mjs'
+import { stabilizePackageRoot } from '../lib/user-scope-wiring.mjs'
 
 const home = os.homedir()
-const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url))) // uninstall/ → repo root
+const rawRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url))) // uninstall/ → package root
+// wireAll stabilizes worktree checkouts to the main root — ownership must
+// match both the path this uninstall lives on and the stabilized install root.
+const stableRoot = stabilizePackageRoot(rawRoot)
+const ownedRoots = [...new Set([rawRoot, stableRoot])]
 // Both candidate hook files — whichever a past install() symlinked.
 const hookFiles = [
   path.join(home, '.claude', 'hooks', 'agentic-sage-emit.mjs'),
   path.join(home, '.claude', 'hooks', 'sage-emit.mjs'),
 ]
-const sageBin = path.join(repoRoot, 'bin', 'sage') // tmux bind signature install wrote: `${sageBin} board`
+// tmux bind signature install wrote: `${sageBin} board` after stabilize.
+const sageBins = ownedRoots.map((r) => path.join(r, 'bin', 'sage'))
 const report = []
-// "Ours" = a symlink whose target is strictly inside this repo. `+ path.sep` so a
-// sibling checkout that merely shares the name prefix (agentic-sage-2/) is NOT ours.
+// "Ours" = a symlink whose target is strictly inside an owned package root.
+// `+ path.sep` so a sibling checkout that merely shares the name prefix is NOT ours.
 const insideRepo = (p) => {
   try {
-    return fs.lstatSync(p).isSymbolicLink() && fs.readlinkSync(p).startsWith(repoRoot + path.sep)
+    if (!fs.lstatSync(p).isSymbolicLink()) return false
+    const t = fs.readlinkSync(p)
+    return ownedRoots.some((r) => t === r || t.startsWith(r + path.sep))
   } catch {
     return false
   }
@@ -108,8 +116,11 @@ try {
   const lines = conf.split('\n')
   // Match the EXACT string install appended (`${sageBin} board`), not loose
   // substrings — a user line with `bin/sage` + `keyboard` must NOT be removed.
-  const needle = `${sageBin} board`
-  const kept = lines.filter((l) => !l.includes(needle) && l.trim() !== '# SAGE fleet pane (bind j)')
+  // Accept either raw or stabilized package root (worktree-run install → main).
+  const needles = sageBins.map((b) => `${b} board`)
+  const kept = lines.filter(
+    (l) => !needles.some((n) => l.includes(n)) && l.trim() !== '# SAGE fleet pane (bind j)',
+  )
   if (kept.length !== lines.length) {
     fs.copyFileSync(tmuxConf, tmuxConf + '.sage-uninstall.bak')
     fs.writeFileSync(tmuxConf, kept.join('\n'))
