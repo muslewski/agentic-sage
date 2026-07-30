@@ -21,7 +21,7 @@ Site: [sage.muslewski.com](https://sage.muslewski.com) · npm: [`agentic-sage`](
 | [Getting started](./getting-started.md) | Install → `sage init` → `sage on` → `sage doctor` |
 | [Claims and territory](./concepts/claims-and-territory.md) | Touched vs claimed; territory vs merge-brief |
 | [Concepts: fleet judge](./concepts/fleet-judge.md) | Why SAGE exists; default-OFF; human at fleet altitude |
-| [CLI reference](./reference/cli.md) | Verbs and flags |
+| [CLI reference](./reference/cli.md) | Every verb by task — flags, exits, examples |
 | [Configuration](./reference/configuration.md) | Scope, storage, judge preference |
 | [Safety](./reference/safety.md) | Containment, identity, fail-open, guard |
 | [Developer logging](./reference/developer-logging.md) | Opt-in local fleet-devlog |
