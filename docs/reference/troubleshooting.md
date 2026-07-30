@@ -351,7 +351,7 @@ health banner, one row per check, and a verdict line. **Writes nothing.**
 
 ```text
 $ sage doctor
-SAGE doctor · HEALTH 12/12 ██████████ 100%
+SAGE doctor · HEALTH 13/13 ██████████ 100%
   ✓ sage home — ~/.claude/agentic-sage
   ✓ global config — enabled
   ✓ emitter hook — ~/.claude/hooks/agentic-sage-emit.mjs
@@ -364,11 +364,12 @@ SAGE doctor · HEALTH 12/12 ██████████ 100%
   ✓ scope + storage — global · <dir> · via built-in
   ✓ project adapter — present (<repo>/.agentic-sage/adapter.mjs)
   ✓ live judge — preferred · offline — run: sage judge run
-  12 ok · 0 need attention
+  ✓ user-scope wiring — clean
+  13 ok · 0 need attention
 ```
 
 (If `~/.grok` is absent, the **grok wiring** row is omitted and the denominator
-is **11**, not 12.)
+is **12**, not 13.)
 
 ### Check catalogue
 
@@ -386,14 +387,41 @@ is **11**, not 12.)
 | **scope + storage** | never fails | **yes** — always ✓; explains rule | — |
 | **project adapter** | never fails | **yes** — absent is `none (core-only — fine)`; atlas vault may add a soft hint | optional adapter |
 | **live judge** | never fails | **yes** — preferred-offline is still ✓ | `sage judge run` (soft) |
+| **user-scope wiring** | See [User-scope wiring](#user-scope-wiring-fragile-links) — one row per finding, or a single ✓ when clean / no `~/.claude` | skip-when-absent is ✓ | condition-specific (below) |
 
-Failed rows print a second line: `→ run: <command>`.
+Failed rows print a second line: `→ run: <command>` (or a concrete fix description).
+
+### User-scope wiring (fragile links)
+
+`sage doctor` also scans **`<HOME>/.claude`** (hooks, skills, and `settings.json`
+commands) for paths that break under everyday fleet hygiene — worktree cleanup
+and Node version switches. The scan is **read-only** and **fail-open**: missing
+`~/.claude`, unreadable files, or malformed JSON yield one line and the rest of
+doctor continues. Doctor never repairs, moves, or deletes user config.
+
+| Condition | Mark | Meaning | Typical fix |
+|-----------|------|---------|-------------|
+| **dangling** | ✗ | Symlink under `~/.claude/hooks` or `…/skills` whose target does not exist | Remove the link or repoint it; then `sage init --repair` from a **stable** install (main checkout or package path) |
+| **wired-missing** | ✗ | A path in a `settings.json` hook `command` that does not resolve on disk (plain file or broken link) | Create the file, fix the command path, or `sage init --repair` |
+| **worktree** | ⚠ | Target (or command path) contains a `worktrees/` segment — deleted when that branch’s worktree is removed | Relink to the main repo root or installed package path; prefer `sage init --repair` from main |
+| **nvm-pinned** | ⚠ | Target lives under `.nvm/versions/node/<version>/` — breaks on the next Node upgrade | Relink outside the nvm version tree (stable checkout or a version-agnostic install) |
+| **settings-malformed** | ⚠ | `settings.json` is not valid JSON — command scan skipped | Fix or restore `~/.claude/settings.json` |
+| clean / no `~/.claude` | ✓ | Nothing fragile found, or user-scope dir absent | — |
+
+**Severity is honest:** a dangling *wired* hook is broken *now* (✗). A
+worktree-targeted link that still resolves is a *latent* risk (⚠) — doctor does
+not print both marks for the same path. Latent rows still count as “need
+attention” so the desk sees them before the next worktree prune.
+
+Install itself no longer creates worktree-targeted emitter/skill links: `wireAll`
+/ `wireProject` stabilize the package root to the main git checkout when the
+source path is a linked worktree.
 
 ### Exit behaviour (today vs intent)
 
 | Behaviour | Intended fleet shape | **What exists today** |
 |-----------|----------------------|------------------------|
-| Severity tiers | Separate tiers for *broken* vs *suboptimal* | **Binary** `ok` / not `ok` only. Soft policy (preferred judge offline, missing optional adapter) is forced **ok: true** so it never counts as “need attention.” |
+| Severity tiers | Separate tiers for *broken* vs *suboptimal* | Soft policy (preferred judge offline, missing optional adapter) stays **ok: true**. User-scope **latent** risks use **⚠** with `ok: false`; **broken** paths use **✗**. |
 | Exit code | Nonzero only on hard failure | **Always exit 0** — including a fully red install. Confirmed by CLI wiring (`bin/sage` only `console.log`s the render) and tests. |
 | Machine output | `--json` mode | **`--json` is ignored.** `sage doctor --json` prints the same human checklist as without the flag. (Other verbs such as `board` / `fleet` / `war` do have real `--json` envelopes.) |
 
@@ -409,8 +437,9 @@ Banner:
 SAGE doctor · HEALTH <ok>/<total> <gauge> <pct>%
 ```
 
-There is no separate “warn” glyph. A desk can be `12 ok · 0 need attention`
-while still printing preferred-offline text on the live-judge **detail** string.
+Marks: **✓** ok, **✗** broken, **⚠** latent risk (user-scope worktree / nvm /
+malformed settings). A desk can still be mostly green while preferred-offline
+text appears on the live-judge **detail** string.
 
 ### Related commands
 

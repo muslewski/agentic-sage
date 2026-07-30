@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+* **doctor:** user-scope wiring scan — dangling / worktree-targeted / nvm-pinned symlinks under `~/.claude` and wired-but-missing `settings.json` command paths; read-only, fail-open; ✗ for broken, ⚠ for latent risk
+* **wire:** `wireAll` / `wireProject` stabilize the package root to the main git checkout so emitter/skill symlinks never target a linked worktree
 * **emit:** SessionStart soft lines cap at 2 — preferred offline > fleet peers > wired lag (`state.json` vs package); no registry probe; fail-open
 * **register:** `sage register` / `heartbeat` / `close` — launcher-side session declaration without a harness hook (contract C4)
 * **bridge:** read Agent Status Provider records as synthetic sessions on board/fleet (pull path; a real record for the same pid always wins)
@@ -37,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs
 
+* doctor catalogue: user-scope wiring conditions (dangling, worktree, nvm-pinned, wired-missing) with marks and fixes
 * dogfood accuracy: real clone invocation (`node bin/sage`), reproducible board and merge-brief samples, doctor storage remedy matches repair
 * problem-first README on-ramp; CLI verb index by task; troubleshooting symptoms and doctor catalogue; safety/containment and hermetic HOME notes
 * INTEROP dual-registration (pull + push); developer logging documented as opt-in and local-only

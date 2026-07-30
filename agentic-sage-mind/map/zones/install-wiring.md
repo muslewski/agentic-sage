@@ -1,11 +1,11 @@
 ---
 type: zone
-summary: "Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter + desk-gate + fleet-desk-wire scripts, verify-fleet, uninstall."
+summary: "Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, stabilize package root away from worktrees, fleet-wire scripts, verify-fleet, uninstall."
 tags: [install, wiring, init, fleet]
-status: seeded
+status: active
 created: 2026-07-21
-updated: 2026-07-28
-verifiedAt: unverified
+updated: 2026-07-30
+verifiedAt: 01de612d
 owns:
   routes: []
   testids: []
@@ -16,6 +16,7 @@ owns:
     - "lib/init.mjs"
     - "lib/harness.mjs"
     - "lib/install-state.mjs"
+    - "lib/user-scope-wiring.mjs"
     - "scripts/**"
   tools: []
 depends: []
@@ -27,7 +28,7 @@ sources: []
 
 ## What this is
 
-How SAGE attaches to a machine or repo: symlink emitter, merge seven lifecycle hooks into Claude settings (backup once, skip-if-present, abort on malformed JSON), optional Grok hook file, skill symlinks, tmux `bind j` popup, interactive/non-interactive init (scope × storage × enable), repair/rename of legacy `~/.claude/sage`, and reversible uninstall. Successful `wireAll`/`wireProject` stamps `~/.claude/agentic-sage/state.json` `wiredVersion` for package-freshness Tier A. Fleet helpers: `scripts/fleet-wire-preferred-judge.mjs`, `scripts/fleet-drop-atlas-adapter.mjs`, `scripts/desk-gate.mjs`, `scripts/fleet-desk-wire.mjs` (`fleet-wire-desk.mjs` alias).
+How SAGE attaches to a machine or repo: symlink emitter, merge seven lifecycle hooks into Claude settings (backup once, skip-if-present, abort on malformed JSON), optional Grok hook file, skill symlinks, tmux `bind j` popup, interactive/non-interactive init (scope × storage × enable), repair/rename of legacy `~/.claude/sage`, and reversible uninstall. Successful `wireAll`/`wireProject` stamps `~/.claude/agentic-sage/state.json` `wiredVersion` for package-freshness Tier A. **Package-root stabilize (2026-07-30):** before linking, `stabilizePackageRoot` prefers the main git checkout when `repoRoot` is a linked worktree — so `sage init` from a worktree never points `~/.claude/hooks/*` at a path `git worktree remove` will delete. Fleet helpers: `scripts/fleet-wire-preferred-judge.mjs`, `scripts/fleet-drop-atlas-adapter.mjs`, `scripts/desk-gate.mjs`, `scripts/fleet-desk-wire.mjs` (`fleet-wire-desk.mjs` alias).
 
 ## Anchors
 

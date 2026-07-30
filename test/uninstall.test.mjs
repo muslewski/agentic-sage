@@ -5,8 +5,11 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { mkTmp } from './helpers.mjs'
+import { stabilizePackageRoot } from '../lib/user-scope-wiring.mjs'
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+// install.mjs stabilizes worktree package roots to the main checkout.
+const packageRoot = stabilizePackageRoot(root)
 const node = process.execPath
 const runScript = (script, home) =>
   execFileSync(node, [path.join(root, script)], { env: { ...process.env, HOME: home }, encoding: 'utf8' })
@@ -78,7 +81,7 @@ test('uninstall: tmux removes only the exact SAGE bind, keeps a user keyboard li
   const tmux = path.join(home, '.tmux.conf')
   fs.writeFileSync(tmux, 'bind-key C-k run-shell "~/bin/sage --keyboard-mode"\n') // user line: bin/sage + keyboard
   runScript('install.mjs', home)
-  const sageBoard = path.join(root, 'bin', 'sage') + ' board'
+  const sageBoard = path.join(packageRoot, 'bin', 'sage') + ' board'
   assert.ok(fs.readFileSync(tmux, 'utf8').includes(sageBoard)) // install added the bind
   runScript('uninstall/uninstall.mjs', home)
   const conf = fs.readFileSync(tmux, 'utf8')

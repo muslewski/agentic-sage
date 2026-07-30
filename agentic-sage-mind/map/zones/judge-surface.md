@@ -1,11 +1,11 @@
 ---
 type: zone
-summary: "Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default), guard default-OFF."
-tags: [board, territory, fleet, guard, live-judge, preferred]
+summary: "Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default; user-scope wiring scan), guard default-OFF."
+tags: [board, territory, fleet, guard, live-judge, preferred, doctor]
 status: active
 created: 2026-07-21
 updated: 2026-07-30
-verifiedAt: d5ccf86b
+verifiedAt: 01de612d
 owns:
   routes: []
   testids: []
@@ -17,6 +17,7 @@ owns:
     - "lib/backlog.mjs"
     - "lib/asking.mjs"
     - "lib/control.mjs"
+    - "lib/user-scope-wiring.mjs"
     - "lib/guard.mjs"
     - "lib/brief.mjs"
     - "lib/judge-desired.mjs"
@@ -27,6 +28,7 @@ owns:
     - "test/fleet-devlog.test.mjs"
     - "test/judge-desired.test.mjs"
     - "test/gate.test.mjs"
+    - "test/user-scope-wiring.test.mjs"
   tools: []
 depends: []
 invariants: []
@@ -48,6 +50,8 @@ Universal-core answers to "who is doing what" and "am I about to collide": colle
 **Both-glob prefix boundary (2026-07-30 reconcile):** both-glob `overlaps` uses path-segment-aware static prefixes — `nested/**` does not collide with `nested-inner/**` (plain `startsWith` used to poison nested-worktree territory).
 
 **Gate freshness side-effect (2026-07-30 reconcile):** `computePackageFreshness` caches npm latest only when the sage home directory already exists; a "sage home missing" gate warning must not be contradicted by creating `state.json`.
+
+**User-scope wiring doctor (2026-07-30):** `lib/user-scope-wiring.mjs` scans `<HOME>/.claude` for dangling / worktree-targeted / nvm-pinned symlinks and wired-but-missing settings commands. Read-only, fail-open. Broken → ✗; latent risk → ⚠. Doctor never repairs user config — see decision `2026-07-30-doctor-reports-not-repairs`.
 
 ## Anchors
 
