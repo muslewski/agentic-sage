@@ -32,7 +32,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.mjs",
     "postinstall": "node scripts/postinstall.mjs",
     "lint": "biome check .",
     "format": "biome format --write .",
