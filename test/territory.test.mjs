@@ -49,6 +49,13 @@ test('overlaps: exact, one-glob match, both-glob static-prefix', () => {
   assert.ok(overlaps('*.ts', '*.ts'))
   assert.ok(!overlaps('**/a.ts', '**/b.ts'))
   assert.ok(overlaps('src/**', 'src/auth/*.ts')) // src/** suffix '' → vacuously ok
+  // path-segment boundary: nested worktree names must not false-overlap
+  assert.ok(!overlaps('nested/**', 'nested-inner/**'))
+  assert.ok(!overlaps('nested-inner/**', 'nested/**'))
+  assert.ok(!overlaps('nested/*', 'nested-inner/*'))
+  assert.ok(overlaps('src/**', 'src/foo/**')) // real child dir still overlaps
+  assert.ok(overlaps('foo/nested/**', 'foo/nested/bar/**'))
+  assert.ok(!overlaps('foo/nested/**', 'foo/nested-inner/**'))
 })
 
 test('isGenerated: lockfiles, dirs, markers; source false; extra glob', () => {
