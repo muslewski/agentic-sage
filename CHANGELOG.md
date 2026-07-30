@@ -9,9 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.4.0](https://github.com/muslewski/agentic-sage/compare/v1.3.1...v1.4.0) (2026-07-30)
 
 ### Features
+
 * **emit:** SessionStart soft lines cap at 2 — preferred offline > fleet peers > wired lag (`state.json` vs package); no registry probe; fail-open
+* **register:** `sage register` / `heartbeat` / `close` — launcher-side session declaration without a harness hook (contract C4)
+* **bridge:** read Agent Status Provider records as synthetic sessions on board/fleet (pull path; a real record for the same pid always wins)
+* **board:** fold launcher-declared children into board and fleet; roll up LIVE rows by lane past a viewport budget
+* **prune:** `sage prune --all` fleet-wide prune with dry-run (dry-run unless `--yes`); accepts `--older-than`
+* **devlog:** fleet-devlog v1 — shared, opt-in, local-only developer log (no network; never published)
+
+### Changed
+
+* **gate:** default path is local-only (wired stamp). npm registry probe is opt-in via `sage gate --check-latest` or `packageFreshness.registry=true` — everyday `sage gate` no longer calls the network
+* **cli:** `claim`, `link`/`unlink`, and `register` set nonzero exit codes on failure (previously often exit 0 with a message only). Fire-and-forget scripts should keep `|| true`
+* **skills:** vendored atlas-* skills removed from the package; user-scope install is the source of truth
+
+### Fixes
+
+* **init:** `sage init --repair` creates the missing per-repo storage directory that doctor flags — the suggested remedy now resolves the condition it was suggested for
+* **territory:** path-boundary static prefix so `nested/**` does not collide with sibling `nested-inner/**` paths
+* **gate:** freshness probe must not mkdir a missing sage home; preferred-offline probe skips agent-status synthetic merge (avoids hangs on dense fleets)
+* **store / identity:** sid path safety and realpath containment; skip FIFO on read; register worktree = show-toplevel; repo-id handles relocated gitdir
+* **fleet-devlog:** portable `referencePath` default; re-vendor work-kb reference byte-identical
+* **test:** suite scoped to `test/*.mjs` so linked git worktrees are no longer collected by the runner; hermetic HOME spawns use `process.execPath`
+
+### Docs
+
+* dogfood accuracy: real clone invocation (`node bin/sage`), reproducible board and merge-brief samples, doctor storage remedy matches repair
+* problem-first README on-ramp; CLI verb index by task; troubleshooting symptoms and doctor catalogue; safety/containment and hermetic HOME notes
+* INTEROP dual-registration (pull + push); developer logging documented as opt-in and local-only
+* mind/atlas index rebuilds and ledger notes (no product behaviour)
+
 ## [1.3.1](https://github.com/muslewski/agentic-sage/compare/v1.3.0...v1.3.1) (2026-07-28)
 
 ### Bug Fixes
