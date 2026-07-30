@@ -1954,6 +1954,18 @@ const main = async () => {
         } catch (e) {
           return console.log(`sage: ${e.message}`)
         }
+        // Recreate the resolved per-repo data dir when cwd is a git repo.
+        // Doctor's "storage dir" check and its → run: sage init --repair hint
+        // must agree: repair must clear a missing-storage ✗ (design: recreate
+        // missing dirs). wireProject already mkdirSyncs; global wireAll only
+        // seeds sage home, so do the repo dir here.
+        if (mainRoot && info?.dir) {
+          try {
+            fs.mkdirSync(info.dir, { recursive: true })
+          } catch {
+            /* never fail repair on storage mkdir */
+          }
+        }
         console.log('sage: re-asserted global wiring')
         return console.log(
           renderSummary({

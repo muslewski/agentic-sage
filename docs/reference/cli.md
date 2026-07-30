@@ -69,7 +69,7 @@ Wire hooks and skills. Seeds config **disabled** unless you pass `--enable`.
 | (none, non-TTY) | Safe default: global scope, harness claude, **enable false** |
 | `--global` | Wire user-level Claude settings/hooks/skills |
 | `--project` | Wire this repo only |
-| `--repair` | Re-assert wiring without inventing new policy |
+| `--repair` | Re-assert wiring; recreate missing dirs (including this repo’s storage dir when cwd is a git repo) |
 | `--show` | Print resolved scope, harness paths, storage, enablement (no wire) |
 | `--enable` | Opt in while wiring |
 | `--storage <mode>` | Project storage: `repo-root` \| `sibling` \| `agent-home` |
@@ -358,12 +358,13 @@ SAGE merge-brief · <repo_id> · 0 contested path(s)
   no contested paths — clear to merge
 ```
 
-With three live peers all claiming `src/**` (caller is one of them):
+With three live sessions on distinct branches all claiming `src/**` (caller is
+one of them). Labels under `contested by:` are **branch names**:
 
 ```text
 SAGE merge-brief · <repo_id> · RISK █░░░ low · 1 contested path(s)
   src/**  █░░░ low  ██
-    contested by: <branch>, <branch>
+    contested by: fix/board, feat/auth
 ```
 
 Without self resolution, every live claimant counts (risk can read higher).
