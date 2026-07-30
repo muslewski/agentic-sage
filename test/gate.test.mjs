@@ -162,3 +162,34 @@ test('offline/CI env blocks registry even under --check-latest', async () => {
   assert.equal(v, null)
   assert.equal(spy, 0)
 })
+
+test('gate home-missing does not create sage home via freshness cache write', async () => {
+  const { computePackageFreshness } = await import('../lib/package-freshness.mjs')
+  const home = mkTmp('sage-gate-nomk-')
+  // No sageHome(home) directory — gate will warn "home missing".
+  assert.equal(fs.existsSync(sageHome(home)), false)
+  const c = capture()
+  const code = runGate(['--check-latest'], {
+    home,
+    cwd: home,
+    stdout: c.stdout,
+    stderr: c.stderr,
+    checkLatest: true,
+    fetchLatest: () => '99.0.0',
+    env: {}, // allow registry path even when process.env.CI is set
+  })
+  // Freshness still evaluates (may warn about npm lag) but must not mkdir home.
+  assert.equal(code, 0)
+  assert.match(c.out(), /sage home missing/)
+  assert.equal(fs.existsSync(sageHome(home)), false, 'must not create home from probe')
+
+  // Direct unit path: cache write skipped when home absent
+  const report = computePackageFreshness(home, {
+    checkLatest: true,
+    fetchLatest: () => '99.0.0',
+    env: {},
+    now: Date.now(),
+  })
+  assert.equal(report.latest, '99.0.0')
+  assert.equal(fs.existsSync(sageHome(home)), false)
+})
