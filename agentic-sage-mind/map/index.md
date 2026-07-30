@@ -5,7 +5,7 @@
 | Zone | Status | Freshness | Summary |
 |------|--------|-----------|---------|
 | adapters | seeded | seeded | Optional per-repo adapter contract — discovery/load of `.agentic-sage/adapter.mjs`, fail-closed-to-core enrichment (`ownsZone`/`claimedWork`/`backlogRows`), plus shipped `adapters/template.mjs` and worked-example `adapters/acme.mjs`. |
-| cli | active | ok | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, register, init, doctor, gate, and other fleet-judge verbs over lib/*. |
+| cli | active | ⚠ stale | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, register, init, doctor, gate, and other fleet-judge verbs over lib/*. |
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
 | install-wiring | seeded | seeded | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, fleet-wire-preferred-judge + fleet-drop-atlas-adapter + desk-gate + fleet-desk-wire scripts, verify-fleet, uninstall. |
 | judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default), guard default-OFF. |
@@ -15,6 +15,7 @@
 
 ## ⚠ Verification gaps
 
+- zone cli: ⚠ stale — code changed since verifiedAt, review and re-stamp
 - zone adapters: seeded — not yet verified (verifiedAt: unverified)
 - zone emitter: seeded — not yet verified (verifiedAt: unverified)
 - zone install-wiring: seeded — not yet verified (verifiedAt: unverified)
