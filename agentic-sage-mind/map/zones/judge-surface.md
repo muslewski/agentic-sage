@@ -5,7 +5,7 @@ tags: [board, territory, fleet, guard, live-judge, preferred]
 status: active
 created: 2026-07-21
 updated: 2026-07-30
-verifiedAt: 07109c5f
+verifiedAt: d5ccf86b
 owns:
   routes: []
   testids: []
@@ -77,7 +77,11 @@ to `$XDG_STATE_HOME/fleet-devlog/events.jsonl` when opted in — same
 keeps its own install-id and `hashRepoRoot` scheme; fleet events use
 `resolveRepoId` (`basename-sha2568` of the main root).
 
-**Reference path (2026-07-30):** no desk-absolute default. `referencePath()` returns
-`FLEET_DEVLOG_REF` or null. Drift tests fail loudly when the env points at a
-missing file; visible `t.skip` only when no reference is installed at all.
+**Reference path (2026-07-30):** portable default. `referencePath()` returns
+`FLEET_DEVLOG_REF` when set, else this module (`import.meta.url`) — never a
+hardcoded desk path. Vendored byte-identical with work-kb
+`contracts/fleet-devlog.reference.mjs`. Drift tests fail loudly when the env
+points at a missing file; visible `t.skip` only when no sibling reference is
+discoverable.
+
 
