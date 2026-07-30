@@ -10,7 +10,7 @@ order: 0
 | Recipe | What you get |
 |--------|----------------|
 | [Multi-harness (Claude + Grok)](./multi-harness.md) | One desk, two CLIs, one judge |
-| [Dogfood layout](./dogfood.md) | How the maintainer fleet runs SAGE |
+| [Dogfood layout](./dogfood.md) | Maintainer fleet + PASS/FAIL/UNVERIFIED/n/a verdicts |
 | [Statusline](./statusline.md) | Segment in Claude / tmux (+ oracle / herald context) |
 | [Live judge](./live-judge.md) | Optional agent pane: continuous briefs for workers |
 | [Desk fleet](./desk-fleet.md) | Multi-repo desk in ~10 minutes (SAGE + optional Atlas) |
