@@ -327,3 +327,13 @@ test('s4: doctor exit stays 0 regardless of failures (CLI wiring contract)', asy
   const home = mkTmp('sage-s4-')
   assert.doesNotThrow(() => renderDoctor(doctor(home, mkTmp('sage-norepo-'))))
 })
+
+test('doctor sage home: regular file at home path is not ok', () => {
+  const home = mkTmp('sage-doc-file-')
+  const sh = sageHome(home)
+  fs.mkdirSync(path.dirname(sh), { recursive: true })
+  fs.writeFileSync(sh, 'not-a-directory')
+  const c = doctor(home, mkTmp('sage-norepo-')).find((x) => x.name === 'sage home')
+  assert.equal(c.ok, false)
+  assert.match(c.detail, /not a directory/i)
+})

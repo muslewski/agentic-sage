@@ -231,6 +231,47 @@ test('claim onto a sid with no record prints a hint (no ghost row)', () => {
   assert.equal(r.status, 1)
 })
 
+test('claim on a closed session refuses and exits 1 (no link_state rewrite)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  seedSession(home, id, {
+    session_id: 'closed1',
+    status: 'closed',
+    link_state: 'closed',
+    branch: 'feat-x',
+    updated_at: '2026-06-28T12:00:00Z',
+  })
+  const r = runSage(['claim', 'src/**'], {
+    home,
+    cwd: repo,
+    extraEnv: { SAGE_SELF_SID: 'closed1' },
+  })
+  assert.match(r.stdout, /closed/i)
+  assert.equal(r.status, 1)
+  const rec = JSON.parse(fs.readFileSync(sessionFile(home, id, 'closed1'), 'utf8'))
+  assert.equal(rec.link_state, 'closed')
+  assert.equal(rec.claimed_globs, undefined)
+})
+
+test('claim on non-object session record refuses (no schema-corrupt merge)', () => {
+  const home = mkTmp('sage-h-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  fs.mkdirSync(sessionsDir(home, id), { recursive: true })
+  // Corrupt: JSON string as whole file contents (truthy, not a plain object)
+  fs.writeFileSync(path.join(sessionsDir(home, id), 'bad.json'), JSON.stringify('just-a-string'))
+  const r = runSage(['claim', 'src/**'], {
+    home,
+    cwd: repo,
+    extraEnv: { SAGE_SELF_SID: 'bad' },
+  })
+  assert.match(r.stdout, /no open record/i)
+  assert.equal(r.status, 1)
+  const raw = fs.readFileSync(path.join(sessionsDir(home, id), 'bad.json'), 'utf8')
+  assert.equal(JSON.parse(raw), 'just-a-string')
+})
+
 test('guard add normalizes a ./-prefixed path to repo-relative', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
