@@ -5,7 +5,7 @@ tags: [board, territory, fleet, guard, live-judge, preferred]
 status: active
 created: 2026-07-21
 updated: 2026-07-30
-verifiedAt: c253ffd2
+verifiedAt: 07109c5f
 owns:
   routes: []
   testids: []
@@ -44,6 +44,10 @@ Universal-core answers to "who is doing what" and "am I about to collide": colle
 **Preferred probe cost (2026-07-30):** `hasLiveJudgeSession` walks every repo under sage home but always passes `noSynthetic: true` — judges are real `role=judge` emitter sessions, never Agent Status Provider rows. Merging agent-status on every repo re-resolved hundreds of launcher records and hung `sage gate` / SessionStart preferred-offline probes on busy machines. `isJudgeDesireSatisfied` checks attachable briefs first (O(1) file reads) before the multi-repo live-judge walk.
 
 **Collision surface (2026-07-30):** synthetic agent-status rows appear on board/fleet/war but are excluded from territory / why-diverged / merge-brief. `mergeBrief` unions `claimed_globs` and `touched_globs` so claim-only overlaps still contest.
+
+**Both-glob prefix boundary (2026-07-30 reconcile):** both-glob `overlaps` uses path-segment-aware static prefixes — `nested/**` does not collide with `nested-inner/**` (plain `startsWith` used to poison nested-worktree territory).
+
+**Gate freshness side-effect (2026-07-30 reconcile):** `computePackageFreshness` caches npm latest only when the sage home directory already exists; a "sage home missing" gate warning must not be contradicted by creating `state.json`.
 
 ## Anchors
 
