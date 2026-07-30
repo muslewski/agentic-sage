@@ -37,10 +37,10 @@ sources: []
 ### Task 1: docs-kit health command
 
 **Files:**
-- Modify: `/home/kento/Repositories/docs-kit/bin/docs-kit.mjs`
-- Modify: `/home/kento/Repositories/docs-kit/tests/check.test.mjs` (or add `tests/health.test.mjs`)
-- Modify: `/home/kento/Repositories/docs-kit/README.md`
-- Modify: `/home/kento/Repositories/docs-kit/VERSION` → `0.1.1` if shipping behavior change
+- Modify: `~/Repositories/docs-kit/bin/docs-kit.mjs`
+- Modify: `~/Repositories/docs-kit/tests/check.test.mjs` (or add `tests/health.test.mjs`)
+- Modify: `~/Repositories/docs-kit/README.md`
+- Modify: `~/Repositories/docs-kit/VERSION` → `0.1.1` if shipping behavior change
 
 **Interfaces:**
 - Produces: `docs-kit health <docs-dir>` — runs check + relative-link warnings; exit 0 if check passes even with warnings; exit 1 if frontmatter/meta fail
@@ -56,7 +56,7 @@ sources: []
 ### Task 2: atlas-recollection docs soft-nudge
 
 **Files:**
-- Modify: `/home/kento/Repositories/memory-atlas/skills/atlas-recollection/SKILL.md`
+- Modify: `~/Repositories/memory-atlas/skills/atlas-recollection/SKILL.md`
 
 **Interfaces:**
 - Produces: checklist items  after atlas check for Docs soft-nudge; report format template
@@ -78,12 +78,12 @@ sources: []
 ### Task 3: agentic-sage works-with + contextual mentions
 
 **Files:**
-- Create: `/home/kento/Repositories/agentic-sage/docs/works-with.md`
-- Modify: `/home/kento/Repositories/agentic-sage/docs/_meta.json`
-- Modify: `/home/kento/Repositories/agentic-sage/docs/recipes/statusline.md` (and/or getting-started / interop pointers) for real sibling mentions
-- Modify: `/home/kento/Repositories/agentic-sage/docs/index.md` link works-with
-- Modify: `/home/kento/Repositories/agentic-sage/package.json` scripts (`docs:health`)
-- Modify: `/home/kento/Repositories/agentic-sage/CLAUDE.md` recollection pointer to docs soft-nudge
+- Create: `~/Repositories/agentic-sage/docs/works-with.md`
+- Modify: `~/Repositories/agentic-sage/docs/_meta.json`
+- Modify: `~/Repositories/agentic-sage/docs/recipes/statusline.md` (and/or getting-started / interop pointers) for real sibling mentions
+- Modify: `~/Repositories/agentic-sage/docs/index.md` link works-with
+- Modify: `~/Repositories/agentic-sage/package.json` scripts (`docs:health`)
+- Modify: `~/Repositories/agentic-sage/CLAUDE.md` recollection pointer to docs soft-nudge
 
 **Interfaces:**
 - works-with table: status-herald, token-oracle, memory-atlas, llm-armory, mossferry — honest one-liners + links

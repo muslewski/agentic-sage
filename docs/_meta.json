@@ -6,14 +6,20 @@
     { "title": "Getting started", "href": "getting-started.md" },
     {
       "title": "Concepts",
-      "items": [{ "title": "Fleet judge", "href": "concepts/fleet-judge.md" }]
+      "items": [
+        { "title": "Fleet judge", "href": "concepts/fleet-judge.md" },
+        { "title": "Claims and territory", "href": "concepts/claims-and-territory.md" }
+      ]
     },
     {
       "title": "Reference",
       "items": [
         { "title": "CLI", "href": "reference/cli.md" },
         { "title": "Configuration", "href": "reference/configuration.md" },
-        { "title": "Adapters", "href": "reference/adapters.md" }
+        { "title": "Adapters", "href": "reference/adapters.md" },
+        { "title": "Safety", "href": "reference/safety.md" },
+        { "title": "Developer logging", "href": "reference/developer-logging.md" },
+        { "title": "Troubleshooting", "href": "reference/troubleshooting.md" }
       ]
     },
     {
@@ -27,6 +33,20 @@
         { "title": "Desk fleet", "href": "recipes/desk-fleet.md" }
       ]
     },
-    { "title": "Works with", "href": "works-with.md" }
+    {
+      "title": "Install channels",
+      "items": [
+        { "title": "Distribution", "href": "distribution.md" },
+        { "title": "Gemini CLI setup", "href": "gemini-cli-setup.md" },
+        { "title": "Claude community submit", "href": "claude-community-submit.md" }
+      ]
+    },
+    {
+      "title": "Fleet",
+      "items": [
+        { "title": "Works with", "href": "works-with.md" },
+        { "title": "Interop: status-herald", "href": "interop-status-herald.md" }
+      ]
+    }
   ]
 }

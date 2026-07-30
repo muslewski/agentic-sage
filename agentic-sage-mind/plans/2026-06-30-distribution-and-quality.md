@@ -28,7 +28,7 @@ execution-skill: superpowers:subagent-driven-development
   `npx biome check` after Task 5.
 - **Commit convention** — all commits use Conventional Commits (`feat:`, `fix:`,
   `chore:`, `docs:`, `ci:`, `refactor:`) so release-please can compute versions.
-- **Repo root** — `/home/kento/Repositories/agentic-sage` (all paths are relative to it
+- **Repo root** — `~/Repositories/agentic-sage` (all paths are relative to it
   unless stated).
 - **Never mention the owner's other projects** — the `author` field and all docs name
   only Mateusz Muślewski / muslewski / 10kento10@gmail.com.
@@ -106,7 +106,7 @@ Add a `files` whitelist and `engines.node` to `package.json` so the npm tarball 
 Extract the five wiring steps from `install.mjs` into a testable module so `sage init`
 (Task 3) can reuse the same logic without duplication.
 
-- [ ] Create `/home/kento/Repositories/agentic-sage/lib/wiring.mjs` with this exact content:
+- [ ] Create `~/Repositories/agentic-sage/lib/wiring.mjs` with this exact content:
 
   ```javascript
   // lib/wiring.mjs — conservative ~/.claude wiring, injectable for tests.

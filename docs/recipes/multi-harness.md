@@ -32,7 +32,9 @@ sage board   # when cwd is a judged repo
 
 ## 4. Skills
 
-After install, agent skills (`sage-fleet`, `sage-doctor`) teach each session to claim territory and ask for merge briefs — without becoming a queen agent.
+After install, agent skills (`sage-fleet`, `sage-doctor`) teach each session to
+`sage claim` globs, run `sage territory` / `sage merge-brief`, and stay off the
+queen-agent path.
 
 ## Related
 

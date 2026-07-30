@@ -121,40 +121,29 @@ import { randomUUID } from 'node:crypto'
 const _log = console.log.bind(console)
 console.log = (...args) => _log(...args.map((a) => (typeof a === 'string' ? paint(a) : a)))
 
-const USAGE = `usage: sage <command>   (for Claude Code, Grok Build CLI, and other AI agents)
-  board [--watch] [--wide|-w] [--all] [--flat] [--json]  live-first roster; --all expands archive
-  register [--sid <id>] …               declare a session (C4 push; any launcher)
-  war [--json] [--wide|-w] [--all]       live cross-repo fleet cockpit; ? help · X clear dead
-  fleet [--json]                         one-line nearest-neighbour summary
-  territory <glob…>    who else claims/touches these paths (pre-flight)
-  why-diverged <file>  which sessions touch a file + why (+ numstat)
-  merge-brief          all contested paths before you merge
-  repos [--all]        product/orphan atlas; --all expands orphan fold
-  prune [--days N] [--yes]   remove closed/dead sessions older than N days (default 7)
-  on | off             enable/disable SAGE globally
-  link <sid> [state]   manual link_state override (default: linked)
-  unlink <sid>         mark a session unlinked (closed)
-  claim <glob…>        register this session's intent (claimed_globs)
-  backlog              rows × live sessions: who holds what, orphans, .md drift
-  backlog claim <row>  register THIS session's backlog row (claimed_row)
-  guard …              list | add <path> | rm <path> | on | off (default OFF)
-  adapter init         scaffold .agentic-sage/adapter.mjs from the template
-  init                 wizard (TTY) or --global|--project|--repair|--show — wire skills+hooks
-  where                this repo's resolved scope, storage dir, and matched rule
-  enable | disable     per-repo enable override (independent of global on/off)
-  doctor               validate dirs / hook / settings / token-forecast
-  gate [--strict]      soft install freshness + preferred-judge offline warn
-  telemetry …          status|report|dump|clear|on|off (local debug; default OFF)
-  statusline           the "Asking Sage" status-bar segment (empty unless consulting)
-  judge on --fleet|--repo [--takeover]  register THIS session as live judge
-  judge off            clear judge role; stale own brief
-  judge status         live judges + brief ages
-  judge show [--fleet|--repo]  print fresh brief text
-  judge publish        stdin JSON → atomic brief write (skill loop)
-  judge run [--auto|--fleet|--repo] [--harness auto|grok|claude|none]
-            [--once] [--takeover] [--print-only]  start live judge (easy path)
-  prune [--all] [--older-than <d>] [--dry-run] [--yes] [--json]  drop old closed sessions
-  about --tmux <session> [--json]   facts + judge one-liner for a tmux session (ferry)`
+const USAGE = `usage: sage <command>   passive fleet judge for parallel AI coding sessions
+
+PRIMARY (day one — enough for one desk)
+  init [--global|--project|--repair|--show]  wire hooks/skills (default OFF)
+  on | off             global enable switch
+  register --sid <id>  declare a session (also: heartbeat | close)
+  claim <glob…>        write this session's claimed_globs (needs self)
+  board […]            live-first roster for this repo
+  territory <glob…>    who else claims or touches these paths
+  merge-brief          paths contested by two+ *other* live sessions
+  doctor               validate install, hook, settings, adapter
+
+Happy path (after init + on; set SAGE_SELF_SID on macOS / hermetic shells):
+  sage register --sid worker --pid $$ --lane feature --by me --kind worker
+  SAGE_SELF_SID=worker sage claim 'src/**'
+  sage board
+  SAGE_SELF_SID=worker sage territory 'src/**'
+  SAGE_SELF_SID=worker sage merge-brief
+
+Full verb reference (flags, exits, writes): docs/reference/cli.md
+Also: war · fleet · why-diverged · repos · prune · enable|disable · where ·
+  link|unlink · backlog · guard · adapter init · gate · judge · telemetry ·
+  statusline · about`
 
 // Load the optional per-repo adapter + its ctx (project enrichment; null on any
 // repo with no adapter → the agnostic P1–P4 path).

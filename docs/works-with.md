@@ -50,4 +50,4 @@ Hands-on multi-repo path: [Wire a multi-repo desk](./recipes/desk-fleet.md).
 | Past | memory-atlas | per-repo `npm i -D memory-atlas` | `atlas gate` / SessionStart |
 | Present | agentic-sage | once `npm i -g agentic-sage` | `sage gate` / preferred offline |
 
-Desk wire (manjaro / power users): `node scripts/fleet-desk-wire.mjs`
+Desk wire (multi-repo power users): `node scripts/fleet-desk-wire.mjs`

@@ -14,9 +14,6 @@ SAGE has two install layers:
 | **npm CLI** | `sage` binary, store, judge | `board`, `territory`, `merge-brief`, `judge`, `about` |
 | **Harness plugin / skills** | Agent learns *when* to call sage | Discoverability in each UI |
 
-Fleet research (full directory map):  
-`work-kb` → `work-kb-mind/reports/2026-07-24-agent-plugin-skill-marketplaces.md`
-
 ## npm (always)
 
 ```bash
@@ -42,9 +39,10 @@ grok plugin install muslewski/agentic-sage --trust
 /plugin install agentic-sage@agentic-sage
 ```
 
-Community form (submitted): Console  
+Community form (not a PR): Console  
 https://platform.claude.com/plugins/submit  
-→ after approval: `@claude-community`
+→ after approval: `@claude-community`  
+Checklist: [Claude community submit](./claude-community-submit.md)
 
 ## Cursor
 

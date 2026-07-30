@@ -1,4 +1,12 @@
-# `docs/superpowers/` moved
+---
+title: "Specs and plans moved"
+description: "docs/superpowers/ specs and plans now live under agentic-sage-mind/."
+section: home
+order: 99
+draft: true
+---
+
+# Specs and plans moved
 
 Agent design specs and implementation plans live in the **memory-atlas** vault
 (same convention as Syndcast: specs/plans under the mind, not under public `docs/`).

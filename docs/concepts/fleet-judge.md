@@ -39,8 +39,8 @@ See README § “Universal core vs your project” and [`CONVENTIONS.md`](../../
 
 ## Flywheel
 
-1. Sessions stamp liveness and optional territory.
-2. You (or a skill) call `board` / `war` / merge brief.
+1. Sessions stamp liveness and optional claims / territory.
+2. You (or a skill) call `board` / `war` / `merge-brief`.
 3. You reallocate work; SAGE does not reallocate for you.
 
 Agent session protocol: skill `skills/sage-fleet/SKILL.md` after install.
@@ -66,5 +66,6 @@ See recipe [Live judge](../recipes/live-judge.md) and skill `sage-judge`.
 ## Related
 
 - [Getting started](../getting-started.md)
-- [Safety notes](../reference/cli.md#safety)
+- [Claims and territory](./claims-and-territory.md)
+- [Safety](../reference/safety.md)
 - Architecture map (agents): [`agentic-sage-mind/map/index.md`](../../agentic-sage-mind/map/index.md)
