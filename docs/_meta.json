@@ -6,14 +6,19 @@
     { "title": "Getting started", "href": "getting-started.md" },
     {
       "title": "Concepts",
-      "items": [{ "title": "Fleet judge", "href": "concepts/fleet-judge.md" }]
+      "items": [
+        { "title": "Fleet judge", "href": "concepts/fleet-judge.md" },
+        { "title": "Claims and territory", "href": "concepts/claims-and-territory.md" }
+      ]
     },
     {
       "title": "Reference",
       "items": [
         { "title": "CLI", "href": "reference/cli.md" },
         { "title": "Configuration", "href": "reference/configuration.md" },
-        { "title": "Adapters", "href": "reference/adapters.md" }
+        { "title": "Adapters", "href": "reference/adapters.md" },
+        { "title": "Safety", "href": "reference/safety.md" },
+        { "title": "Developer logging", "href": "reference/developer-logging.md" }
       ]
     },
     {

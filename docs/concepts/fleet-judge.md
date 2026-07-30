@@ -66,5 +66,6 @@ See recipe [Live judge](../recipes/live-judge.md) and skill `sage-judge`.
 ## Related
 
 - [Getting started](../getting-started.md)
-- [Safety notes](../reference/cli.md#safety)
+- [Claims and territory](./claims-and-territory.md)
+- [Safety](../reference/safety.md)
 - Architecture map (agents): [`agentic-sage-mind/map/index.md`](../../agentic-sage-mind/map/index.md)

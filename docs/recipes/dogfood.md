@@ -7,9 +7,9 @@ order: 20
 
 # Dogfood layout
 
-The project’s own dogfood notes live in:
+The project’s own dogfood notes live in the architecture vault (not this public tree):
 
-→ [`docs/dogfood-log.md`](../dogfood-log.md)
+→ [`agentic-sage-mind/reports/dogfood-log.md`](../../agentic-sage-mind/reports/dogfood-log.md)
 
 Design background (Atlas mind, not public product prose):
 

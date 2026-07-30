@@ -1,6 +1,6 @@
 ---
 title: "CLI reference"
-description: "agentic-sage sage command verbs — board, war, doctor, init, on/off, enable."
+description: "agentic-sage sage command verbs — board, register, claim, territory, merge-brief, judge, doctor."
 section: reference
 order: 10
 ---
@@ -9,63 +9,88 @@ order: 10
 
 Binary names: **`sage`** · **`agentic-sage`** (same entry).
 
-Run `sage --help` / `sage <verb> --help` for the live surface. Below is the product map.
+Run `sage` with no args (or an unknown verb) for the live usage list. Below is
+the product map. Prefer the live binary over this page when they disagree.
 
 ## Everyday
 
 | Command | Purpose |
 |---------|---------|
-| `sage board` | Per-repo session board (must be inside a judged git repo) |
-| `sage war` | Cross-repo war-room cockpit (TTY interactive) |
+| `sage board [--watch] [--wide\|-w] [--all] [--flat] [--json]` | Per-repo session roster |
+| `sage war [--json] [--wide\|-w] [--all]` | Cross-repo war-room cockpit (TTY interactive) |
+| `sage fleet [--json]` | One-line nearest-neighbour summary |
 | `sage doctor` | Health checks + fix hints |
-| `sage status` | Compact status / wiring summary |
+| `sage gate [--strict]` | Soft install freshness + preferred-judge offline warn |
+| `sage where` | This repo’s resolved scope + storage + matched rule |
 
-## Install & lifecycle
+## Register, claim, collision
 
 | Command | Purpose |
 |---------|---------|
-| `sage init` | Bootstrap hooks/templates for this machine |
+| `sage register --sid <id> [--pid <n>] [--cwd <path>] [--parent <sid>] [--kind …] [--lane …] [--fleet-run …] [--corr …] [--by …] [--json]` | Launcher-side session declaration (contract C4) |
+| `sage register heartbeat --sid <id> […]` | Refresh liveness stamp |
+| `sage register close --sid <id> [--result ok\|failed\|partial]` | Mark closed |
+| `sage claim <glob…>` | Write `claimed_globs` on **this** session (needs self) |
+| `sage territory <glob…>` | Who else claims/touches these paths |
+| `sage why-diverged <file>` | Which sessions touch a file + optional numstat |
+| `sage merge-brief` | Paths contested by two or more *other* live sessions |
+
+Self resolution for `claim` / consult verbs: pid-walk to an open record, or set
+`SAGE_SELF_SID`. Claim refuses closed sessions, judge-role sessions, and unsafe
+ids. Usage when no globs: `usage: sage claim <glob> [glob…]` (exit 2). There is
+no `claim --help` — `--help` is claimed as a literal glob.
+
+Claims vs touches: [Claims and territory](../concepts/claims-and-territory.md).
+
+## Install and lifecycle
+
+| Command | Purpose |
+|---------|---------|
+| `sage init` | Wizard or `--global` / `--project` / `--repair` / `--show` |
 | `sage on` / `sage off` | Global judging switch |
 | `sage enable` / `sage disable` | Project-scoped judging |
-| `sage uninstall` | Surgical remove (see `uninstall/README.md`) |
+| `sage prune [--all] [--older-than <d>] [--dry-run] [--yes] [--json]` | Drop old closed sessions (also older `--days` form in help) |
+| `sage link <sid> [state]` / `sage unlink <sid>` | Manual link_state helpers |
 
-## Coordination (optional)
+Uninstall: `node uninstall/uninstall.mjs` (see `uninstall/README.md`).
+
+## Optional coordination
 
 | Command | Purpose |
 |---------|---------|
-| `sage territory` / `why-diverged` / `merge-brief` | Collision facts for workers |
-| `sage claim` / `sage backlog` | Register intent / backlog rows |
-| `sage guard` | Contested-path hard stop (default OFF) |
-| `sage link` / `sage unlink` | Manual link_state helpers |
+| `sage backlog` / `sage backlog claim <row>` | Adapter-gated backlog rows |
+| `sage guard …` | `list` \| `add` \| `rm` \| `on` \| `off` (default OFF) |
+| `sage adapter init` | Scaffold `.agentic-sage/adapter.mjs` |
+| `sage repos [--all]` | Product/orphan atlas |
+| `sage statusline` | “Asking Sage” segment (empty unless consulting) |
+| `sage about --tmux <session> [--json]` | Facts + judge one-liner for a tmux session |
+| `sage telemetry …` | Local debug stream (default OFF) |
 
 ## Live judge (optional)
 
-Optional Claude/Grok pane that reasons and writes continuous briefs. Core stays passive — no LLM in Node.
+No LLM inside Node. Optional Claude/Grok pane writes narrative briefs.
 
 | Command | Purpose |
 |---------|---------|
-| `sage judge run […]` | **Easy start** — auto scope + harness spawn (or fact-only keeper) |
+| `sage judge run […]` | Easy start — auto scope + harness (or fact-only) |
 | `sage judge on --fleet\|--repo [--takeover]` | Mark this session as live judge |
 | `sage judge off` | Clear role; mark brief stale |
 | `sage judge publish` | Stdin JSON → atomic brief write |
 | `sage judge status` / `show` | Freshness + print brief |
 
-`judge run` flags: `--auto|--fleet|--repo`, `--harness auto|grok|claude|none`, `--once`, `--takeover`, `--print-only`.
+`judge run` flags: `--auto|--fleet|--repo`, `--harness auto|grok|claude|none`,
+`--once`, `--takeover`, `--print-only`.
 
-Consult verbs layer fresh briefs after facts (repo then fleet). After judge exit, briefs stay attachable for ~30s **grace**. War shows a **⚖** chip when a judge/brief is active. Skill: `sage-judge`. Recipe: [Live judge](../recipes/live-judge.md).
-
-## Statusline
-
-| Command | Purpose |
-|---------|---------|
-| `sage statusline` | Emit / install statusline segment (Claude / tmux consumers) |
+**Offline by default:** without a live judge or fresh brief, CLI answers stay
+fact-only. Recipe: [Live judge](../recipes/live-judge.md).
 
 ## Safety
 
-SAGE is **passive**. CLI verbs that *look* active (init, enable, statusline install) only touch **SAGE’s own wiring and store**, not your application source as an agent would.
+SAGE is **passive**. CLI verbs that look active (init, enable, statusline) only
+touch **SAGE’s own wiring and store**, not your application source.
 
-Full narrative: [README — Safety](../../README.md#safety) · [SETUP.md](../../SETUP.md)
+→ [Safety](./safety.md) · [`SETUP.md`](../../SETUP.md)
 
 ## Machine JSON
 
-Board / fleet machine envelopes: [`SCHEMA.md`](../../SCHEMA.md)
+Board / fleet envelopes: [`SCHEMA.md`](../../SCHEMA.md)
