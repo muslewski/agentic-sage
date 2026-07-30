@@ -71,6 +71,18 @@ test('gitSignals: trunk hint is used verbatim and included in touched detection'
   assert.equal(sig.trunk, 'main')
 })
 
+test('gitSignals skips nested worktree checkout dirs in untracked porcelain', () => {
+  const main = mkGitRepo()
+  // Nested worktree checkout inside main — appears as ?? nested/ for outer.
+  const nested = path.join(main, 'nested-inner')
+  git(main, 'worktree', 'add', '-q', nested, '-b', 'nested-br')
+  const sig = gitSignals(main)
+  assert.ok(
+    !sig.touched.some((p) => p === 'nested-inner' || p === 'nested-inner/' || p.startsWith('nested-inner/')),
+    `outer must not claim nested worktree as touched; got ${sig.touched}`,
+  )
+})
+
 test('gitSignals: a bad trunk hint short-circuits trunkOf (diff fails, porcelain-only)', () => {
   const repo = mkGitRepo()
   git(repo, 'checkout', '-qb', 'feature')

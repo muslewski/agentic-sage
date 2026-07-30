@@ -1,11 +1,11 @@
 ---
 type: zone
-summary: "The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, init, doctor, and other fleet-judge verbs over lib/*."
+summary: "The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, register, init, doctor, gate, and other fleet-judge verbs over lib/*."
 tags: [cli, entrypoint]
 status: active
 created: 2026-07-21
-updated: 2026-07-29
-verifiedAt: 4b132798
+updated: 2026-07-30
+verifiedAt: c253ffd2
 owns:
   routes: []
   testids: []
@@ -38,7 +38,15 @@ Inferred from package.json `bin`, README quickstart, and `bin/sage` switch dispa
 ## Fleet visibility verbs (2026-07-29)
 
 - `sage register` / `heartbeat` / `close` — C4 launcher push (see INTEROP.md).
+  Exit **0** success, **1** soft-fail, **2** usage/unsafe sid.
+- `sage claim` / `link` / `unlink` — honest nonzero on missing session, unsafe sid, closed session.
+- `sage gate` — local wired-stamp by default; `--check-latest` owns the npm probe.
 - `sage prune --all [--older-than N] [--dry-run] [--yes] [--json]` — fleet-wide.
 - `sage board --flat` — disable LIVE lane rollup; `--json` always keeps full
   `sessions` plus optional top-level `groups`.
+
+## Invariants (2026-07-30)
+
+- Mutation failures set `process.exitCode` (claim/link/register/main.catch).
+- `main().catch` sets exitCode 1 so write failures are not silent success.
 

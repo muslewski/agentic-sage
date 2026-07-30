@@ -45,13 +45,13 @@ sage register close --sid <id> [--cwd <path>] [--result ok|failed|partial] [--js
 
 | Code | Meaning |
 |---|---|
-| `0` | success **or soft-fail** (not a git repo, store unwritable, unknown sid on heartbeat) |
-| `2` | usage error only (missing `--sid`) |
+| `0` | success |
+| `1` | soft-fail (not a git repo, store unwritable, unknown sid on heartbeat, path refused) |
+| `2` | usage / unsafe sid (missing `--sid`, path separators in sid) |
 
-**Why exit 0 on soft-fail:** a launcher will call this inline before `exec`. If
-environmental failures returned nonzero, every integrator would write
-`sage register … || true` and then could not detect real usage errors either.
-Reserve nonzero for "you called me wrong".
+Suite convention: **0 = clean, 1 = ran and found problems, 2 = could not complete.**
+Launchers that want fire-and-forget keep `|| true` (recommended pattern below).
+Honest nonzero lets scripts that *do* check `$?` detect store failures.
 
 ### Recommended shell pattern
 

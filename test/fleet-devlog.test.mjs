@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import { devlogEnabled, installId, sanitizeEvent, emit, referencePath } from '../lib/fleet-devlog.mjs'
 
 test('off by default with no env and no config', () => {
@@ -94,16 +95,54 @@ test('emit never throws on an unwritable root', () => {
   )
 })
 
-test('referencePath honours FLEET_DEVLOG_REF and falls back to default', () => {
-  const def = '/home/kento/Repositories/work-kb/contracts/fleet-devlog.reference.mjs'
-  assert.equal(referencePath({}), def)
+test('referencePath honours FLEET_DEVLOG_REF and has no desk-absolute default', () => {
+  assert.equal(referencePath({}), null)
+  assert.equal(referencePath({ FLEET_DEVLOG_REF: '' }), null)
   assert.equal(referencePath({ FLEET_DEVLOG_REF: '/tmp/alt-ref.mjs' }), '/tmp/alt-ref.mjs')
+  // Must never bake a private /home/... path into shipped source resolution.
+  assert.equal(referencePath({}), null)
 })
 
-test('vendored emitter matches the work-kb reference', () => {
-  const ref = process.env.FLEET_DEVLOG_REF
-    || '/home/kento/Repositories/work-kb/contracts/fleet-devlog.reference.mjs'
-  if (!fs.existsSync(ref)) return   // stranger's clone: no work-kb, nothing to compare — skip
+test('FLEET_DEVLOG_REF set but missing fails loudly (never silent pass)', () => {
+  const missing = '/nonexistent/fleet-devlog.reference.mjs'
+  assert.equal(referencePath({ FLEET_DEVLOG_REF: missing }), missing)
+  assert.equal(fs.existsSync(missing), false)
+})
+
+/**
+ * Discover a work-kb contract without hardcoding a desk username path.
+ * Tries FLEET_DEVLOG_REF, then portable relative layouts from this package root.
+ */
+function discoverFleetDevlogRef() {
+  const fromEnv = referencePath(process.env)
+  if (fromEnv) return fromEnv
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  const pkgRoot = path.resolve(here, '..')
+  const candidates = [
+    // main clone next to work-kb under Repositories/
+    path.resolve(pkgRoot, '..', 'work-kb', 'contracts', 'fleet-devlog.reference.mjs'),
+    // worktree: <repo>/.claude/worktrees/<name> → up to Repositories/work-kb
+    path.resolve(pkgRoot, '..', '..', '..', '..', 'work-kb', 'contracts', 'fleet-devlog.reference.mjs'),
+  ]
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c
+  }
+  return null
+}
+
+test('vendored emitter matches the work-kb reference', (t) => {
+  const fromEnv = referencePath(process.env)
+  if (fromEnv && !fs.existsSync(fromEnv)) {
+    assert.fail(
+      `FLEET_DEVLOG_REF is set to ${fromEnv} but the file is missing — drift guard cannot run silently`,
+    )
+  }
+  const ref = discoverFleetDevlogRef()
+  if (!ref) {
+    t.skip('no fleet-devlog reference installed (set FLEET_DEVLOG_REF to enable drift check)')
+    return
+  }
+  assert.ok(fs.existsSync(ref), `reference unresolvable at ${ref}`)
   const a = crypto.createHash('sha256').update(fs.readFileSync(ref)).digest('hex')
   const b = crypto.createHash('sha256').update(
     fs.readFileSync(new URL('../lib/fleet-devlog.mjs', import.meta.url))).digest('hex')

@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { mkTmp, mkGitRepo } from './helpers.mjs'
 import { sessionsDir, globalConfig, sageHome } from '../lib/paths.mjs'
-import { readRecord } from '../lib/store.mjs'
+import { readRecord, mergeRecord } from '../lib/store.mjs'
 import { writeRegistryEntry, legacySageHome, migrateStateDir } from '../lib/roots.mjs'
 import { resolveRepoId } from '../lib/repo-id.mjs'
 import { wireProject, wireAll } from '../lib/wiring.mjs'
@@ -54,10 +54,18 @@ test('listRepos includes legacy-home repos when new home is empty', () => {
 
 test('linkSession/unlinkSession set link_state', () => {
   const home = mkTmp('sage-c-')
+  // Must have an existing record — link no longer creates ghosts.
+  mergeRecord(home, 'repo-x', 's1', { session_id: 's1', status: 'active' })
   linkSession(home, 'repo-x', 's1', 'linked')
   assert.equal(readRecord(home, 'repo-x', 's1').link_state, 'linked')
   unlinkSession(home, 'repo-x', 's1')
   assert.equal(readRecord(home, 'repo-x', 's1').link_state, 'closed')
+})
+
+test('linkSession refuses unknown sid (no ghost)', () => {
+  const home = mkTmp('sage-c-')
+  assert.throws(() => linkSession(home, 'repo-x', 'ghost'), /no open record/)
+  assert.equal(readRecord(home, 'repo-x', 'ghost'), null)
 })
 
 test('listRepos counts sessions; empty → []', () => {

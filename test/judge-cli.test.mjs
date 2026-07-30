@@ -151,13 +151,21 @@ describe('sage judge CLI', () => {
     assert.ok(env.briefs)
     assert.equal(env.briefs.repo.summary, 'two live on src')
 
-    // claim blocked for judge (advisory exit 0 + message)
-    const claimOut = run(['claim', 'src/**'], {
-      home,
-      cwd: repo,
-      env: { SAGE_SELF_SID: sid, HOME: home },
-    })
+    // claim blocked for judge — honest exit 1 + message
+    let claimOut = ''
+    let claimStatus = 0
+    try {
+      claimOut = run(['claim', 'src/**'], {
+        home,
+        cwd: repo,
+        env: { SAGE_SELF_SID: sid, HOME: home },
+      })
+    } catch (e) {
+      claimOut = e.stdout || e.message || ''
+      claimStatus = e.status ?? 1
+    }
     assert.match(claimOut, /judge sessions do not claim/)
+    assert.equal(claimStatus, 1)
 
     const off = run(['judge', 'off'], {
       home,

@@ -51,8 +51,8 @@
     }
   },
   "updateCheck": {
-    "checkedAt": "2026-07-28T08:16:09.749Z",
-    "latest": "0.5.2",
+    "checkedAt": "2026-07-29T22:08:33.312Z",
+    "latest": "0.5.4",
     "source": "npm"
   }
 }

@@ -5,8 +5,10 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { readRecord, writeRecord, mergeRecord, appendEvent } from '../lib/store.mjs'
-import { eventsFile, sessionFile } from '../lib/paths.mjs'
+import { execFileSync } from 'node:child_process'
+import { readRecord, writeRecord, mergeRecord, appendEvent, readJson } from '../lib/store.mjs'
+import { eventsFile, sessionFile, sessionsDir } from '../lib/paths.mjs'
+import { collectSessions } from '../lib/board.mjs'
 import { mkTmp, NODE } from './helpers.mjs'
 
 const pexecFile = promisify(execFile)
@@ -107,4 +109,50 @@ test('fresh foreign lock does not deadlock — bounded wait, fail-open write', (
   assert.deepEqual(out, { a: 1, b: 2 })
 
   fs.rmdirSync(lock)
+})
+
+test('writeRecord refuses unsafe session ids (path escape)', () => {
+  const home = mkTmp('sage-h-')
+  for (const sid of ['../x', 'a/b', 'a\\b', '..']) {
+    assert.throws(() => writeRecord(home, 'r', sid, { a: 1 }), /unsafe/)
+  }
+  assert.equal(readRecord(home, 'r', '../x'), null)
+})
+
+test('sessions/ symlink escape is refused (containment)', () => {
+  const home = mkTmp('sage-h-')
+  const outside = mkTmp('sage-outside-')
+  const marker = path.join(outside, 'escaped.json')
+  // Plant sessions/ as a symlink pointing outside the repo data dir.
+  const sdir = sessionsDir(home, 'r')
+  fs.mkdirSync(path.dirname(sdir), { recursive: true })
+  fs.symlinkSync(outside, sdir)
+  assert.throws(() => writeRecord(home, 'r', 's', { evil: true }), /escapes|unsafe|symlink|root/i)
+  assert.equal(fs.existsSync(marker), false)
+  // outside dir must not gain s.json
+  assert.equal(fs.existsSync(path.join(outside, 's.json')), false)
+})
+
+test('readJson skips non-files (FIFO would hang on read)', () => {
+  const home = mkTmp('sage-h-')
+  const dir = sessionsDir(home, 'r')
+  fs.mkdirSync(dir, { recursive: true })
+  const fifo = path.join(dir, 'pipe.json')
+  try {
+    execFileSync('mkfifo', [fifo], { stdio: 'ignore' })
+  } catch {
+    // Host without mkfifo: still prove regular-file guard via a directory named *.json
+    const asDir = path.join(dir, 'not-a-file.json')
+    fs.mkdirSync(asDir)
+    assert.equal(readJson(asDir), null)
+    return
+  }
+  const t0 = Date.now()
+  assert.equal(readJson(fifo), null)
+  assert.ok(Date.now() - t0 < 500, 'readJson must not block on a FIFO')
+  // collectSessions path also must not hang
+  const t1 = Date.now()
+  const sessions = collectSessions(home, 'r', Date.now())
+  assert.ok(Date.now() - t1 < 1000)
+  assert.equal(sessions.length, 0)
 })

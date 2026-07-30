@@ -131,6 +131,87 @@ test('mergeBrief + territory: dead/closed ghosts do not contest', () => {
   assert.equal(whyDiverged(home, id, 'shared.ts', { now: NOW }).length, 0)
 })
 
+test('synthetic live sessions are excluded from territory / why-diverged / merge-brief', () => {
+  const home = mkTmp('sage-h-')
+  const id = 'r1'
+  seed(home, id, [
+    {
+      session_id: 'real-a',
+      branch: 'feat-a',
+      pid: LIVE_PID,
+      touched_globs: ['src/shared.ts'],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+    {
+      session_id: 'real-b',
+      branch: 'feat-b',
+      pid: LIVE_PID,
+      claimed_globs: ['src/shared.ts'],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+    {
+      session_id: 'synth-empty',
+      pid: LIVE_PID,
+      synthetic: true,
+      // empty globs must NOT invent a false all-clear peer on the collision surface
+      touched_globs: [],
+      claimed_globs: [],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+    {
+      session_id: 'synth-claim',
+      pid: LIVE_PID,
+      synthetic: true,
+      // even if a synthetic row wrongly carried globs, collision tools ignore it
+      claimed_globs: ['src/shared.ts'],
+      touched_globs: ['src/shared.ts'],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+  ])
+  const terr = territory(home, id, ['src/shared.ts'], { now: NOW })
+  assert.deepEqual(terr.map((x) => x.session_id).sort(), ['real-a', 'real-b'])
+  assert.ok(terr.every((x) => !x.session_id.startsWith('synth')))
+  const why = whyDiverged(home, id, 'src/shared.ts', { now: NOW })
+  assert.deepEqual(why.map((x) => x.session_id).sort(), ['real-a', 'real-b'])
+  const brief = mergeBrief(home, id, { now: NOW })
+  assert.equal(brief.length, 1)
+  assert.equal(brief[0].sessions.length, 2)
+  assert.ok(brief[0].sessions.every((s) => !String(s.session_id).startsWith('synth')))
+})
+
+test('mergeBrief contests claimed_globs overlaps (not only touched)', () => {
+  const home = mkTmp('sage-h-')
+  const id = 'r1'
+  seed(home, id, [
+    {
+      session_id: 'a',
+      branch: 'feat-a',
+      pid: LIVE_PID,
+      claimed_globs: ['src/auth/**'],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+    {
+      session_id: 'b',
+      branch: 'feat-b',
+      pid: LIVE_PID,
+      claimed_globs: ['src/auth/**'],
+      updated_at: '2026-06-28T11:00:00Z',
+    },
+  ])
+  const c = mergeBrief(home, id, { now: NOW })
+  assert.equal(c.length, 1)
+  assert.equal(c[0].path, 'src/auth/**')
+  assert.equal(c[0].sessions.length, 2)
+  assert.ok(c[0].sessions.every((s) => s.via === 'claimed'))
+})
+
+test('claimsOf coerces non-array globs to empty (no TypeError)', () => {
+  assert.deepEqual(claimsOf({ claimed_globs: 'nope', touched_globs: 3 }), {
+    claimed: [],
+    touched: [],
+  })
+})
+
 // ── Task 4: renders ─────────────────────────────────────────────────────────
 
 test('renderTerritory: overlap names branch; empty → clear', () => {

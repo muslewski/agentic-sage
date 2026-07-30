@@ -73,3 +73,42 @@ test('heartbeat on an unknown sid is a soft no-op, not a throw', () => {
   const r = heartbeatSession({ home, sid: 'never-registered', cwd: process.cwd() })
   assert.equal(r.ok, false)
 })
+
+test('registerSession refuses path-like sids (no escape under sessions/)', () => {
+  const home = tmpHome()
+  for (const sid of ['../escape', 'foo/bar', 'a\\b', '../../tmp/x']) {
+    const r = registerSession({ home, sid, cwd: process.cwd() })
+    assert.equal(r.ok, false, sid)
+    assert.match(r.reason, /unsafe/i)
+  }
+  // Nothing written outside the intended sessions tree for this home
+  const sage = path.join(home, '.claude', 'agentic-sage')
+  if (fs.existsSync(sage)) {
+    const walk = (d, acc = []) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name)
+        if (e.isDirectory()) walk(p, acc)
+        else acc.push(p)
+      }
+      return acc
+    }
+    const files = walk(sage)
+    assert.equal(files.length, 0, `unexpected writes: ${files}`)
+  }
+})
+
+test('registerSession stores worktree as the cwd checkout (not only main root)', () => {
+  const home = tmpHome()
+  // Use this package's own cwd — already a git worktree/checkout.
+  const r = registerSession({ home, sid: 'wt-1', cwd: process.cwd() })
+  assert.equal(r.ok, true)
+  const rec = readRecord(home, r.repo_id, 'wt-1')
+  assert.ok(rec.worktree)
+  // worktree must be the actual show-toplevel, not a random parent
+  assert.ok(fs.existsSync(path.join(rec.worktree, '.git')) || fs.existsSync(rec.worktree))
+  assert.ok(
+    rec.worktree === process.cwd() ||
+      fs.realpathSync(rec.worktree) === fs.realpathSync(process.cwd()) ||
+      process.cwd().startsWith(rec.worktree),
+  )
+})

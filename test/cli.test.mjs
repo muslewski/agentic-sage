@@ -196,29 +196,39 @@ test('claim writes claimed_globs + link_state=linked onto the current record', (
   assert.equal(rec.link_state, 'linked')
 })
 
-test('claim with no resolvable session prints a clear hint; exit 0', () => {
+test('claim with no resolvable session prints a clear hint; exit 1', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
-  assert.match(run(['claim', 'src/**'], home, repo), /SAGE_SELF_SID/)
+  const r = runSage(['claim', 'src/**'], { home, cwd: repo })
+  assert.match(r.stdout, /SAGE_SELF_SID/)
+  assert.equal(r.status, 1)
 })
 
 test('claim refuses an unsafe SAGE_SELF_SID (path traversal)', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
-  assert.match(run(['claim', 'src/**'], home, repo, { SAGE_SELF_SID: '../../evil' }), /unsafe/)
+  const r = runSage(['claim', 'src/**'], { home, cwd: repo, extraEnv: { SAGE_SELF_SID: '../../evil' } })
+  assert.match(r.stdout, /unsafe/)
+  assert.equal(r.status, 2)
 })
 
 test('link/unlink refuse unsafe session_id (path traversal)', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
-  assert.match(run(['link', '../../evil'], home, repo), /unsafe/)
-  assert.match(run(['unlink', 'foo/../bar'], home, repo), /unsafe/)
+  const a = runSage(['link', '../../evil'], { home, cwd: repo })
+  assert.match(a.stdout, /unsafe/)
+  assert.equal(a.status, 2)
+  const b = runSage(['unlink', 'foo/../bar'], { home, cwd: repo })
+  assert.match(b.stdout, /unsafe/)
+  assert.equal(b.status, 2)
 })
 
 test('claim onto a sid with no record prints a hint (no ghost row)', () => {
   const home = mkTmp('sage-h-')
   const repo = mkGitRepo()
-  assert.match(run(['claim', 'src/**'], home, repo, { SAGE_SELF_SID: 'ghost' }), /no open record/)
+  const r = runSage(['claim', 'src/**'], { home, cwd: repo, extraEnv: { SAGE_SELF_SID: 'ghost' } })
+  assert.match(r.stdout, /no open record/)
+  assert.equal(r.status, 1)
 })
 
 test('guard add normalizes a ./-prefixed path to repo-relative', () => {

@@ -1272,13 +1272,30 @@ const main = async () => {
     case 'link':
     case 'unlink': {
       const repoId = resolveRepoId(cwd)
-      if (!repoId) return console.log('sage: not a git repo')
-      if (!a1) return console.log(`usage: sage ${cmd} <session_id>${cmd === 'link' ? ' [state]' : ''}`)
+      if (!repoId) {
+        console.log('sage: not a git repo')
+        process.exitCode = 1
+        return
+      }
+      if (!a1) {
+        console.log(`usage: sage ${cmd} <session_id>${cmd === 'link' ? ' [state]' : ''}`)
+        process.exitCode = 2
+        return
+      }
       // Same path-safety guard as claim / SAGE_SELF_SID — sid becomes a filename under sessions/.
-      if (/[/\\]|\.\./.test(a1)) return console.log('sage: refusing an unsafe session_id')
-      cmd === 'link'
-        ? linkSession(home, repoId, a1, a2 || 'linked')
-        : unlinkSession(home, repoId, a1)
+      if (/[/\\]|\.\./.test(a1)) {
+        console.log('sage: refusing an unsafe session_id')
+        process.exitCode = 2
+        return
+      }
+      try {
+        if (cmd === 'link') linkSession(home, repoId, a1, a2 || 'linked')
+        else unlinkSession(home, repoId, a1)
+      } catch (e) {
+        console.log(`sage: ${cmd} failed — ${e?.message || e}`)
+        process.exitCode = 1
+        return
+      }
       return console.log(`sage: ${cmd === 'link' ? `linked ${a1} (${a2 || 'linked'})` : `unlinked ${a1}`}`)
     }
     case 'about': {
@@ -1591,7 +1608,8 @@ const main = async () => {
     }
     case 'register': {
       // C4 push contract — any launcher declares a session without a harness
-      // hook. Soft-fail (not a repo, store error) → exit 0. Usage error → exit 2.
+      // hook. Exit: 0 success, 1 soft-fail (env/store), 2 usage/unsafe sid.
+      // Launchers that want fire-and-forget keep `|| true`.
       const flags = process.argv.slice(3)
       const flag = (name) => {
         const i = flags.indexOf(name)
@@ -1610,6 +1628,12 @@ const main = async () => {
             '       sage register heartbeat --sid <id> [--cwd <path>] [--json]\n' +
             '       sage register close --sid <id> [--cwd <path>] [--result ok|failed|partial] [--json]',
         )
+        process.exit(2)
+      }
+      if (/[/\\]|\.\./.test(sid)) {
+        const bad = { ok: false, sid, reason: 'unsafe session id' }
+        if (json) console.log(JSON.stringify(bad))
+        else console.log(`sage: register soft-fail — ${bad.reason}`)
         process.exit(2)
       }
       const regCwd = flag('--cwd') || cwd
@@ -1643,7 +1667,6 @@ const main = async () => {
           })
         }
       } catch (e) {
-        // TypeError on missing sid already handled; anything else is soft-fail
         result = { ok: false, sid, reason: e?.message || String(e) }
       }
       if (json) {
@@ -1654,31 +1677,61 @@ const main = async () => {
       } else {
         console.log(`sage: register soft-fail — ${result.reason || 'unknown'}`)
       }
-      process.exit(0)
+      process.exit(result.ok ? 0 : 1)
     }
     case 'claim': {
       const repoId = resolveRepoId(cwd)
-      if (!repoId) return console.log('sage: not a git repo')
+      if (!repoId) {
+        console.log('sage: not a git repo')
+        process.exitCode = 1
+        return
+      }
       const globs = process.argv.slice(3)
-      if (!globs.length) return console.log('usage: sage claim <glob> [glob…]')
+      if (!globs.length) {
+        console.log('usage: sage claim <glob> [glob…]')
+        process.exitCode = 2
+        return
+      }
       const sid = resolveSelfSid(home, repoId)
-      if (!sid)
-        return console.log(
+      if (!sid) {
+        console.log(
           'sage: cannot resolve the current session — run inside an enabled session, or set SAGE_SELF_SID',
         )
-      if (/[/\\]|\.\./.test(sid)) return console.log('sage: refusing an unsafe SAGE_SELF_SID')
-      if (!readRecord(home, repoId, sid))
-        return console.log(`sage: no open record for ${sid} here — claim from the session that owns it`)
-      {
-        const rec = readRecord(home, repoId, sid)
-        if (rec?.role === 'judge')
-          return console.log('sage: judge sessions do not claim product territory — sage judge off first')
+        process.exitCode = 1
+        return
       }
-      mergeRecord(home, repoId, sid, {
-        claimed_globs: globs,
-        link_state: 'linked',
-        updated_at: new Date(now).toISOString(),
-      })
+      if (/[/\\]|\.\./.test(sid)) {
+        console.log('sage: refusing an unsafe SAGE_SELF_SID')
+        process.exitCode = 2
+        return
+      }
+      const rec = readRecord(home, repoId, sid)
+      if (!rec || typeof rec !== 'object' || Array.isArray(rec)) {
+        console.log(`sage: no open record for ${sid} here — claim from the session that owns it`)
+        process.exitCode = 1
+        return
+      }
+      if (rec.status === 'closed' || rec.link_state === 'closed') {
+        console.log(`sage: session ${sid} is closed — cannot claim on a closed session`)
+        process.exitCode = 1
+        return
+      }
+      if (rec.role === 'judge') {
+        console.log('sage: judge sessions do not claim product territory — sage judge off first')
+        process.exitCode = 1
+        return
+      }
+      try {
+        mergeRecord(home, repoId, sid, {
+          claimed_globs: globs,
+          link_state: 'linked',
+          updated_at: new Date(now).toISOString(),
+        })
+      } catch (e) {
+        console.log(`sage: claim failed — ${e?.message || e}`)
+        process.exitCode = 1
+        return
+      }
       try {
         markAsking(home, sid, 'claim') // best-effort breadcrumb — never break the claim
       } catch {
@@ -2044,7 +2097,10 @@ const main = async () => {
 const _t0 = Date.now()
 const _cmd = process.argv[2] || ''
 main()
-  .catch((e) => console.log(`sage: ${e && e.message ? e.message : 'error'}`))
+  .catch((e) => {
+    console.log(`sage: ${e && e.message ? e.message : 'error'}`)
+    process.exitCode = 1
+  })
   .finally(async () => {
     try {
       if (!_cmd || _cmd === 'telemetry' || _cmd === 'statusline') return
