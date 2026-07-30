@@ -20,7 +20,7 @@
 - zone install-wiring: seeded — not yet verified (verifiedAt: unverified)
 - zone skills-templates: seeded — not yet verified (verifiedAt: unverified)
 - zone war-room: seeded — not yet verified (verifiedAt: unverified)
-- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-preferred-probe-no-synthetic
+- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-preferred-probe-no-synthetic, 2026-07-30-territory-prefix-boundary
 
 ## ⚠ Graph coherence
 
@@ -35,7 +35,7 @@ _none_
 - specs: 16 (approved 5 · planned 11)
 - plans: 4 (done 2 · ready 2)
 - reports: 2 (? 2)
-- decisions: 7 (accepted 7)
+- decisions: 8 (accepted 8)
 
 ### Recent
 
