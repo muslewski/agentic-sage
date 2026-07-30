@@ -2,10 +2,10 @@
 type: zone
 summary: "Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, stabilize package root away from worktrees, fleet-wire scripts, verify-fleet, uninstall."
 tags: [install, wiring, init, fleet]
-status: seeded
+status: active
 created: 2026-07-21
 updated: 2026-07-30
-verifiedAt: unverified
+verifiedAt: 01de612d
 owns:
   routes: []
   testids: []

@@ -5,7 +5,7 @@ tags: [board, territory, fleet, guard, live-judge, preferred, doctor]
 status: active
 created: 2026-07-21
 updated: 2026-07-30
-verifiedAt: d5ccf86b
+verifiedAt: 01de612d
 owns:
   routes: []
   testids: []
