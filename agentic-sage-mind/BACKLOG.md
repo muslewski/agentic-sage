@@ -14,3 +14,7 @@ Status legend: 🟡 claimed · ⬜ open · ✅ done
 
 | ID | Status | Mission | Lands |
 |----|--------|---------|-------|
+| D-model-col | ⬜ | War-room MODEL column from existing session model/effort fields (salvage from feat/status-heartbeat-model) | — |
+| D-judge-desired | ⬜ | Optional `sage judge desired` convenience verb | — |
+| D-provider-hb | ⬜ | Optional provider heartbeat alongside pull bridge (not replacing agent-status.mjs) | — |
+| — | — | See `ideas/2026-07-30-status-heartbeat-model-salvage.md` — do **not** merge branch `lib/agent-status.mjs` | — |
