@@ -95,12 +95,15 @@ test('emit never throws on an unwritable root', () => {
   )
 })
 
-test('referencePath honours FLEET_DEVLOG_REF and has no desk-absolute default', () => {
-  assert.equal(referencePath({}), null)
-  assert.equal(referencePath({ FLEET_DEVLOG_REF: '' }), null)
+test('referencePath honours FLEET_DEVLOG_REF; default is this module (portable)', () => {
+  // Unset → this vendored file (import.meta.url), never a hardcoded desk path.
+  const def = referencePath({})
+  assert.ok(typeof def === 'string' && def.endsWith(`${path.sep}fleet-devlog.mjs`))
+  assert.equal(referencePath({ FLEET_DEVLOG_REF: '' }), def)
   assert.equal(referencePath({ FLEET_DEVLOG_REF: '/tmp/alt-ref.mjs' }), '/tmp/alt-ref.mjs')
-  // Must never bake a private /home/... path into shipped source resolution.
-  assert.equal(referencePath({}), null)
+  // Source must not embed a private /home/... absolute for a *different* ref path.
+  const src = fs.readFileSync(new URL('../lib/fleet-devlog.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(src, /\/home\/[A-Za-z0-9._-]+\/Repositories\//)
 })
 
 test('FLEET_DEVLOG_REF set but missing fails loudly (never silent pass)', () => {
