@@ -39,8 +39,8 @@ See README § “Universal core vs your project” and [`CONVENTIONS.md`](../../
 
 ## Flywheel
 
-1. Sessions stamp liveness and optional territory.
-2. You (or a skill) call `board` / `war` / merge brief.
+1. Sessions stamp liveness and optional claims / territory.
+2. You (or a skill) call `board` / `war` / `merge-brief`.
 3. You reallocate work; SAGE does not reallocate for you.
 
 Agent session protocol: skill `skills/sage-fleet/SKILL.md` after install.

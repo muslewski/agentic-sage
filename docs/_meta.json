@@ -33,6 +33,20 @@
         { "title": "Desk fleet", "href": "recipes/desk-fleet.md" }
       ]
     },
-    { "title": "Works with", "href": "works-with.md" }
+    {
+      "title": "Install channels",
+      "items": [
+        { "title": "Distribution", "href": "distribution.md" },
+        { "title": "Gemini CLI setup", "href": "gemini-cli-setup.md" },
+        { "title": "Claude community submit", "href": "claude-community-submit.md" }
+      ]
+    },
+    {
+      "title": "Fleet",
+      "items": [
+        { "title": "Works with", "href": "works-with.md" },
+        { "title": "Interop: status-herald", "href": "interop-status-herald.md" }
+      ]
+    }
   ]
 }

@@ -1,12 +1,30 @@
-# Cross-Project Convention: Session State Between agentic-sage and status-herald
+---
+title: "Interop: status-herald"
+description: "Observational contract between SAGE (fleet judge) and status-herald on the compact/hot path."
+section: recipes
+order: 80
+---
 
-**Projects:** agentic-sage (Sage War Room / fleet judge) and status-herald (curtains, bottom bars, cards).
+# Interop: status-herald
 
-**Purpose:** Provide a lightweight *observational contract* for the narrow overlap (especially the compaction path) so the two systems do not lie to the human in incompatible ways. This is *not* a partnership or shared implementation mandate. The systems are adjacent tools that observe the same agent hooks; they answer different questions and are allowed (and expected) to differ on many details.
+**Projects:** agentic-sage (fleet judge — board, session store, territory) and
+status-herald (curtains, bottom bars, cards).
 
-This document is the single source of truth for the *shared vocabulary on the compact/hot path*. It lives primarily here and is mirrored/referenced from `status-herald/docs/interop-status-herald.md`. See also the full deliberation record in `advisor-plans/026-sage-herald-interop-strategy.md`.
+**Purpose:** Provide a lightweight *observational contract* for the narrow
+overlap (especially the compaction path) so the two systems do not lie to the
+human in incompatible ways. This is *not* a partnership or shared
+implementation mandate. The systems are adjacent tools that observe the same
+agent hooks; they answer different questions and are allowed (and expected) to
+differ on many details.
 
-**Scope:** Hook-driven state only (UserPromptSubmit, PostToolUse, Stop, Pre/PostCompact, Notification, Subagent*, Session*). Not about territory, claims, handoffs, or token math.
+This document is the single source of truth for the *shared vocabulary on the
+compact/hot path*. It lives primarily here and is mirrored/referenced from
+status-herald’s docs tree under the same filename. Historical design notes live
+in the mind vault reports, not in a path agents must open to operate.
+
+**Scope:** Hook-driven state only (UserPromptSubmit, PostToolUse, Stop,
+Pre/PostCompact, Notification, Subagent*, Session*). Not about territory,
+claims, handoffs, or token math.
 
 **Invariants (non-negotiable):**
 - Both systems are **fail-open** and **default-OFF**.
@@ -20,7 +38,7 @@ This document is the single source of truth for the *shared vocabulary on the co
 
 These tools answer **different questions**. They will legitimately disagree outside the compact path.
 
-| Concern | Sage (fleet judge) | Herald (per-pane UI) |
+| Concern | SAGE (fleet judge) | Herald (per-pane UI) |
 |---------|--------------------|----------------------|
 | Question | Is this session collision-relevant / hot for the fleet? | What face should *this* pane show the human right now? |
 | Authoritative surface | session record + derived `liveness` / `phase` | `@herald_state` + curtain/card stamps |
@@ -80,7 +98,7 @@ export const STATES = Object.freeze({
 
 ## "Hot/Busy for Fleet Judgment" vs "UI Affordance"
 
-- **Sage owns coarse hotness** (for collision detection, territory, "N hot" rollups, lead glyphs in war room/board):
+- **SAGE owns coarse hotness** (for collision detection, territory, "N hot" rollups, lead glyphs on `sage board` / `sage war`):
   - Used by: `lib/warroom.js` (`isHot`), `lib/fleet.js` (`tally` + `working`), `lib/board.js`, territory/guard relevance, `sage war` / `board` counts.
   - A session is **hot** iff it might be editing things right now or about to.
   - `working` tally **includes** compacting sessions (via `liveness === 'working'`).
@@ -92,7 +110,7 @@ export const STATES = Object.freeze({
 
 **They must agree on the compacting path** but may differ on post-Stop subs (herald can stay WORKING via sub count; sage goes `idle` on Stop — sage's coarse model treats main turn end as non-hot).
 
-**War room (sage) specific display rules (per this convention):**
+**Board / war display rules (SAGE, per this convention):**
 - STATUS column: `"compacting"` (with `ctx%` if present) or the liveness value. Never lie "idle" or "done" during compact.
 - Lead glyph: `◆` (hot) for `liveness==='working' || phase==='compacting'`.
 - Panels/rollups: may say "X working" or "X hot" that **rolls in** compacting (consistent with `working` count). Explicit `compacting` count available in `--json` totals.
@@ -146,12 +164,12 @@ Both systems normalize event names (Claude snake, Grok camel/Pascal, env fallbac
 
 ---
 
-## Display in War Room (sage) + Herald UI
+## Display on board / war (SAGE) + Herald UI
 
-- War room STATUS: exactly `"compacting"` (append ` · XX%` if `ctx_used`/`ctx_window` present on the sage record) or the raw liveness. Lead with `◆` for hot (including compacting).
+- Board / war STATUS: exactly `"compacting"` (append ` · XX%` if `ctx_used`/`ctx_window` present on the SAGE record) or the raw liveness. Lead with `◆` for hot (including compacting).
 - Panels: "X hot" / "X working" rolls compacting in (via the `working` count). Separate `compacting` total available in JSON.
 - Herald cards: use `COMPACTING` state for dedicated art/text ("compressing context…"). Never show a compacting session as `DONE`.
-- When sage `phase` present, herald (if consuming) should prefer or align its state with it for compacting.
+- When SAGE `phase` present, herald (if consuming) should prefer or align its state with it for compacting.
 
 ---
 
@@ -284,7 +302,7 @@ function isFleetHotFromEither(sageLiveness, sagePhase, heraldState) {
   - After PreCompact: sage `phase==='compacting' && liveness==='working'`, herald `COMPACTING`, `isHot` true, card not showing DONE.
   - After PostCompact + idle_prompt/Stop: phase cleared, state DRAINED to idle/DONE, not hot.
   - Subagent-heavy turn: herald may stay WORKING across Stops; sage idles on main Stop (documented divergence).
-- E2E: `sage doctor` + `herald curtain doctor` + live session exercising the events; visual check war room vs card.
+- E2E: `sage doctor` + `herald curtain doctor` + live session exercising the events; visual check board/war vs card.
 - Add a shared "contract test" fixture (JSONL of events) runnable from both repos if they live in one workspace.
 
 Run the sequence in both and `assert(agreesOnCompacting(...) && sameHotDecision(...))`.
