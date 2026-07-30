@@ -87,9 +87,11 @@ fact-only. Recipe: [Live judge](../recipes/live-judge.md).
 ## Safety
 
 SAGE is **passive**. CLI verbs that look active (init, enable, statusline) only
-touch **SAGE’s own wiring and store**, not your application source.
+touch **SAGE’s own wiring and store**, not your application source. Register
+refuses path-shaped and other unsafe `--sid` values; board readers skip
+non-files under `sessions/` so a FIFO cannot hang the roster.
 
-→ [Safety](./safety.md) · [`SETUP.md`](../../SETUP.md)
+→ [Safety](./safety.md) (containment, identity, reader bounds) · [`SETUP.md`](../../SETUP.md)
 
 ## Machine JSON
 

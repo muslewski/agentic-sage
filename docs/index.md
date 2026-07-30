@@ -23,7 +23,7 @@ Site: [sage.muslewski.com](https://sage.muslewski.com) · npm: [`agentic-sage`](
 | [Concepts: fleet judge](./concepts/fleet-judge.md) | Why SAGE exists; default-OFF; human at fleet altitude |
 | [CLI reference](./reference/cli.md) | Verbs and flags |
 | [Configuration](./reference/configuration.md) | Scope, storage, judge preference |
-| [Safety](./reference/safety.md) | Fail-open, guard, hooks |
+| [Safety](./reference/safety.md) | Containment, identity, fail-open, guard |
 | [Developer logging](./reference/developer-logging.md) | Opt-in local fleet-devlog |
 | [Adapters](./reference/adapters.md) | Optional project enrichment |
 | [Recipes](./recipes/index.md) | Multi-harness, dogfood, statusline, live judge |

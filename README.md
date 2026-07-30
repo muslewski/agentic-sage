@@ -219,7 +219,7 @@ the `sage-fleet` skill at start / before PR / on conflict.
 | [Claims and territory](./docs/concepts/claims-and-territory.md) | Touched vs claimed, merge-brief rules |
 | [Fleet judge](./docs/concepts/fleet-judge.md) | Why SAGE exists; default-OFF |
 | [CLI reference](./docs/reference/cli.md) | Verbs and flags |
-| [Safety](./docs/reference/safety.md) | Fail-open, guard, hooks |
+| [Safety](./docs/reference/safety.md) | Containment, identity, fail-open, guard |
 | [Configuration](./docs/reference/configuration.md) | Scope and storage |
 | [Developer logging](./docs/reference/developer-logging.md) | Opt-in local fleet-devlog |
 | [`SETUP.md`](./SETUP.md) | Full human setup |
@@ -229,8 +229,10 @@ the `sage-fleet` skill at start / before PR / on conflict.
 
 ## Safety (short)
 
-Default **OFF**. Emitter is **fail-open**. The only path that can block an edit
-is the **guard**, which needs two explicit on-switches. Full table:
+Default **OFF**. Emitter is **fail-open**. Session writes are **path-contained**
+(unsafe `sid` and symlink escape refused). Nested worktrees keep distinct
+`worktree` paths under one `repo_id`. The only path that can block an edit is
+the **guard**, which needs two explicit on-switches. Full detail:
 [Safety](./docs/reference/safety.md).
 
 ## Community
