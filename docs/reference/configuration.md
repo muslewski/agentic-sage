@@ -63,7 +63,9 @@ sage: live judge preferred · offline — run: sage judge run
 ```
 
 Exit code stays 0. `sage gate --strict` fails only on install/freshness lag,
-never on preferred-offline.
+never on preferred-offline. SessionStart can inject the same soft line on every
+new session until the desire is satisfied or the preference is dialed back —
+[Troubleshooting](./troubleshooting.md#session-start-nudge-appears-on-every-new-session).
 
 ## Env
 

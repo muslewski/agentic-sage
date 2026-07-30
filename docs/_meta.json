@@ -18,7 +18,8 @@
         { "title": "Configuration", "href": "reference/configuration.md" },
         { "title": "Adapters", "href": "reference/adapters.md" },
         { "title": "Safety", "href": "reference/safety.md" },
-        { "title": "Developer logging", "href": "reference/developer-logging.md" }
+        { "title": "Developer logging", "href": "reference/developer-logging.md" },
+        { "title": "Troubleshooting", "href": "reference/troubleshooting.md" }
       ]
     },
     {

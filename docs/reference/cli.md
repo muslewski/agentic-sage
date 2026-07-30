@@ -580,7 +580,9 @@ sage gate: fail (strict) — install/wire incomplete
 ### `sage doctor`
 
 Validate dirs, emitter hook, settings wiring, skills, token-forecast, current
-repo, storage, adapter, live-judge optional note.
+repo, storage, adapter, live-judge optional note. Full check catalogue, fix
+lines, and known gaps (always-exit-0, no `--json`, soft rows forced ✓):
+[Troubleshooting · sage doctor](./troubleshooting.md#sage-doctor--every-check-today).
 
 ```text
 $ sage doctor
@@ -592,7 +594,8 @@ SAGE doctor · HEALTH 7/11 ██████░░░░ 64%
   7 ok · 4 need attention
 ```
 
-Exit **0** even when checks need attention (today). **Writes:** nothing.
+Exit **0** even when checks need attention (today). **`--json` is ignored**
+(same human checklist). **Writes:** nothing.
 
 ### `sage prune`
 
@@ -731,5 +734,7 @@ current names.
 - [Configuration](./configuration.md)
 - [Safety](./safety.md)
 - [Developer logging](./developer-logging.md)
+- [Troubleshooting](./troubleshooting.md) (doctor catalogue, symptoms)
+- [Dogfood verdicts](../recipes/dogfood.md#dogfood-verdict-vocabulary)
 - Agent install runbook: [`AGENTS.md`](../../AGENTS.md)
 - Human setup: [`SETUP.md`](../../SETUP.md)

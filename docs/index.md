@@ -26,7 +26,8 @@ Site: [sage.muslewski.com](https://sage.muslewski.com) · npm: [`agentic-sage`](
 | [Safety](./reference/safety.md) | Containment, identity, fail-open, guard |
 | [Developer logging](./reference/developer-logging.md) | Opt-in local fleet-devlog |
 | [Adapters](./reference/adapters.md) | Optional project enrichment |
-| [Recipes](./recipes/index.md) | Multi-harness, dogfood, statusline, live judge |
+| [Troubleshooting](./reference/troubleshooting.md) | Symptoms, `sage doctor`, nvm harness note |
+| [Recipes](./recipes/index.md) | Multi-harness, dogfood verdicts, statusline, live judge |
 | [Works with](./works-with.md) | Fleet siblings (herald, oracle, atlas, armory, ferry) |
 
 ## Doctrine (short)
