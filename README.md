@@ -65,9 +65,13 @@ sage board
 ```text
 SAGE · agentic-sage-0e480620 · 2 sessions
 
-● docs/onramp-pass ✎  idle
-● docs/onramp-pass ✎  idle
+● feat/auth  idle
+● main       idle
 ```
+
+Branch name and dirt marker (`✎` when the checkout is dirty) come from each
+session’s git state — they vary by machine. On a clean `main` checkout with one
+live session the row is typically `● main  idle`.
 
 One session alone claiming a path:
 
@@ -104,12 +108,12 @@ collision surface now.
 ### Pairwise: use `territory`
 
 With two live sessions both claiming `src/auth/**`, the peer shows up as
-**claimed** (self excluded):
+**claimed** (self excluded). Labels are **branch names**, not session ids:
 
 ```text
 $ SAGE_SELF_SID=session-a sage territory 'src/auth/**'
 SAGE territory · src/auth/**
-  docs/onramp-pass   claimed  idle     src/auth/**
+  feat/auth          claimed  idle     src/auth/**
 ```
 
 Clear path:
@@ -122,20 +126,21 @@ SAGE territory · lib/unrelated/**
 ### Multi-party: `merge-brief`
 
 `merge-brief` lists paths that **two or more other live sessions** have
-touched or claimed (caller excluded when self is resolved). Three sessions
-all claiming `src/auth/**`, run as one of them:
+touched or claimed (caller excluded when self is resolved). Three sessions on
+distinct branches all claiming `src/auth/**`, run as the one on `main`:
 
 ```text
-$ SAGE_SELF_SID=sess-a sage merge-brief
-SAGE merge-brief · agentic-sage-0e480620 · RISK █░░░ low · 2 contested path(s)
-  node_modules  █░░░ low  ██
-    contested by: docs/onramp-pass, docs/onramp-pass
+$ SAGE_SELF_SID=session-a sage merge-brief
+SAGE merge-brief · agentic-sage-0e480620 · RISK █░░░ low · 1 contested path(s)
   src/auth/**  █░░░ low  ██
-    contested by: docs/onramp-pass, docs/onramp-pass
+    contested by: fix/board, feat/auth
 ```
 
-`src/auth/**` is contested **via claims**. `node_modules` appeared because
-register recorded it on each session’s **touched** set (dirty checkout).
+`contested by:` lists **branch names** of the other live sessions (not session
+ids). Two sessions on the same branch will render that name twice — that is
+expected, not a duplicate-row bug. `src/auth/**` is contested **via claims**.
+Dirty checkouts may also list touched paths (for example `node_modules`) when
+register recorded them.
 
 **Known limitation:** with exactly two sessions that only conflict with each
 other, each caller’s `merge-brief` prints **clear to merge** (only one *other*
@@ -197,14 +202,19 @@ sage doctor             # local validation
 Plugin / marketplace matrix (Grok, Claude, Cursor, Codex, Gemini, skills.sh):
 [docs/distribution.md](./docs/distribution.md).
 
-Clone-from-source:
+Clone-from-source (no global `sage` on PATH until you link or `npm link`):
 
 ```bash
 git clone https://github.com/muslewski/agentic-sage.git
 cd agentic-sage
-node install.mjs        # same as sage init --global from source
-sage on
+node install.mjs           # same as sage init --global from source (wires hooks/skills)
+node bin/sage on           # invoke via the clone entry point
+node bin/sage doctor       # local validation
 ```
+
+Optional: put the clone on PATH yourself, for example
+`export PATH="$PWD/bin:$PATH"`, then bare `sage on` works. Global npm install
+already provides `sage` / `agentic-sage` on PATH.
 
 Paste [`templates/CLAUDE.snippet.md`](./templates/CLAUDE.snippet.md) (or
 [`templates/GROK.snippet.md`](./templates/GROK.snippet.md)) so sessions reach for

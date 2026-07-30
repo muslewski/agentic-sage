@@ -49,9 +49,15 @@ every session.
 sage doctor
 ```
 
-Fix anything marked ✗ (`N ok · M need attention`). Doctor always exits **0**
-today even when rows fail — read the checklist, not the exit code. Soft notes
-(preferred live judge offline, optional adapter absent) stay ✓; see
+Read the checklist, not the exit code — doctor always exits **0** today even
+when rows fail. Soft notes (preferred live judge offline, optional adapter
+absent) stay ✓.
+
+For a red install row, run the printed `→ run:` remedy (often
+`sage init` or `sage init --repair`). In particular **storage dir** is ✗ until
+the per-repo data directory exists; `sage init --repair` creates it when your
+cwd is that git repo (an empty dir is enough for ✓ — you do not need a session
+yet). Soft ✓ rows need no fix. Full catalogue:
 [Troubleshooting · sage doctor](./reference/troubleshooting.md#sage-doctor--every-check-today).
 
 When the install rows are green:

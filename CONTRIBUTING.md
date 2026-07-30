@@ -20,6 +20,8 @@ git clone https://github.com/muslewski/agentic-sage.git
 cd agentic-sage
 npm install          # installs biome (dev dep); no runtime deps
 node install.mjs     # wire into your own ~/.claude to dogfood while developing
+# Clone does not put `sage` on PATH — use the entry point (or npm link / PATH):
+node bin/sage doctor
 ```
 
 ## Running tests

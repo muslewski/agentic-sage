@@ -37,9 +37,19 @@ config we use ourselves — copy it for a proven setup.
 npm install -g agentic-sage
 ```
 
-Zero dependencies, Node ≥ 20. **From source instead?**
-`git clone https://github.com/muslewski/agentic-sage && cd agentic-sage` — then use
-`node install.mjs` in place of `sage init` below.
+Zero dependencies, Node ≥ 20. **From source instead?** A clone does **not** put
+`sage` on PATH. Use the clone entry point for every CLI step:
+
+```bash
+git clone https://github.com/muslewski/agentic-sage.git
+cd agentic-sage
+node install.mjs          # same as sage init --global from source
+node bin/sage on          # not bare `sage on` until PATH/link is set
+node bin/sage doctor
+```
+
+Optional: `export PATH="$PWD/bin:$PATH"` (or `npm link`) so bare `sage …` works
+for the steps below.
 
 ### 2. Wire (`~/.claude` by default, **disabled**)
 
@@ -62,7 +72,7 @@ Non-interactive flags (agents, CI, scripting) — full reference in [`AGENTS.md`
 ```bash
 sage init --global [--enable]
 sage init --project [--path <dir>] [--storage repo-root|sibling|agent-home] [--yes] [--enable]
-sage init --repair      # re-assert wiring + perform the safe legacy-state-dir rename
+sage init --repair      # re-assert wiring, recreate missing dirs (incl. this repo’s storage), legacy rename
 sage init --show        # full breakdown: scope, storage, rule matched, enablement
 ```
 

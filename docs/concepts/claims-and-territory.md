@@ -23,10 +23,10 @@ Ask whether **any other live session** claims or touches the globs you are about
 ```text
 $ SAGE_SELF_SID=session-a sage territory 'src/auth/**'
 SAGE territory · src/auth/**
-  docs/onramp-pass   claimed  idle     src/auth/**
+  feat/auth          claimed  idle     src/auth/**
 ```
 
-Empty answer:
+The first column is the peer’s **branch name** (not its session id). Empty answer:
 
 ```text
 SAGE territory · lib/unrelated/**
@@ -39,18 +39,20 @@ The `via` column is either `claimed` or `touched`. Self is excluded so you do no
 
 Lists paths that **two or more other live sessions** have touched or claimed (judges and synthetic agent-status rows are ignored).
 
-Example (three live sessions all claimed `src/auth/**`; caller is one of them):
+Example (three live sessions on distinct branches all claimed `src/auth/**`;
+caller is the one on `main`):
 
 ```text
-$ SAGE_SELF_SID=sess-a sage merge-brief
-SAGE merge-brief · agentic-sage-0e480620 · RISK █░░░ low · 2 contested path(s)
-  node_modules  █░░░ low  ██
-    contested by: docs/onramp-pass, docs/onramp-pass
+$ SAGE_SELF_SID=session-a sage merge-brief
+SAGE merge-brief · agentic-sage-0e480620 · RISK █░░░ low · 1 contested path(s)
   src/auth/**  █░░░ low  ██
-    contested by: docs/onramp-pass, docs/onramp-pass
+    contested by: fix/board, feat/auth
 ```
 
-Here `src/auth/**` is contested **via claims** (no one needed to edit the files first). `node_modules` came from each session’s **touched** set (dirty checkout recorded at register time).
+`contested by:` lists **branch names** of the other live sessions. Two peers on
+the same branch will show that name twice. Here `src/auth/**` is contested
+**via claims** (no one needed to edit the files first). Dirty checkouts may
+also surface touched paths (for example `node_modules`) when register recorded them.
 
 Clear output when nothing multi-party conflicts among peers:
 

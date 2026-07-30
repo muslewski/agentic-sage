@@ -157,13 +157,13 @@ only branch names.
 $ sage board
 SAGE · <repo_id> · 2 sessions
 
-● docs/onramp-pass ✎  idle  bin/ +4
-● docs/onramp-pass ✎  idle  bin/ +4
+● main ✎  idle  bin/ +4
+● main ✎  idle  bin/ +4
 ```
 
 That is **two** session records on the **same branch** (common when two agents
 share a worktree or both registered with the same git HEAD). They are not
-merged into one record.
+merged into one record. Branch name and dirt marker (`✎`) vary by checkout.
 
 **Fix — show ids:**
 
@@ -171,8 +171,8 @@ merged into one record.
 $ sage board --wide
 SAGE · <repo_id> · 2 sessions
 
-● docs/onramp-pass ✎  idle  bin/ +4    beta
-● docs/onramp-pass ✎  idle  bin/ +4    alpha
+● main ✎  idle  bin/ +4    beta
+● main ✎  idle  bin/ +4    alpha
 ```
 
 Or `sage board --json` and read each object’s `session_id` / `pid` /
@@ -276,6 +276,8 @@ global default → built-in → legacy. Full chain:
 3. Project-scope installs default storage under `<repo>/.agentic-sage` unless
    you passed `--storage sibling|agent-home` at init.
 4. Missing storage dir is a doctor **✗** with `→ run: sage init --repair`.
+   That command creates the resolved per-repo data directory when cwd is the
+   git repo (empty is enough for ✓). First `sage register` also creates it.
 
 ---
 
