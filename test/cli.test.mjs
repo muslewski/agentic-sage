@@ -498,6 +498,23 @@ test('init --repair: re-asserts current wiring without changing enablement', () 
   assert.match(out, /ENABLED/)
 })
 
+test('init --repair: creates missing per-repo storage dir (doctor storage check)', () => {
+  const home = mkTmp('sage-i-')
+  const repo = mkGitRepo()
+  const id = resolveRepoId(repo)
+  run(['init', '--global'], home, repo)
+  const dataDir = path.join(home, '.claude', 'agentic-sage', 'repos', id)
+  assert.equal(fs.existsSync(dataDir), false, 'fresh global init does not create repos/<id>')
+  const before = run(['doctor'], home, repo)
+  assert.match(before, /✗ storage dir/)
+  assert.match(before, /→ run: sage init --repair/)
+  run(['init', '--repair'], home, repo)
+  assert.equal(fs.existsSync(dataDir), true, 'repair must mkdir the resolved data dir')
+  const after = run(['doctor'], home, repo)
+  assert.match(after, /✓ storage dir/)
+  assert.doesNotMatch(after, /✗ storage dir/)
+})
+
 // ── plan 011: legacy-install upgrade (npm-update-no-re-init guarantee) ─────
 
 test('plan 011 e2e: a legacy install (~/.claude/sage) reads fine via fallback with no init; `sage init --global` migrates it in place; a second init is a noop', () => {

@@ -40,6 +40,15 @@ How SAGE attaches to a machine or repo: symlink emitter, merge seven lifecycle h
 
 Prefer empty until verified. Product claims: never auto-enable without `--enable`; never clobber existing config.
 
+## Repair creates per-repo storage (2026-07-30)
+
+`sage init --repair` re-asserts hooks/skills and, when cwd is a git repo under
+**global** scope, `mkdir`s the resolved data dir (`explainRepoDataDir` →
+`repos/<repo_id>` under sage home). Project-scope repair already did this via
+`wireProject`. Doctor’s `storage dir` ✗ with `→ run: sage init --repair` must
+clear after that command — an empty dir is enough for ✓. First session write
+(`register` / `mergeRecord`) also creates the dir.
+
 ## Lineage
 
 AGENTS.md setup runbook, README install section, wiring headers, 2026-07-21 atlas-seed pass.
