@@ -106,18 +106,21 @@ Sage Island (optional Tauri 2 desktop binary)
 
 - **npm package `agentic-sage`:** remains pure CLI; **must not** depend on Tauri/Electron/desktop crates at runtime.
 - **Desktop app:** separate tree (e.g. `desktop/` in-repo or sibling release artifact) with its own build/CI.
-- Discovery: island looks for `sage` on `PATH`, then optional user-configured absolute path.
+- Discovery:
+  - **`SAGE_REMOTE=<ssh-host>`** (MacBook → manjaro desk): `ssh -o BatchMode=yes host -- sh -c 'sage …'` using host PATH `sage`. Default poll verb: **`fleet --json`** (no Mac cwd). Optional `SAGE_REMOTE_CWD` → `cd` + `board --json`.
+  - **Local:** `SAGE_BIN` or `sage` on PATH → `board --json`.
+- Aligns with mossferry: UI on laptop, fleet truth on agent host. Do not sync `~/.claude/agentic-sage` as primary live path (pid liveness is host-local).
 
 ### 5.2 Data loop
 
-1. Resolve sage binary.
-2. Poll `sage board --json` and/or `sage fleet --json` on an interval (e.g. 1–2s; tunable).
-3. When heat suspected or badge non-zero, also fetch merge-brief / territory as needed.
-4. Optional later: fs-watch `~/.claude/agentic-sage/repos/*/sessions/*.json` and briefs for faster refresh without inventing `sage serve` in v1.
+1. Resolve transport (remote SSH or local binary).
+2. Poll `sage fleet --json` (remote default) or `sage board --json` (local / remote_cwd) on an interval (e.g. 1–2s; tunable).
+3. When heat suspected or badge non-zero, also fetch merge-brief when cwd is defined; otherwise heat 0.
+4. Optional later: fs-watch only for **local** single-machine; remote stays poll/SSH.
 5. Fail-open:
-   - binary missing → “Install sage CLI” empty state
-   - SAGE off / no sessions → calm “0 sessions” / “SAGE off”
-   - JSON parse error → keep last good snapshot; log once; no crash loop
+   - binary / SSH missing → calm empty (`sage?` / `ssh?`)
+   - SAGE off / no sessions → calm “0 sessions”
+   - JSON parse error → keep last good snapshot; no crash loop
 
 ### 5.3 Schema contract
 

@@ -177,16 +177,19 @@ Workers still trust contested/clear from the CLI; briefs layer when fresh. No se
 
 ### 🏝 Sage Island desktop (optional Mac-first glass dock)
 
-Terminal SAGE stays primary. For an always-on-top **top-edge island** that shows live
-sessions (soft actions only — copy / open Finder), build the companion from source:
+Terminal SAGE stays primary. For a Mac **top-edge island** that watches agents on a remote
+host (manjaro desk / mossferry), build the companion and point it at SSH:
 
 ```bash
-cd desktop && npm install && npm run tauri dev   # or tauri build
+cd /path/to/agentic-sage/desktop   # repo folder, not ~/Desktop
+export SAGE_REMOTE=manjaro         # ssh Host alias; BatchMode keys required
+npm install && npm run tauri dev
 ```
 
-Requires Node ≥ 20, Rust, and `sage` on `PATH` (or `SAGE_BIN`). **Not** shipped by
+Mac UI + **remote** `sage fleet --json` over SSH. Requires Node ≥ 20, Rust, working
+`ssh $SAGE_REMOTE 'sage fleet --json'`, and sage on the **host**. **Not** shipped by
 `npm i -g agentic-sage`. Unsigned Mac builds may need Gatekeeper **Open Anyway**.
-Details: [`desktop/README.md`](./desktop/README.md). Design: `agentic-sage-mind/specs/2026-07-31-sage-island-desktop-design.md`.
+Details: [`desktop/README.md`](./desktop/README.md).
 
 ### 🔧 tmux fleet pane
 

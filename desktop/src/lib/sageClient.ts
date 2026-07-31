@@ -1,8 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { BoardEnvelope } from './types';
 
+/** Local Mac sage vs remote host (manjaro) over SSH. */
+export type SageTransportInfo = {
+  mode: 'local' | 'remote';
+  host: string | null;
+  remote_cwd: string | null;
+};
+
 /**
- * Parse `sage board --json` stdout into a BoardEnvelope.
+ * Parse `sage board --json` / `sage fleet --json` stdout into a BoardEnvelope.
  * Throws on invalid JSON or missing sessions array.
  */
 export function parseBoardJson(text: string): BoardEnvelope {
@@ -53,21 +60,63 @@ export function parseHeatFromMergeBrief(stdout: string): number {
 }
 
 /**
- * Invoke the native `run_sage` command with `board --json` and parse the envelope.
+ * Which verbs to poll for the island.
+ * - remote + no remote_cwd → `fleet --json` (full manjaro desk; Mac has no repo cwd)
+ * - local or remote with SAGE_REMOTE_CWD → `board --json` (repo-scoped)
  */
-export async function fetchBoard(): Promise<BoardEnvelope> {
-  const stdout = await invoke<string>('run_sage', {
-    args: ['board', '--json'],
-  });
+export function islandPollArgs(transport: SageTransportInfo): string[] {
+  if (transport.mode === 'remote' && !transport.remote_cwd) {
+    return ['fleet', '--json'];
+  }
+  return ['board', '--json'];
+}
+
+/**
+ * SSH one-liner to open a remote worktree in a Mac Terminal (soft action when remote).
+ * Paths live on the host (e.g. manjaro) — paste into local Terminal; do not open in Finder.
+ */
+export function remoteCdCommand(host: string, worktree: string): string {
+  const p = worktree.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `ssh -t ${host} "cd \\"${p}\\" && exec \\$SHELL -l"`;
+}
+
+/**
+ * Ask native shell how sage is reached (local PATH vs SAGE_REMOTE ssh).
+ */
+export async function getSageTransport(): Promise<SageTransportInfo> {
+  const raw = await invoke<string>('get_sage_transport');
+  const data = JSON.parse(raw) as Partial<SageTransportInfo>;
+  const mode = data.mode === 'remote' ? 'remote' : 'local';
+  return {
+    mode,
+    host: typeof data.host === 'string' ? data.host : null,
+    remote_cwd: typeof data.remote_cwd === 'string' ? data.remote_cwd : null,
+  };
+}
+
+/**
+ * Invoke native `run_sage` with the right poll verb and parse the envelope.
+ */
+export async function fetchBoard(
+  transport?: SageTransportInfo,
+): Promise<BoardEnvelope> {
+  const t = transport ?? (await getSageTransport());
+  const args = islandPollArgs(t);
+  const stdout = await invoke<string>('run_sage', { args });
   return parseBoardJson(stdout);
 }
 
 /**
  * Best-effort contested heat from `merge-brief --json`. Returns 0 when the CLI
  * has no JSON kind or the invoke fails (fail-open; never invents contested math).
+ * Remote without remote_cwd: merge-brief is cwd-scoped → skip (0).
  */
-export async function fetchHeat(): Promise<number> {
+export async function fetchHeat(transport?: SageTransportInfo): Promise<number> {
   try {
+    const t = transport ?? (await getSageTransport());
+    if (t.mode === 'remote' && !t.remote_cwd) {
+      return 0;
+    }
     const stdout = await invoke<string>('run_sage', {
       args: ['merge-brief', '--json'],
     });
@@ -86,6 +135,7 @@ export async function copyText(text: string): Promise<void> {
 
 /**
  * Soft action: open a path (worktree/dir) via Tauri `open_path` command.
+ * Only useful for **local** paths (Finder / file manager on this machine).
  */
 export async function openPath(path: string): Promise<void> {
   await invoke('open_path', { path });

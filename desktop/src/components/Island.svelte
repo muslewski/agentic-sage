@@ -5,6 +5,8 @@
     view: CollapsedView | null;
     status: 'ok' | 'loading' | 'error' | 'missing' | 'empty';
     hoverId?: string | null;
+    /** When set, island is reading manjaro (or other host) over SSH. */
+    remoteHost?: string | null;
     onPillEnter?: (sessionId: string) => void;
     onPillLeave?: () => void;
     onPillClick?: (sessionId: string) => void;
@@ -18,6 +20,7 @@
     view,
     status,
     hoverId = null,
+    remoteHost = null,
     onPillEnter,
     onPillLeave,
     onPillClick,
@@ -50,8 +53,13 @@
   onpointerleave={() => onShellLeave?.()}
   onclick={handleShellClick}
 >
+  {#if remoteHost}
+    <span class="island-remote" title="Polling sage over SSH on {remoteHost}" data-interactive>
+      @{remoteHost}
+    </span>
+  {/if}
   {#if status === 'missing'}
-    <span class="island-status" data-kind="missing">sage?</span>
+    <span class="island-status" data-kind="missing">{remoteHost ? 'ssh?' : 'sage?'}</span>
   {:else if status === 'error'}
     <span class="island-status" data-kind="error">SAGE · …</span>
   {:else if status === 'loading' && !view}

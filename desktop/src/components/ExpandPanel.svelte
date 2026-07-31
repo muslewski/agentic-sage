@@ -2,16 +2,30 @@
   import type { BoardEnvelope, SageSession } from '$lib/types';
   import { sessionLabel } from '$lib/labels';
   import { isLiveSession } from '$lib/density';
-  import { copyText, openPath } from '$lib/sageClient';
+  import {
+    copyText,
+    openPath,
+    remoteCdCommand,
+    type SageTransportInfo,
+  } from '$lib/sageClient';
 
   interface Props {
     sessions: SageSession[];
     board: BoardEnvelope | null;
     focusId?: string | null;
+    transport?: SageTransportInfo | null;
     onCollapse?: () => void;
   }
 
-  let { sessions, board, focusId = null, onCollapse }: Props = $props();
+  let {
+    sessions,
+    board,
+    focusId = null,
+    transport = null,
+    onCollapse,
+  }: Props = $props();
+
+  const isRemote = $derived(transport?.mode === 'remote' && !!transport.host);
 
   let toast: string | null = $state(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -44,6 +58,17 @@
     }
   }
 
+  /** Remote worktrees live on manjaro — copy ssh cd, don't open Mac Finder. */
+  async function doRemotePath(s: SageSession) {
+    const host = transport?.host;
+    const wt = s.worktree ? String(s.worktree) : '';
+    if (!host || !wt) {
+      flash('No remote path');
+      return;
+    }
+    await doCopy('ssh cd', remoteCdCommand(host, wt));
+  }
+
   function claimsText(s: SageSession): string {
     const g = s.claimed_globs ?? [];
     return g.length ? g.join('\n') : '';
@@ -61,7 +86,12 @@
 
 <div class="expand-panel" role="dialog" aria-label="SAGE sessions" data-focus={focusId ?? ''}>
   <header class="expand-head">
-    <span class="expand-title">Live sessions · {live.length}</span>
+    <span class="expand-title">
+      Live sessions · {live.length}
+      {#if isRemote}
+        <span class="expand-remote">@{transport?.host}</span>
+      {/if}
+    </span>
     <div class="expand-head-actions">
       <button
         type="button"
@@ -140,14 +170,33 @@
               Claims
             </button>
             {#if s.worktree}
-              <button
-                type="button"
-                class="soft-btn"
-                title="Open worktree"
-                onclick={() => doOpen(String(s.worktree))}
-              >
-                Open
-              </button>
+              {#if isRemote}
+                <button
+                  type="button"
+                  class="soft-btn"
+                  title="Copy ssh cd to remote worktree (paths are on the host, not this Mac)"
+                  onclick={() => doRemotePath(s)}
+                >
+                  ssh cd
+                </button>
+                <button
+                  type="button"
+                  class="soft-btn"
+                  title="Copy remote worktree path"
+                  onclick={() => doCopy('path', String(s.worktree))}
+                >
+                  Path
+                </button>
+              {:else}
+                <button
+                  type="button"
+                  class="soft-btn"
+                  title="Open worktree"
+                  onclick={() => doOpen(String(s.worktree))}
+                >
+                  Open
+                </button>
+              {/if}
             {/if}
           </div>
         </article>
@@ -191,6 +240,13 @@
   .expand-title {
     font-weight: 600;
     letter-spacing: 0.01em;
+  }
+
+  .expand-remote {
+    margin-left: 6px;
+    font-weight: 500;
+    font-size: 11px;
+    opacity: 0.7;
   }
 
   .expand-head-actions {

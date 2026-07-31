@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseBoardJson, parseHeatFromMergeBrief } from './sageClient';
+import {
+  islandPollArgs,
+  parseBoardJson,
+  parseHeatFromMergeBrief,
+  remoteCdCommand,
+} from './sageClient';
 
 describe('parseBoardJson', () => {
   it('parses schema 1 board envelope', () => {
@@ -55,5 +60,35 @@ describe('parseHeatFromMergeBrief', () => {
     expect(parseHeatFromMergeBrief('')).toBe(0);
     expect(parseHeatFromMergeBrief('{')).toBe(0);
     expect(parseHeatFromMergeBrief(JSON.stringify({ paths: 'nope' }))).toBe(0);
+  });
+});
+
+describe('islandPollArgs', () => {
+  it('uses fleet --json for remote without remote_cwd (Mac → manjaro desk)', () => {
+    expect(
+      islandPollArgs({ mode: 'remote', host: 'manjaro', remote_cwd: null }),
+    ).toEqual(['fleet', '--json']);
+  });
+
+  it('uses board --json for local or remote with cwd', () => {
+    expect(
+      islandPollArgs({ mode: 'local', host: null, remote_cwd: null }),
+    ).toEqual(['board', '--json']);
+    expect(
+      islandPollArgs({
+        mode: 'remote',
+        host: 'manjaro',
+        remote_cwd: '/home/kento/Repositories/agentic-sage',
+      }),
+    ).toEqual(['board', '--json']);
+  });
+});
+
+describe('remoteCdCommand', () => {
+  it('builds an ssh cd one-liner', () => {
+    const cmd = remoteCdCommand('manjaro', '/home/kento/Repositories/agentic-sage');
+    expect(cmd).toContain('ssh -t manjaro');
+    expect(cmd).toContain('agentic-sage');
+    expect(cmd).toContain('cd');
   });
 });

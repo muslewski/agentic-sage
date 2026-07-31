@@ -4,7 +4,12 @@
   import Peek from '../components/Peek.svelte';
   import ExpandPanel from '../components/ExpandPanel.svelte';
   import { buildCollapsedView, isLiveSession } from '$lib/density';
-  import { fetchBoard, fetchHeat } from '$lib/sageClient';
+  import {
+    fetchBoard,
+    fetchHeat,
+    getSageTransport,
+    type SageTransportInfo,
+  } from '$lib/sageClient';
   import type { BoardEnvelope, CollapsedView, SageSession } from '$lib/types';
   import { fitIslandWindow, type UiMode } from '$lib/windowFit';
   import '../styles/glass.css';
@@ -17,6 +22,7 @@
   let status: PollStatus = $state('loading');
   let sessions: SageSession[] = $state([]);
   let board: BoardEnvelope | null = $state(null);
+  let transport: SageTransportInfo | null = $state(null);
 
   let mode: UiMode = $state('collapsed');
   let hoverId: string | null = $state(null);
@@ -31,17 +37,30 @@
     if (
       /not found on PATH/i.test(msg) ||
       /SAGE_BIN/i.test(msg) ||
+      /SAGE_REMOTE/i.test(msg) ||
       /sage binary/i.test(msg) ||
-      /No such file/i.test(msg)
+      /No such file/i.test(msg) ||
+      /Permission denied/i.test(msg) ||
+      /Could not resolve hostname/i.test(msg) ||
+      /Connection timed out/i.test(msg) ||
+      /Connection refused/i.test(msg)
     ) {
       return 'missing';
     }
     return 'error';
   }
 
+  async function ensureTransport(): Promise<SageTransportInfo> {
+    if (transport) return transport;
+    const t = await getSageTransport();
+    transport = t;
+    return t;
+  }
+
   async function pollOnce(): Promise<void> {
     try {
-      const [nextBoard, heat] = await Promise.all([fetchBoard(), fetchHeat()]);
+      const t = await ensureTransport();
+      const [nextBoard, heat] = await Promise.all([fetchBoard(t), fetchHeat(t)]);
       board = nextBoard;
       sessions = nextBoard.sessions ?? [];
       const next = buildCollapsedView(sessions, heat);
@@ -54,7 +73,7 @@
       }
     } catch (err) {
       status = classifyError(err);
-      // Keep last good view on transient error; clear only on missing binary.
+      // Keep last good view on transient error; clear only on missing binary / dead remote.
       if (status === 'missing') {
         view = null;
         sessions = [];
@@ -184,6 +203,7 @@
       {view}
       {status}
       {hoverId}
+      remoteHost={transport?.mode === 'remote' ? transport.host : null}
       onPillEnter={onPillEnter}
       onPillLeave={onPillLeave}
       onPillClick={(id) => pin(id)}
@@ -200,6 +220,7 @@
         {sessions}
         {board}
         focusId={hoverId}
+        {transport}
         onCollapse={collapse}
       />
     {/if}

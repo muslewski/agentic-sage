@@ -1,73 +1,109 @@
 # Sage Island
 
-Optional **desktop companion** for [agentic-sage](../README.md): a Mac-first Tauri + Svelte shell that will show a top-edge fleet island over live `sage --json` data.
+Optional **desktop companion** for [agentic-sage](../README.md): a Mac-first Tauri + Svelte
+**top-edge glass island** that shows live fleet sessions.
 
-This package is **not** part of the published `agentic-sage` npm package. Installing `npm i -g agentic-sage` never installs or builds this app. Clone the repo and build here if you want the island UI.
+This package is **not** part of the published `agentic-sage` npm package.
+`npm i -g agentic-sage` never installs this app.
+
+## Your desk (MacBook + manjaro)
+
+Agents and SAGE state live on **manjaro**. The island UI lives on the **MacBook**.
+
+```
+Mac Island  ──ssh BatchMode──►  manjaro: sage fleet --json
+                                ~/.claude/agentic-sage/…
+```
+
+Same split as [mossferry](https://github.com/muslewski/mossferry): **door/UI on Mac, truth on host**.
+
+### Mac setup (remote island — recommended)
+
+1. **SSH host alias** that already works with ferry (BatchMode / keys, no password prompt):
+
+   ```bash
+   # ~/.ssh/config  (example)
+   Host manjaro
+     HostName manjaro.tail6d112d.ts.net   # or 100.101.198.44 / LAN
+     User kento
+     IdentityFile ~/.ssh/id_ed25519
+   ```
+
+   Check: `ssh -o BatchMode=yes manjaro 'sage fleet --json' | head`
+
+2. On **manjaro**: `sage` on PATH, SAGE on (`sage on`), agents running as usual.
+
+3. On **Mac**, clone this repo, checkout the island branch, then:
+
+   ```bash
+   cd /path/to/agentic-sage          # the REPO, not ~/Desktop
+   git checkout feat/sage-island-desktop
+   cd desktop                        # lowercase folder inside the repo
+
+   export SAGE_REMOTE=manjaro        # your ssh Host alias
+   # optional: export SAGE_REMOTE_CWD=/home/kento/Repositories/agentic-sage
+
+   npm install
+   npm run tauri dev
+   ```
+
+| Env | Meaning |
+|-----|---------|
+| **`SAGE_REMOTE`** | SSH host alias → island polls **remote** `sage` (required for Mac → manjaro) |
+| `SAGE_REMOTE_CWD` | If set, remote runs `cd` then `board --json` instead of full `fleet --json` |
+| `SAGE_SSH` | Override `ssh` binary (default: `ssh` on PATH) |
+| `SAGE_BIN` | **Local** sage path only (ignored for remote binary; host still runs bare `sage`) |
+
+Without `SAGE_REMOTE`, the island uses **local** `sage` on the Mac (empty unless you also run agents there).
+
+### Soft actions (remote)
+
+- Copy session id / claims / board JSON  
+- **Path** — copy remote worktree path  
+- **ssh cd** — copy a one-liner for Mac Terminal (`ssh -t host "cd …"`)  
+- **Not** Finder “Open” for remote paths (those paths don’t exist on the Mac)
+
+### Hide / show
+
+**⌘⇧\\** (also Super+Shift+\\ on Linux)
 
 ## Requirements
 
-- **Node.js** ≥ 20
-- **Rust** toolchain (`rustc` / `cargo`) for Tauri
-- **`sage` CLI** on `PATH` (from this monorepo or a global install), or set **`SAGE_BIN`** to an absolute path — the island spawns `sage board --json` (and soft helpers) via a native Tauri command
-- Platform packages for Tauri (see [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/))
-
-### macOS (primary target)
-
-- Xcode Command Line Tools
-- After download of unsigned/local builds: **System Settings → Privacy & Security → Open Anyway** (Gatekeeper) if macOS blocks the app
-
-### Linux
-
-Scaffold and frontend build work; full `tauri build` / `tauri dev` need WebKitGTK and related system deps. macOS-only features (menu bar island placement) may be incomplete here.
+- **Node.js** ≥ 20  
+- **Rust** (`rustc` / `cargo`) for Tauri  
+- Platform packages: [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)  
+- **macOS:** Xcode CLT; unsigned builds may need Gatekeeper **Open Anyway**
 
 ## Develop
 
 ```bash
 cd desktop
+export SAGE_REMOTE=manjaro   # your real desk
 npm install
 npm run tauri dev
 ```
 
-Frontend-only (no native window):
+Frontend only (no native window):
 
 ```bash
-npm run dev      # Vite on http://localhost:1420
-npm run build    # static SPA → build/
-npm test         # vitest (density, sageClient, windowFit)
+npm run dev
+npm run build
+npm test
 ```
 
-Empty island states: `sage?` (binary missing), `SAGE · 0` (no live sessions),
-`SAGE · …` (poll error, last good view kept when possible).
+Empty states: `ssh?` / `sage?` (unreachable), `SAGE · 0` (no live sessions), `SAGE · …` (poll error).
 
-
-## Sage CLI wiring
-
-Native commands (Rust, `src-tauri/src/lib.rs`):
+## Native commands
 
 | Command | Role |
-|---|---|
-| `run_sage(args)` | Resolve binary (`SAGE_BIN` → PATH scan for `sage`), spawn, return stdout |
-| `copy_text(text)` | System clipboard via **`arboard`** (not the Tauri clipboard plugin) |
-| `open_path(path)` | `open` (macOS) / `xdg-open` (Linux) / `cmd /C start` (Windows) |
-| `fit_island(w, h)` | Logical resize + top-center reposition for collapsed / peek / pinned |
-| `toggle_island_visible` | Hide ↔ show the always-on-top window |
-
-Frontend helpers live in `src/lib/sageClient.ts` (`parseBoardJson`, `fetchBoard`, `copyText`, `openPath`) and `src/lib/windowFit.ts`. Binary resolution does **not** use a shell plugin — only `std::process::Command` with the resolved path.
-
-## Interaction (v1)
-
-| Gesture | Behavior |
-|---|---|
-| Hover island / pill | **Peek** strip (label, liveness, first 2 claims); leave → collapse |
-| Click island / pill / heat | **Pin** expand panel with live rows + soft actions |
-| Esc or click outside chrome | Unpin / collapse |
-| Soft actions | Copy session id, claims, board JSON; open worktree path |
-| **⌘⇧\\** / **Super+Shift+\\** | Global hide/show (also window-focused when focused) |
-
-Soft actions never call `sage claim` / `register` / `guard` — clipboard and OS open only.
+|---------|------|
+| `run_sage(args)` | Local `SAGE_BIN`/PATH **or** `ssh SAGE_REMOTE -- sh -c '… sage …'` |
+| `get_sage_transport` | `{ mode, host, remote_cwd }` for UI badge / soft actions |
+| `copy_text` / `open_path` | Soft actions |
+| `fit_island` / `toggle_island_visible` | Window chrome |
 
 ## Notes
 
-- Headless CLI remains source of truth under the repo root; `desktop/` never lands in root `package.json` `files` / `dependencies`.
-- Build artifacts (`node_modules`, `build`, `src-tauri/target`, `src-tauri/gen`) are gitignored.
-- `tauri build` may fail without platform packages — install Tauri system deps for your OS, then retry.
+- Headless CLI remains source of truth on the **agent host**.  
+- `desktop/` never lands in root `package.json` `files` / `dependencies`.  
+- Build artifacts are gitignored.
