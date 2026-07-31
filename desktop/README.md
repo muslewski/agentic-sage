@@ -33,8 +33,12 @@ Frontend-only (no native window):
 ```bash
 npm run dev      # Vite on http://localhost:1420
 npm run build    # static SPA → build/
-npm test         # vitest (pure TS helpers; empty until later tasks)
+npm test         # vitest (density, sageClient, windowFit)
 ```
+
+Empty island states: `sage?` (binary missing), `SAGE · 0` (no live sessions),
+`SAGE · …` (poll error, last good view kept when possible).
+
 
 ## Sage CLI wiring
 

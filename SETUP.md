@@ -175,6 +175,19 @@ sage judge run          # auto scope + harness; elevates the desk
 
 Workers still trust contested/clear from the CLI; briefs layer when fresh. No second API.
 
+### 🏝 Sage Island desktop (optional Mac-first glass dock)
+
+Terminal SAGE stays primary. For an always-on-top **top-edge island** that shows live
+sessions (soft actions only — copy / open Finder), build the companion from source:
+
+```bash
+cd desktop && npm install && npm run tauri dev   # or tauri build
+```
+
+Requires Node ≥ 20, Rust, and `sage` on `PATH` (or `SAGE_BIN`). **Not** shipped by
+`npm i -g agentic-sage`. Unsigned Mac builds may need Gatekeeper **Open Anyway**.
+Details: [`desktop/README.md`](./desktop/README.md). Design: `agentic-sage-mind/specs/2026-07-31-sage-island-desktop-design.md`.
+
 ### 🔧 tmux fleet pane
 
 `install.mjs` offers a `bind j` → `display-popup` running `sage board` (the live fleet view).
