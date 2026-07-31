@@ -11,3 +11,11 @@ advisor-plans/
 !.env.example
 !.env*.example
 
+# Sage Island (Tauri) — local build only
+desktop/node_modules/
+desktop/dist/
+desktop/build/
+desktop/.svelte-kit/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
