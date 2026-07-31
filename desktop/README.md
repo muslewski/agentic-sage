@@ -8,7 +8,7 @@ This package is **not** part of the published `agentic-sage` npm package. Instal
 
 - **Node.js** ≥ 20
 - **Rust** toolchain (`rustc` / `cargo`) for Tauri
-- **`sage` CLI** on `PATH` (from this monorepo or a global install) — used later for fleet data; not required just to open the empty scaffold window
+- **`sage` CLI** on `PATH` (from this monorepo or a global install), or set **`SAGE_BIN`** to an absolute path — the island spawns `sage board --json` (and soft helpers) via a native Tauri command
 - Platform packages for Tauri (see [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/))
 
 ### macOS (primary target)
@@ -35,6 +35,18 @@ npm run dev      # Vite on http://localhost:1420
 npm run build    # static SPA → build/
 npm test         # vitest (pure TS helpers; empty until later tasks)
 ```
+
+## Sage CLI wiring
+
+Native commands (Rust, `src-tauri/src/lib.rs`):
+
+| Command | Role |
+|---|---|
+| `run_sage(args)` | Resolve binary (`SAGE_BIN` → PATH scan for `sage`), spawn, return stdout |
+| `copy_text(text)` | System clipboard via **`arboard`** (not the Tauri clipboard plugin) |
+| `open_path(path)` | `open` (macOS) / `xdg-open` (Linux) / `cmd /C start` (Windows) |
+
+Frontend helpers live in `src/lib/sageClient.ts` (`parseBoardJson`, `fetchBoard`, `copyText`, `openPath`). Binary resolution does **not** use a shell plugin — only `std::process::Command` with the resolved path.
 
 ## Notes
 
