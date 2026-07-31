@@ -5,7 +5,7 @@ tags: [desktop, island, tauri, ui, optional]
 status: active
 created: 2026-07-31
 updated: 2026-07-31
-verifiedAt: d72e5dd8
+verifiedAt: c24ae5ab
 owns:
   routes: []
   testids: []
