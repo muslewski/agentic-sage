@@ -1,9 +1,68 @@
 <script lang="ts">
-  // Sage Island scaffold — empty shell; later tasks wire fleet poll + glass UI.
+  import { onMount } from 'svelte';
+  import Island from '../components/Island.svelte';
+  import { buildCollapsedView } from '$lib/density';
+  import { fetchBoard, fetchHeat } from '$lib/sageClient';
+  import type { CollapsedView } from '$lib/types';
+  import '../styles/glass.css';
+
+  const POLL_MS = 1500;
+
+  type PollStatus = 'ok' | 'loading' | 'error' | 'missing' | 'empty';
+
+  let view: CollapsedView | null = $state(null);
+  let status: PollStatus = $state('loading');
+
+  function classifyError(err: unknown): 'missing' | 'error' {
+    const msg = err instanceof Error ? err.message : String(err ?? '');
+    if (
+      /not found on PATH/i.test(msg) ||
+      /SAGE_BIN/i.test(msg) ||
+      /sage binary/i.test(msg) ||
+      /No such file/i.test(msg)
+    ) {
+      return 'missing';
+    }
+    return 'error';
+  }
+
+  async function pollOnce(): Promise<void> {
+    try {
+      const [board, heat] = await Promise.all([fetchBoard(), fetchHeat()]);
+      const next = buildCollapsedView(board.sessions ?? [], heat);
+      view = next;
+      status = next.pills.length === 0 ? 'empty' : 'ok';
+    } catch (err) {
+      status = classifyError(err);
+      // Keep last good view on transient error; clear only on missing binary.
+      if (status === 'missing') {
+        view = null;
+      }
+    }
+  }
+
+  onMount(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const loop = async () => {
+      if (cancelled) return;
+      await pollOnce();
+      if (cancelled) return;
+      timer = setTimeout(loop, POLL_MS);
+    };
+
+    void loop();
+
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
+    };
+  });
 </script>
 
-<main class="island">
-  <p class="label">Sage Island</p>
+<main class="island-root">
+  <Island {view} {status} />
 </main>
 
 <style>
@@ -15,7 +74,7 @@
     background: transparent;
   }
 
-  .island {
+  .island-root {
     box-sizing: border-box;
     width: 100vw;
     height: 100vh;
@@ -23,25 +82,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      sans-serif;
-    background: rgba(28, 28, 30, 0.72);
-    color: #f5f5f7;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: transparent;
     -webkit-app-region: drag;
-    user-select: none;
-  }
-
-  .label {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    opacity: 0.9;
+    app-region: drag;
   }
 </style>

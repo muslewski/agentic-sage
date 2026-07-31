@@ -10,14 +10,18 @@
     "frontendDist": "../build"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Sage Island",
-        "width": 520,
-        "height": 96,
+        "width": 480,
+        "height": 56,
         "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
         "resizable": false,
-        "center": true
+        "fullscreen": false,
+        "skipTaskbar": true
       }
     ],
     "security": {

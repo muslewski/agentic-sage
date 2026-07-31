@@ -1,6 +1,7 @@
 // Sage Island — Tauri commands: sage CLI invoke + soft actions.
 use std::path::PathBuf;
 use std::process::Command;
+use tauri::{LogicalPosition, Manager, WebviewWindow};
 
 /// Resolve the `sage` binary: `SAGE_BIN` env → first executable named `sage` on PATH.
 fn resolve_sage_bin() -> Result<String, String> {
@@ -109,11 +110,35 @@ fn open_path(path: String) -> Result<(), String> {
     }
 }
 
+/// Place the island near the top-center of the current monitor (y ≈ 10 px).
+fn position_top_center(window: &WebviewWindow) {
+    let Ok(Some(monitor)) = window.current_monitor() else {
+        return;
+    };
+    let screen = monitor.size();
+    let scale = monitor.scale_factor();
+    let Ok(outer) = window.outer_size() else {
+        return;
+    };
+    // Convert physical → logical so LogicalPosition matches monitor metrics.
+    let screen_w = screen.width as f64 / scale;
+    let win_w = outer.width as f64 / scale;
+    let x = ((screen_w - win_w) / 2.0).max(0.0);
+    let y = 10.0_f64;
+    let _ = window.set_position(LogicalPosition::new(x, y));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![run_sage, copy_text, open_path])
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                position_top_center(&window);
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
