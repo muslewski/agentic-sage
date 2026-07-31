@@ -45,8 +45,22 @@ Native commands (Rust, `src-tauri/src/lib.rs`):
 | `run_sage(args)` | Resolve binary (`SAGE_BIN` → PATH scan for `sage`), spawn, return stdout |
 | `copy_text(text)` | System clipboard via **`arboard`** (not the Tauri clipboard plugin) |
 | `open_path(path)` | `open` (macOS) / `xdg-open` (Linux) / `cmd /C start` (Windows) |
+| `fit_island(w, h)` | Logical resize + top-center reposition for collapsed / peek / pinned |
+| `toggle_island_visible` | Hide ↔ show the always-on-top window |
 
-Frontend helpers live in `src/lib/sageClient.ts` (`parseBoardJson`, `fetchBoard`, `copyText`, `openPath`). Binary resolution does **not** use a shell plugin — only `std::process::Command` with the resolved path.
+Frontend helpers live in `src/lib/sageClient.ts` (`parseBoardJson`, `fetchBoard`, `copyText`, `openPath`) and `src/lib/windowFit.ts`. Binary resolution does **not** use a shell plugin — only `std::process::Command` with the resolved path.
+
+## Interaction (v1)
+
+| Gesture | Behavior |
+|---|---|
+| Hover island / pill | **Peek** strip (label, liveness, first 2 claims); leave → collapse |
+| Click island / pill / heat | **Pin** expand panel with live rows + soft actions |
+| Esc or click outside chrome | Unpin / collapse |
+| Soft actions | Copy session id, claims, board JSON; open worktree path |
+| **⌘⇧\\** / **Super+Shift+\\** | Global hide/show (also window-focused when focused) |
+
+Soft actions never call `sage claim` / `register` / `guard` — clipboard and OS open only.
 
 ## Notes
 

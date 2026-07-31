@@ -98,9 +98,31 @@
   opacity: 0.85;
 }
 
+/* Interactive chrome: pills/buttons must not drag the frameless window */
+.island-shell {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  cursor: default;
+}
+
+.island-pill,
+.island-dot-btn,
+.island-heat,
+button {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .island-shell {
     --glass-bg: rgba(28, 28, 30, 0.92);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .peek-strip,
+  .expand-panel {
+    --glass-bg: rgba(28, 28, 30, 0.95);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

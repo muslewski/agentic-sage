@@ -1,7 +1,7 @@
-// Sage Island — Tauri commands: sage CLI invoke + soft actions.
+// Sage Island — Tauri commands: sage CLI invoke + soft actions + window fit.
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::{LogicalPosition, Manager, WebviewWindow};
+use tauri::{LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 /// Resolve the `sage` binary: `SAGE_BIN` env → first executable named `sage` on PATH.
 fn resolve_sage_bin() -> Result<String, String> {
@@ -110,6 +110,38 @@ fn open_path(path: String) -> Result<(), String> {
     }
 }
 
+/// Resize the main island window (logical px) and re-center at top edge.
+#[tauri::command]
+fn fit_island(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window missing".to_string())?;
+    let w = width.clamp(120.0, 1200.0);
+    let h = height.clamp(40.0, 900.0);
+    window
+        .set_size(LogicalSize::new(w, h))
+        .map_err(|e| format!("set_size: {e}"))?;
+    position_top_center(&window);
+    Ok(())
+}
+
+/// Toggle main window visibility. Returns whether the window is visible after the call.
+#[tauri::command]
+fn toggle_island_visible(app: tauri::AppHandle) -> Result<bool, String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window missing".to_string())?;
+    let visible = window.is_visible().unwrap_or(true);
+    if visible {
+        window.hide().map_err(|e| format!("hide: {e}"))?;
+        Ok(false)
+    } else {
+        window.show().map_err(|e| format!("show: {e}"))?;
+        let _ = window.set_focus();
+        Ok(true)
+    }
+}
+
 /// Place the island near the top-center of the current monitor (y ≈ 10 px).
 fn position_top_center(window: &WebviewWindow) {
     let Ok(Some(monitor)) = window.current_monitor() else {
@@ -128,15 +160,53 @@ fn position_top_center(window: &WebviewWindow) {
     let _ = window.set_position(LogicalPosition::new(x, y));
 }
 
+fn toggle_main_visibility(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let visible = window.is_visible().unwrap_or(true);
+        if visible {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![run_sage, copy_text, open_path])
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            run_sage,
+            copy_text,
+            open_path,
+            fit_island,
+            toggle_island_visible
+        ])
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 position_top_center(&window);
             }
+
+            // Global hide/show: Super/Cmd+Shift+\ (desktop only; fail-open if grab fails).
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_global_shortcut::{
+                    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+                };
+
+                let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Backslash);
+                let handle = app.handle().clone();
+                if let Err(e) = app.global_shortcut().on_shortcut(shortcut, move |_app, _s, event| {
+                    if event.state == ShortcutState::Pressed {
+                        toggle_main_visibility(&handle);
+                    }
+                }) {
+                    eprintln!("sage-island: global shortcut register failed: {e}");
+                }
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
