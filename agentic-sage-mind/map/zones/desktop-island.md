@@ -2,10 +2,10 @@
 type: zone
 summary: "Optional Sage Island Tauri desktop — top-edge glass fleet dock over sage --json; soft actions; Mac-first; not part of npm CLI package."
 tags: [desktop, island, tauri, ui, optional]
-status: seeded
+status: active
 created: 2026-07-31
 updated: 2026-07-31
-verifiedAt: unverified
+verifiedAt: d72e5dd8
 owns:
   routes: []
   testids: []

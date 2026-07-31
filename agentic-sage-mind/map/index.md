@@ -6,6 +6,7 @@
 |------|--------|-----------|---------|
 | adapters | seeded | seeded | Optional per-repo adapter contract — discovery/load of `.agentic-sage/adapter.mjs`, fail-closed-to-core enrichment (`ownsZone`/`claimedWork`/`backlogRows`), plus shipped `adapters/template.mjs` and worked-example `adapters/acme.mjs`. |
 | cli | active | ⚠ stale | The `sage` / `agentic-sage` CLI entry (`bin/sage`) — dispatches board, war, fleet, territory, claim, register, init, doctor, gate, and other fleet-judge verbs over lib/*. |
+| desktop-island | active | ok | Optional Sage Island Tauri desktop — top-edge glass fleet dock over sage --json; soft actions; Mac-first; not part of npm CLI package. |
 | emitter | seeded | seeded | Fail-open lifecycle emitter hook (`hooks/agentic-sage-emit.mjs`) — records SessionStart/PostToolUse/Stop/PreCompact/SessionEnd and optionally gates PreToolUse; default-OFF, never blocks the harness on error. |
 | install-wiring | active | ok | Install and teardown — wiring/init/harness, wire stamps state.wiredVersion, stabilize package root away from worktrees, fleet-wire scripts, verify-fleet, uninstall. |
 | judge-surface | active | ok | Read-side fleet judge — board/fleet/war/territory, optional live-judge briefs, judge.desired preferred|optional soft offline probe, doctor/gate control (gate local-only by default; user-scope wiring scan), guard default-OFF. |
@@ -20,7 +21,7 @@
 - zone emitter: seeded — not yet verified (verifiedAt: unverified)
 - zone skills-templates: seeded — not yet verified (verifiedAt: unverified)
 - zone war-room: seeded — not yet verified (verifiedAt: unverified)
-- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-collapse-vendored-atlas-skills, 2026-07-30-doctor-reports-not-repairs, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-init-repair-creates-storage-dir, 2026-07-30-preferred-probe-no-synthetic, 2026-07-30-territory-prefix-boundary
+- decision number 2026 reused: 2026-07-23-live-judge-continuous-brief, 2026-07-28-preferred-judge-soft-only, 2026-07-29-dual-registration, 2026-07-29-fleet-devlog-dual-stream, 2026-07-30-collapse-vendored-atlas-skills, 2026-07-30-doctor-reports-not-repairs, 2026-07-30-gate-local-by-default, 2026-07-30-hermetic-home-node-execpath, 2026-07-30-init-repair-creates-storage-dir, 2026-07-30-preferred-probe-no-synthetic, 2026-07-30-territory-prefix-boundary, 2026-07-31-optional-sage-island-desktop
 
 ## ⚠ Graph coherence
 
@@ -32,13 +33,15 @@ _none_
 
 ## Ledger
 
-- specs: 16 (approved 5 · planned 11)
-- plans: 4 (done 2 · ready 2)
+- specs: 17 (approved 6 · planned 11)
+- plans: 5 (done 2 · executing 1 · ready 2)
 - reports: 2 (? 2)
-- decisions: 11 (accepted 10 · active 1)
+- decisions: 12 (accepted 11 · active 1)
 
 ### Recent
 
+- [[2026-07-31-sage-island-desktop-design]]
+- [[2026-07-31-sage-island-desktop]]
 - [[2026-07-28-fleet-follow-preferred-judge-design]]
 - [[2026-07-28-fleet-follow-preferred-judge]]
 - [[2026-07-23-live-judge-session-design]]
@@ -47,5 +50,3 @@ _none_
 - [[2026-07-23-docs-recollection-health-design]]
 - [[2026-07-23-docs-recollection-health]]
 - [[2026-07-17-sage-ui-design]]
-- [[2026-07-14-war-faces-live-clash-memory-design]]
-- [[2026-07-13-war-ruled-columns-design]]

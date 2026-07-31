@@ -2,7 +2,7 @@
 type: plan
 summary: "Implement Sage Island v1: Tauri top-edge glass island over sage --json; hybrid density; soft actions; Mac-first OSS download; desktop/ out of npm tarball."
 tags: [desktop, island, tauri, plan]
-status: active
+status: executing
 created: 2026-07-31
 updated: 2026-07-31
 spec: "[[2026-07-31-sage-island-desktop-design]]"
